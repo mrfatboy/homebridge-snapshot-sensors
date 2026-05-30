@@ -1,0 +1,8 @@
+node_modules/
+dist/
+*.js.map
+*.d.ts.map
+.claude
+.DS_Store
+.env
+/homebridge-stream-sensors-*.*.*.tgz
