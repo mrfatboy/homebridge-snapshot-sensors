@@ -1,0 +1,38 @@
+{
+  "name": "homebridge-stream-sensors",
+  "version": "1.0.0",
+  "description": "Homebridge plugin exposing stream health and quality as HomeKit sensors",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "prepublishOnly": "npm run build",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix"
+  },
+  "keywords": [
+    "homebridge-plugin",
+    "homebridge",
+    "homekit",
+    "stream",
+    "sensors"
+  ],
+  "license": "AGPL-3.0-only",
+  "engines": {
+    "node": ">=18.0.0",
+    "homebridge": ">=2.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "homebridge": "^2.0.0",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "homebridge": "^2.0.0"
+  }
+}

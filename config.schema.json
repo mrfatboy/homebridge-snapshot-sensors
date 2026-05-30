@@ -1,0 +1,49 @@
+{
+  "pluginAlias": "StreamSensors",
+  "pluginType": "platform",
+  "singular": false,
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "title": "Name",
+        "type": "string",
+        "default": "Stream Sensors",
+        "required": true
+      },
+      "streams": {
+        "title": "Streams",
+        "type": "array",
+        "items": {
+          "title": "Stream",
+          "type": "object",
+          "properties": {
+            "id": {
+              "title": "ID",
+              "type": "string",
+              "required": true,
+              "description": "Unique identifier for this stream."
+            },
+            "name": {
+              "title": "Name",
+              "type": "string",
+              "required": true
+            },
+            "url": {
+              "title": "Stream URL",
+              "type": "string",
+              "required": true,
+              "format": "uri"
+            },
+            "pollInterval": {
+              "title": "Poll Interval (seconds)",
+              "type": "integer",
+              "default": 30,
+              "minimum": 5
+            }
+          }
+        }
+      }
+    }
+  }
+}
