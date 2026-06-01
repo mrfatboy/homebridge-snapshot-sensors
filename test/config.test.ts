@@ -4,18 +4,18 @@ import type { Category } from '../src/types.js';
 
 describe('isCategory()', () => {
   it('accepts all four valid categories', () => {
-    expect(isCategory('animal')).toBe(true);
-    expect(isCategory('package')).toBe(true);
-    expect(isCategory('person')).toBe(true);
-    expect(isCategory('vehicle')).toBe(true);
+    expect(isCategory('animals')).toBe(true);
+    expect(isCategory('packages')).toBe(true);
+    expect(isCategory('people')).toBe(true);
+    expect(isCategory('vehicles')).toBe(true);
   });
 
-  it('rejects common misspellings and related words', () => {
-    expect(isCategory('people')).toBe(false);  // the bug from the field
-    expect(isCategory('animals')).toBe(false);
+  it('rejects the old singular spellings and related words', () => {
+    expect(isCategory('animal')).toBe(false);
+    expect(isCategory('person')).toBe(false);
+    expect(isCategory('vehicle')).toBe(false);
     expect(isCategory('persons')).toBe(false);
-    expect(isCategory('vehicles')).toBe(false);
-    expect(isCategory('packages')).toBe(false);
+    expect(isCategory('package')).toBe(false);
     expect(isCategory('cat')).toBe(false);
     expect(isCategory('')).toBe(false);
   });
@@ -23,40 +23,40 @@ describe('isCategory()', () => {
 
 describe('sensor name with stream prefix', () => {
   it('prepends the stream name to the sensor label', () => {
-    expect(`Garden ${sensorName(['animal'])}`).toBe('Garden Animals');
-    expect(`Front Door ${sensorName(['person', 'vehicle'])}`).toBe('Front Door People & Vehicles');
+    expect(`Garden ${sensorName(['animals'])}`).toBe('Garden Animals');
+    expect(`Front Door ${sensorName(['people', 'vehicles'])}`).toBe('Front Door People & Vehicles Sensor');
   });
 
   it('sensor label order does not affect the prefixed result', () => {
-    const a = `Backyard ${sensorName(['person', 'animal'])}`;
-    const b = `Backyard ${sensorName(['animal', 'person'])}`;
+    const a = `Backyard ${sensorName(['people', 'animals'])}`;
+    const b = `Backyard ${sensorName(['animals', 'people'])}`;
     expect(a).toBe(b);
-    expect(a).toBe('Backyard Animals & People');
+    expect(a).toBe('Backyard Animals & People Sensor');
   });
 });
 
 describe('sensorName()', () => {
   it('returns the display name for a single category', () => {
-    expect(sensorName(['animal'])).toBe('Animals');
-    expect(sensorName(['person'])).toBe('People');
-    expect(sensorName(['vehicle'])).toBe('Vehicles');
-    expect(sensorName(['package'])).toBe('Packages');
+    expect(sensorName(['animals'])).toBe('Animals');
+    expect(sensorName(['people'])).toBe('People');
+    expect(sensorName(['vehicles'])).toBe('Vehicles');
+    expect(sensorName(['packages'])).toBe('Packages');
   });
 
   it('sorts alphabetically regardless of input order', () => {
-    const ab: Category[] = ['person', 'animal'];
-    const ba: Category[] = ['animal', 'person'];
+    const ab: Category[] = ['people', 'animals'];
+    const ba: Category[] = ['animals', 'people'];
     expect(sensorName(ab)).toBe(sensorName(ba));
-    expect(sensorName(ba)).toBe('Animals & People');
+    expect(sensorName(ba)).toBe('Animals & People Sensor');
   });
 
   it('joins three categories with Oxford-comma-less ampersand', () => {
-    expect(sensorName(['vehicle', 'animal', 'person'])).toBe('Animals, People & Vehicles');
+    expect(sensorName(['vehicles', 'animals', 'people'])).toBe('Animals, People & Vehicles Sensor');
   });
 
   it('joins all four categories', () => {
-    expect(sensorName(['animal', 'package', 'person', 'vehicle'])).toBe(
-      'Animals, Packages, People & Vehicles',
+    expect(sensorName(['animals', 'packages', 'people', 'vehicles'])).toBe(
+      'Animals, Packages, People & Vehicles Sensor',
     );
   });
 });

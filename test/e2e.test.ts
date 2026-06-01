@@ -60,37 +60,37 @@ describe('Fox detection', () => {
   // fox-ir-mixed: Feb-23 4:55 AM in the bright-IR phase — YOLO sees it as bird (0.85)
   it('IR phase (bright IR, outdoor light on) — Feb-23 4:55 AM', async () => {
     const cats = detectCategories(await runInference(fixture('fox-ir-mixed.rgb')));
-    expect(cats.has('animal')).toBe(true);
+    expect(cats.has('animals')).toBe(true);
   });
 
   // fox-dawn: May-26 4:30 AM, dawn color — YOLO sees sheep (0.60)
   it('dawn color — May-26 4:30 AM', async () => {
     const cats = detectCategories(await runInference(fixture('fox-dawn.rgb')));
-    expect(cats.has('animal')).toBe(true);
+    expect(cats.has('animals')).toBe(true);
   });
 
   // fox-day-1: May-29 8:01 AM, daylight — YOLO sees dog (0.53)
   it('daylight — May-29 8:01 AM', async () => {
     const cats = detectCategories(await runInference(fixture('fox-day-1.rgb')));
-    expect(cats.has('animal')).toBe(true);
+    expect(cats.has('animals')).toBe(true);
   });
 
   // fox-day-2: May-29 8:02 AM, daylight — YOLO sees bird (0.72)
   it('daylight (long clip) — May-29 8:02 AM', async () => {
     const cats = detectCategories(await runInference(fixture('fox-day-2.rgb')));
-    expect(cats.has('animal')).toBe(true);
+    expect(cats.has('animals')).toBe(true);
   });
 
   // fox-ir-dark: DFD03007 dark IR — YOLO sees cat (0.62)
   it('dark IR — DFD03007', async () => {
     const cats = detectCategories(await runInference(fixture('fox-ir-dark.rgb')));
-    expect(cats.has('animal')).toBe(true);
+    expect(cats.has('animals')).toBe(true);
   });
 
   // Feb-23 4:46 AM: COCO-trained YOLO misclassifies this fox as "fire hydrant" in all frames.
   // Asserting false here acts as a regression test — if the model ever improves, update this.
   it('dark IR — Feb-23 4:46 AM (COCO model classifies fox as fire hydrant, not animal)', async () => {
     const cats = detectCategories(await runInference(fixture('ir-dark.rgb')));
-    expect(cats.has('animal')).toBe(false);
+    expect(cats.has('animals')).toBe(false);
   });
 });

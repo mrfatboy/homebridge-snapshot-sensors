@@ -1,4 +1,4 @@
-export type Category = 'animal' | 'package' | 'person' | 'vehicle';
+export type Category = 'animals' | 'packages' | 'people' | 'vehicles';
 
 export interface StreamConfig {
   name: string;

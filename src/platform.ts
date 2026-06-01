@@ -14,7 +14,7 @@ import { loadModel, closeModel, runInference } from './inference.js';
 import { sensorName, isCategory } from './categories.js';
 import type { StreamConfig, Category } from './types.js';
 
-const VALID_CATEGORIES = Object.keys({ animal: 1, package: 1, person: 1, vehicle: 1 }).join(', ');
+const VALID_CATEGORIES = Object.keys({ animals: 1, packages: 1, people: 1, vehicles: 1 }).join(', ');
 
 export class StreamSensorsPlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service;

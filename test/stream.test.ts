@@ -17,7 +17,7 @@ vi.mock('../src/ffmpeg.js', () => ({
 const config: StreamConfig = {
   name: 'Test',
   url: 'rtsp://test/stream',
-  sensors: [['animal'], ['person']],
+  sensors: [['animals'], ['people']],
 };
 
 const fakeLog = {

@@ -1,25 +1,21 @@
 import type { Category } from './types.js';
 
-const DISPLAY: Record<Category, string> = {
-  animal: 'Animals',
-  package: 'Packages',
-  person: 'People',
-  vehicle: 'Vehicles',
-};
+// Display labels are the category keys with the first letter capitalized.
+const capitalize = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 
 // COCO class IDs mapped to each HomeKit category.
-// 'package' is approximate — COCO has no delivery-parcel class.
+// 'packages' is approximate — COCO has no delivery-parcel class.
 export const CATEGORY_CLASS_IDS: Record<Category, ReadonlySet<number>> = {
-  animal:  new Set([14, 15, 16, 17, 18, 19, 20, 21, 22, 23]), // bird, cat, dog, horse, sheep, cow, elephant, bear, zebra, giraffe
-  person:  new Set([0]),
-  vehicle: new Set([1, 2, 3, 5, 6, 7, 8]),                   // bicycle, car, motorcycle, bus, train, truck, boat
-  package: new Set([24, 26, 28]),                             // backpack, handbag, suitcase
+  animals:  new Set([14, 15, 16, 17, 18, 19, 20, 21, 22, 23]), // bird, cat, dog, horse, sheep, cow, elephant, bear, zebra, giraffe
+  people:   new Set([0]),
+  vehicles: new Set([1, 2, 3, 5, 6, 7, 8]),                   // bicycle, car, motorcycle, bus, train, truck, boat
+  packages:  new Set([24, 26, 28]),                             // backpack, handbag, suitcase
 };
 
 export function sensorName(labels: Category[]): string {
-  const names = [...labels].sort().map(l => DISPLAY[l]);
+  const names = [...labels].sort().map(capitalize);
   if (names.length === 1) return names[0];
-  return `${names.slice(0, -1).join(', ')} & ${names[names.length - 1]}`;
+  return `${names.slice(0, -1).join(', ')} & ${names[names.length - 1]} Sensor`;
 }
 
 export function isCategory(s: string): s is Category {
