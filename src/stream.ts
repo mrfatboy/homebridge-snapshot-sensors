@@ -3,15 +3,13 @@ import { FfmpegPump } from './ffmpeg.js';
 import { scoreCategories } from './detector.js';
 import type { CategoryScores } from './detector.js';
 import type { SensorSpec, Detection } from './types.js';
-import { SAMPLE_MS, COOLDOWN_MS, AUTO_OFF_MS } from './settings.js';
+import { SAMPLE_MS } from './settings.js';
 
 export type SensorStateCallback = (sensorIndex: number, active: boolean) => void;
 export type InferFn = (frame: Buffer) => Promise<Detection[]>;
 
 export class StreamWorker {
   private readonly pump: FfmpegPump;
-  private readonly lastTrigger: number[];
-  private readonly autoOffTimers: (ReturnType<typeof setTimeout> | null)[];
   private running = true;
   private wakeUp: (() => void) | null = null;
   private loopDone: Promise<void> = Promise.resolve();
@@ -24,8 +22,6 @@ export class StreamWorker {
     private readonly log: Logger,
   ) {
     this.pump = new FfmpegPump(url, log);
-    this.lastTrigger = sensors.map(() => 0);
-    this.autoOffTimers = sensors.map(() => null);
   }
 
   start(): void {
@@ -37,9 +33,6 @@ export class StreamWorker {
     this.running = false;
     this.wakeUp?.();          // interrupt any in-progress sleep immediately
     this.pump.stop();
-    for (const t of this.autoOffTimers) {
-      if (t !== null) clearTimeout(t);
-    }
   }
 
   // Resolves once the detection loop has fully exited.
@@ -84,23 +77,13 @@ export class StreamWorker {
     // Guard: stop() may have fired while inference was in-flight.
     if (!this.running) return;
 
+    // Level-triggered: each sample reports the sensor's current state directly —
+    // detected this frame, or not. No cooldown or auto-off; the next sample
+    // (every SAMPLE_MS) clears it once the subject leaves. The accessory dedupes
+    // unchanged values, so this is a no-op when nothing changed.
     this.sensors.forEach((sensor, i) => {
-      // Sensor fires when ANY of its categories clears the threshold.
-      const triggered = sensor.categories.some(c => (scores.get(c) ?? 0) >= sensor.threshold);
-      if (!triggered) return;
-
-      const now = Date.now();
-      if (now - this.lastTrigger[i] < COOLDOWN_MS) return;
-      this.lastTrigger[i] = now;
-
-      this.onSensorState(i, true);
-
-      const prev = this.autoOffTimers[i];
-      if (prev !== null) clearTimeout(prev);
-      this.autoOffTimers[i] = setTimeout(() => {
-        this.onSensorState(i, false);
-        this.autoOffTimers[i] = null;
-      }, AUTO_OFF_MS);
+      const detected = sensor.categories.some(c => (scores.get(c) ?? 0) >= sensor.threshold);
+      this.onSensorState(i, detected);
     });
   }
 }

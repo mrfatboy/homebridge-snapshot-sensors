@@ -8,7 +8,7 @@ export class StreamSensorAccessory {
   constructor(
     private readonly platform: StreamSensorsPlatform,
     private readonly accessory: PlatformAccessory,
-    name: string,
+    private readonly name: string,
   ) {
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
       .setCharacteristic(this.platform.Characteristic.Manufacturer, 'homebridge-stream-sensors')
@@ -26,7 +26,10 @@ export class StreamSensorAccessory {
   }
 
   setMotion(active: boolean): void {
+    // Called every sample with the current level; only notify HomeKit on change.
+    if (active === this.active) return;
     this.active = active;
+    this.platform.log.info(`${this.name}: ${active ? 'detected' : 'idle'}`);
     this.motionService.updateCharacteristic(this.platform.Characteristic.MotionDetected, active);
   }
 

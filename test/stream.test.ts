@@ -64,7 +64,7 @@ describe('StreamWorker.stop()', () => {
     expect(Date.now() - t0).toBeLessThan(500);
   });
 
-  it('does not schedule autoOff timers when stop() fires during inference', async () => {
+  it('does not emit any sensor state when stop() fires during inference', async () => {
     // infer resolves an animal detection only after we let it.
     let resolveInfer!: () => void;
     const gatedInfer = (): Promise<Detection[]> =>
@@ -94,18 +94,17 @@ describe('StreamWorker.stop()', () => {
     resolveInfer();
     await new Promise(r => setTimeout(r, 50));
 
-    // updateSensors should have returned early — no autoOff (false) event.
-    const autoOffFires = sensorEvents.filter(([, active]) => !active);
-    expect(autoOffFires).toHaveLength(0);
+    // updateSensors should have returned early — no state pushed at all.
+    expect(sensorEvents).toHaveLength(0);
   });
 });
 
-describe('per-source thresholds', () => {
+describe('threshold gating', () => {
   // A dog detection at confidence 0.30: below the default 0.5, above a 0.25 override.
   const dogAt = (score: number): Detection[] =>
     [{ x1: 0, y1: 0, x2: 300, y2: 300, score, classId: 16 }]; // 16 = dog → animals
 
-  it('fires a low-threshold sensor that the default threshold would miss', async () => {
+  it('a low-threshold sensor turns on for a detection the default would miss', async () => {
     const lowThreshold: SensorSpec[] = [
       { name: 'Sensitive Animals', categories: ['animals'], threshold: 0.25 },
     ];
@@ -121,7 +120,7 @@ describe('per-source thresholds', () => {
     expect(fired.some(([, active]) => active)).toBe(true);
   });
 
-  it('does not fire a default-threshold sensor on the same weak detection', async () => {
+  it('a default-threshold sensor stays off for the same weak detection', async () => {
     const fired: Array<[number, boolean]> = [];
     const worker = new StreamWorker(URL, sensors, (i, a) => fired.push([i, a]),
       () => Promise.resolve(dogAt(0.30)), fakeLog);
@@ -131,6 +130,7 @@ describe('per-source thresholds', () => {
     await new Promise(r => setTimeout(r, 30));
     worker.stop();
 
+    // Level-triggered: it reports false every sample, but never true.
     expect(fired.some(([, active]) => active)).toBe(false);
   });
 });
