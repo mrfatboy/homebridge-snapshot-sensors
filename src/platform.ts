@@ -11,10 +11,8 @@ import { PLATFORM_NAME, PLUGIN_NAME } from './settings.js';
 import { StreamSensorAccessory } from './accessory.js';
 import { StreamWorker } from './stream.js';
 import { loadModel, closeModel, runInference } from './inference.js';
-import { sensorName, isCategory } from './categories.js';
-import type { StreamConfig, Category } from './types.js';
-
-const VALID_CATEGORIES = Object.keys({ animals: 1, packages: 1, people: 1, vehicles: 1 }).join(', ');
+import { resolveSensors } from './categories.js';
+import type { StreamConfig, SensorSpec } from './types.js';
 
 export class StreamSensorsPlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service;
@@ -57,55 +55,50 @@ export class StreamSensorsPlatform implements DynamicPlatformPlugin {
   private discoverDevices(): void {
     const streams: StreamConfig[] = this.config.streams ?? [];
     const seenUUIDs = new Set<string>();
+    // Sensor names are the accessory identity, so they must be unique across the
+    // whole config — a collision would map two sensors onto one HomeKit accessory.
+    const claimedNames = new Set<string>();
 
     for (const stream of streams) {
-      const sensorAccessories: StreamSensorAccessory[] = [];
-
-      // Validate and filter each sensor group, warning on unknown category strings.
-      const validSensors: Category[][] = [];
-      for (const rawGroup of stream.sensors) {
-        const labels = (rawGroup as string[]).filter(label => {
-          if (isCategory(label)) return true;
-          this.log.warn(`Unknown category "${label}" in stream ${stream.url} — valid values: ${VALID_CATEGORIES}`);
-          return false;
-        }).sort() as Category[];
-
-        if (labels.length === 0) {
-          this.log.warn(`Sensor group has no valid categories in stream ${stream.url}, skipping`);
-        } else {
-          validSensors.push(labels);
-        }
-      }
-
       if (!stream.name) {
         this.log.warn(`Stream ${stream.url} is missing a "name" — add one to your config`);
       }
 
-      for (const labels of validSensors) {
-        const uuid = this.api.hap.uuid.generate(`${stream.url}:${labels.join(',')}`);
-        seenUUIDs.add(uuid);
+      const resolved = resolveSensors(stream.name, stream.sensors ?? [], msg => this.log.warn(msg));
 
-        const name = stream.name
-          ? `${stream.name} ${sensorName(labels)}`
-          : sensorName(labels);
+      // Drop sensors whose final name collides with one already claimed.
+      const sensors: SensorSpec[] = [];
+      for (const sensor of resolved) {
+        if (claimedNames.has(sensor.name)) {
+          this.log.error(`Duplicate sensor name "${sensor.name}" — names must be unique; skipping the duplicate`);
+          continue;
+        }
+        claimedNames.add(sensor.name);
+        sensors.push(sensor);
+      }
+
+      const sensorAccessories: StreamSensorAccessory[] = sensors.map(sensor => {
+        const uuid = this.api.hap.uuid.generate(sensor.name);
+        seenUUIDs.add(uuid);
 
         const existing = this.accessories.find(a => a.UUID === uuid);
         let pa: PlatformAccessory;
 
         if (existing) {
-          this.log.info('Restoring accessory:', name);
+          this.log.info('Restoring accessory:', sensor.name);
           pa = existing;
         } else {
-          this.log.info('Adding accessory:', name);
-          pa = new this.api.platformAccessory(name, uuid);
+          this.log.info('Adding accessory:', sensor.name);
+          pa = new this.api.platformAccessory(sensor.name, uuid);
           this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [pa]);
         }
 
-        sensorAccessories.push(new StreamSensorAccessory(this, pa, name));
-      }
+        return new StreamSensorAccessory(this, pa, sensor.name);
+      });
 
       const worker = new StreamWorker(
-        { ...stream, sensors: validSensors },
+        stream.url,
+        sensors,
         (i, active) => sensorAccessories[i]?.setMotion(active),
         frame => runInference(frame),
         this.log,

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { StreamWorker } from '../src/stream.js';
-import type { StreamConfig, Detection } from '../src/types.js';
+import type { SensorSpec, Detection } from '../src/types.js';
 
 // Store each FfmpegPump instance so tests can control it.
 const pumpInstances: { start: ReturnType<typeof vi.fn>; stop: ReturnType<typeof vi.fn>; takeFrame: ReturnType<typeof vi.fn> }[] = [];
@@ -14,11 +14,11 @@ vi.mock('../src/ffmpeg.js', () => ({
   }),
 }));
 
-const config: StreamConfig = {
-  name: 'Test',
-  url: 'rtsp://test/stream',
-  sensors: [['animals'], ['people']],
-};
+const URL = 'rtsp://test/stream';
+const sensors: SensorSpec[] = [
+  { name: 'Test Animals Sensor', sources: [{ category: 'animals', threshold: 0.5 }] },
+  { name: 'Test People Sensor', sources: [{ category: 'people', threshold: 0.5 }] },
+];
 
 const fakeLog = {
   warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn(), success: vi.fn(),
@@ -34,7 +34,7 @@ beforeEach(() => {
 
 describe('StreamWorker.stop()', () => {
   it('interrupts the sleep so the loop exits well under SAMPLE_MS', async () => {
-    const worker = new StreamWorker(config, () => {}, noDetections, fakeLog);
+    const worker = new StreamWorker(URL, sensors, () => {}, noDetections, fakeLog);
     worker.start();
 
     const t0 = Date.now();
@@ -49,7 +49,7 @@ describe('StreamWorker.stop()', () => {
     const slowInfer = (): Promise<Detection[]> =>
       new Promise(res => setTimeout(() => res([]), 100));
 
-    const worker = new StreamWorker(config, () => {}, slowInfer, fakeLog);
+    const worker = new StreamWorker(URL, sensors, () => {}, slowInfer, fakeLog);
     pumpInstances[0]?.takeFrame.mockReturnValueOnce(Buffer.alloc(1024 * 576 * 3));
     worker.start();
 
@@ -74,7 +74,8 @@ describe('StreamWorker.stop()', () => {
 
     const sensorEvents: Array<[number, boolean]> = [];
     const worker = new StreamWorker(
-      config,
+      URL,
+      sensors,
       (i, active) => sensorEvents.push([i, active]),
       gatedInfer,
       fakeLog,
@@ -96,5 +97,40 @@ describe('StreamWorker.stop()', () => {
     // updateSensors should have returned early — no autoOff (false) event.
     const autoOffFires = sensorEvents.filter(([, active]) => !active);
     expect(autoOffFires).toHaveLength(0);
+  });
+});
+
+describe('per-source thresholds', () => {
+  // A dog detection at confidence 0.30: below the default 0.5, above a 0.25 override.
+  const dogAt = (score: number): Detection[] =>
+    [{ x1: 0, y1: 0, x2: 300, y2: 300, score, classId: 16 }]; // 16 = dog → animals
+
+  it('fires a low-threshold sensor that the default threshold would miss', async () => {
+    const lowThreshold: SensorSpec[] = [
+      { name: 'Sensitive Animals', sources: [{ category: 'animals', threshold: 0.25 }] },
+    ];
+    const fired: Array<[number, boolean]> = [];
+    const worker = new StreamWorker(URL, lowThreshold, (i, a) => fired.push([i, a]),
+      () => Promise.resolve(dogAt(0.30)), fakeLog);
+
+    pumpInstances[0]?.takeFrame.mockReturnValueOnce(Buffer.alloc(1024 * 576 * 3));
+    worker.start();
+    await new Promise(r => setTimeout(r, 30));
+    worker.stop();
+
+    expect(fired.some(([, active]) => active)).toBe(true);
+  });
+
+  it('does not fire a default-threshold sensor on the same weak detection', async () => {
+    const fired: Array<[number, boolean]> = [];
+    const worker = new StreamWorker(URL, sensors, (i, a) => fired.push([i, a]),
+      () => Promise.resolve(dogAt(0.30)), fakeLog);
+
+    pumpInstances[0]?.takeFrame.mockReturnValueOnce(Buffer.alloc(1024 * 576 * 3));
+    worker.start();
+    await new Promise(r => setTimeout(r, 30));
+    worker.stop();
+
+    expect(fired.some(([, active]) => active)).toBe(false);
   });
 });

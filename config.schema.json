@@ -28,16 +28,72 @@
             "sensors": {
               "title": "Sensors",
               "type": "array",
-              "description": "Each entry becomes one HomeKit motion sensor. It triggers when any of its listed categories are detected.",
+              "description": "Each entry becomes one HomeKit motion sensor, triggering when any of its categories are detected. Write a sensor as a single category (\"animals\"), a list of categories ([\"animals\", \"people\"]), or an object with an explicit name and per-category thresholds.",
               "items": {
                 "title": "Sensor",
-                "type": "array",
-                "uniqueItems": true,
-                "items": {
-                  "title": "Category",
-                  "type": "string",
-                  "enum": ["animals", "packages", "people", "vehicles"]
-                }
+                "oneOf": [
+                  {
+                    "title": "Single category",
+                    "type": "string",
+                    "enum": ["animals", "packages", "people", "vehicles"]
+                  },
+                  {
+                    "title": "Category list",
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                      "title": "Category",
+                      "type": "string",
+                      "enum": ["animals", "packages", "people", "vehicles"]
+                    }
+                  },
+                  {
+                    "title": "Named sensor",
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "title": "Sensor Name",
+                        "type": "string",
+                        "required": true,
+                        "description": "Used verbatim (no stream prefix). Must be unique across all streams."
+                      },
+                      "source": {
+                        "title": "Sources",
+                        "type": "array",
+                        "description": "Sensor fires when any source clears its threshold.",
+                        "items": {
+                          "title": "Source",
+                          "oneOf": [
+                            {
+                              "title": "Category",
+                              "type": "string",
+                              "enum": ["animals", "packages", "people", "vehicles"]
+                            },
+                            {
+                              "title": "Category with threshold",
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "title": "Category",
+                                  "type": "string",
+                                  "required": true,
+                                  "enum": ["animals", "packages", "people", "vehicles"]
+                                },
+                                "threshold": {
+                                  "title": "Confidence threshold",
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1,
+                                  "description": "Minimum detection confidence (0–1). Defaults to 0.5."
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                ]
               }
             }
           }

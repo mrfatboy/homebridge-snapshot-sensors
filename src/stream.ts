@@ -1,7 +1,8 @@
 import type { Logger } from 'homebridge';
 import { FfmpegPump } from './ffmpeg.js';
-import { detectCategories } from './detector.js';
-import type { StreamConfig, Category, Detection } from './types.js';
+import { scoreCategories } from './detector.js';
+import type { CategoryScores } from './detector.js';
+import type { SensorSpec, Detection } from './types.js';
 import { SAMPLE_MS, COOLDOWN_MS, AUTO_OFF_MS } from './settings.js';
 
 export type SensorStateCallback = (sensorIndex: number, active: boolean) => void;
@@ -16,14 +17,15 @@ export class StreamWorker {
   private loopDone: Promise<void> = Promise.resolve();
 
   constructor(
-    private readonly config: StreamConfig,
+    url: string,
+    private readonly sensors: SensorSpec[],
     private readonly onSensorState: SensorStateCallback,
     private readonly infer: InferFn,
     private readonly log: Logger,
   ) {
-    this.pump = new FfmpegPump(config.url, log);
-    this.lastTrigger = config.sensors.map(() => 0);
-    this.autoOffTimers = config.sensors.map(() => null);
+    this.pump = new FfmpegPump(url, log);
+    this.lastTrigger = sensors.map(() => 0);
+    this.autoOffTimers = sensors.map(() => null);
   }
 
   start(): void {
@@ -57,8 +59,8 @@ export class StreamWorker {
       const t0 = Date.now();
       try {
         const detections = await this.infer(frame);
-        const categories = detectCategories(detections);
-        this.updateSensors(categories);
+        const scores = scoreCategories(detections);
+        this.updateSensors(scores);
       } catch (e) {
         this.log.error('Detection error:', String(e));
       }
@@ -78,12 +80,14 @@ export class StreamWorker {
     });
   }
 
-  private updateSensors(detected: Set<Category>): void {
+  private updateSensors(scores: CategoryScores): void {
     // Guard: stop() may have fired while inference was in-flight.
     if (!this.running) return;
 
-    this.config.sensors.forEach((group, i) => {
-      if (!group.some(cat => detected.has(cat))) return;
+    this.sensors.forEach((sensor, i) => {
+      // Sensor fires when ANY source clears its own threshold.
+      const triggered = sensor.sources.some(s => (scores.get(s.category) ?? 0) >= s.threshold);
+      if (!triggered) return;
 
       const now = Date.now();
       if (now - this.lastTrigger[i] < COOLDOWN_MS) return;
