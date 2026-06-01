@@ -1,6 +1,21 @@
 {
     "tasks": [
         {
+            "command": "npm run test",
+            "group": {
+                "isDefault": true,
+                "kind": "test"
+            },
+            "label": "🧪 Test",
+            "presentation": {
+                "clear": true,
+                "echo": false,
+                "panel": "dedicated",
+                "showReuseMessage": false
+            },
+            "type": "shell"
+        },
+        {
             "command": "npm run build && bin/docker-install",
             "group": {
                 "isDefault": true,

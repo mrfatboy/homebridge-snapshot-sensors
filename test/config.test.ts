@@ -23,7 +23,7 @@ describe('isCategory()', () => {
 
 describe('sensor name with stream prefix', () => {
   it('prepends the stream name to the sensor label', () => {
-    expect(`Garden ${sensorName(['animals'])}`).toBe('Garden Animals');
+    expect(`Garden ${sensorName(['animals'])}`).toBe('Garden Animals Sensor');
     expect(`Front Door ${sensorName(['people', 'vehicles'])}`).toBe('Front Door People & Vehicles Sensor');
   });
 
@@ -37,10 +37,10 @@ describe('sensor name with stream prefix', () => {
 
 describe('sensorName()', () => {
   it('returns the display name for a single category', () => {
-    expect(sensorName(['animals'])).toBe('Animals');
-    expect(sensorName(['people'])).toBe('People');
-    expect(sensorName(['vehicles'])).toBe('Vehicles');
-    expect(sensorName(['packages'])).toBe('Packages');
+    expect(sensorName(['animals'])).toBe('Animals Sensor');
+    expect(sensorName(['people'])).toBe('People Sensor');
+    expect(sensorName(['vehicles'])).toBe('Vehicles Sensor');
+    expect(sensorName(['packages'])).toBe('Packages Sensor');
   });
 
   it('sorts alphabetically regardless of input order', () => {

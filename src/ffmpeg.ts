@@ -12,11 +12,26 @@ if (!_ffmpegPath) throw new Error('ffmpeg-static did not resolve a binary for th
 const ffmpegBin: string = _ffmpegPath;
 
 const BYTES_PER_FRAME = FRAME_WIDTH * FRAME_HEIGHT * 3;
-const MAX_BUFFER_BYTES = BYTES_PER_FRAME * 3;
 
 export interface PumpLog {
   info(msg: string): void;
   warn(msg: string): void;
+}
+
+// Pulls the LATEST complete frame out of the rolling stdout buffer. ffmpeg can
+// emit faster than inference consumes, so any older complete frames are dropped
+// here — we never queue more than one frame. Returns a standalone copy of the
+// newest frame (the detector mutates it in place during IR normalization, so it
+// must not alias the pump's buffer) plus the trailing partial bytes to carry on.
+export function takeLatestFrame(
+  buf: Buffer,
+  frameBytes: number,
+): { latest: Buffer | null; rest: Buffer } {
+  const whole = Math.floor(buf.length / frameBytes);
+  if (whole === 0) return { latest: null, rest: buf };
+  const lastStart = (whole - 1) * frameBytes;
+  const latest = Buffer.from(buf.subarray(lastStart, lastStart + frameBytes));
+  return { latest, rest: Buffer.from(buf.subarray(whole * frameBytes)) };
 }
 
 const FFMPEG_ARGS = (url: string): string[] => {
@@ -82,21 +97,21 @@ export class FfmpegPump {
     child.stderr!.setEncoding('utf8');
     child.stderr!.on('data', (chunk: string) => { stderrTail = (stderrTail + chunk).slice(-1024); });
 
-    let buf = Buffer.alloc(0);
+    let buf: Buffer = Buffer.alloc(0);
     child.stdout!.on('data', (chunk: Buffer) => {
       if (child !== this.ff) return;
       this.restarting = null;
       this.latestFrameDate = Date.now();   // any bytes = ffmpeg alive
       buf = Buffer.concat([buf, chunk]);
-      while (buf.length >= BYTES_PER_FRAME) {
-        this.latestFrame = buf.subarray(0, BYTES_PER_FRAME);
-        buf = buf.subarray(BYTES_PER_FRAME);
+      const { latest, rest } = takeLatestFrame(buf, BYTES_PER_FRAME);
+      buf = rest;
+      if (latest) {
+        this.latestFrame = latest;   // overwrite: only the newest frame is kept
         if (!this.gotFrame) {
           this.gotFrame = true;
           this.log.info(`Receiving frames from ${this.url}`);
         }
       }
-      if (buf.length > MAX_BUFFER_BYTES) buf = buf.subarray(buf.length - BYTES_PER_FRAME);
     });
 
     child.on('error', err => {
