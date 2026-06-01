@@ -1,12 +1,15 @@
 export type Category = 'animals' | 'packages' | 'people' | 'vehicles';
 
-// ── Config input shapes (what users write; values are untrusted JSON) ──────────
-// A sensor can be written three ways:
-//   "animals"                                  one category
-//   ["animals", "people"]                      fires on any listed category
-//   { name, source: [{type, threshold?}, …] }  explicit name + per-source threshold
-export type RawSource = string | { type: string; threshold?: number };
-export type RawSensor = string | string[] | { name?: string; source?: RawSource[] };
+// ── Config input shape (exactly what the GUI form emits; the only accepted form) ─
+// A sensor fires when ANY selected category is detected at or above `threshold`.
+//   { categories: [...], name?, threshold? }
+// Values are untrusted JSON, so every field is optional/loose here and validated
+// in resolveSensors.
+export interface RawSensor {
+  name?: string;
+  categories?: string[];
+  threshold?: number;
+}
 
 export interface StreamConfig {
   name: string;
@@ -14,17 +17,12 @@ export interface StreamConfig {
   sensors: RawSensor[];
 }
 
-// ── Resolved shapes (internal; produced by resolveSensors) ─────────────────────
-// One category to watch for, with the confidence it must clear.
-export interface SourceSpec {
-  category: Category;
-  threshold: number;
-}
-
-// One HomeKit motion sensor. Fires when ANY of its sources clears its threshold.
+// ── Resolved shape (internal; produced by resolveSensors) ──────────────────────
+// One HomeKit motion sensor: fires when ANY category clears the threshold.
 export interface SensorSpec {
   name: string;
-  sources: SourceSpec[];
+  categories: Category[];
+  threshold: number;
 }
 
 export interface Detection {

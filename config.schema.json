@@ -1,7 +1,9 @@
 {
   "pluginAlias": "StreamSensors",
   "pluginType": "platform",
-  "singular": false,
+  "singular": true,
+  "headerDisplay": "Expose camera streams as HomeKit motion sensors using on-device object detection. Add one **Stream** per camera, then add **Sensors** to it.",
+  "footerDisplay": "### How sensors work\n\nEach **Sensor** becomes one HomeKit motion sensor that triggers when **any** of its selected categories is detected above the threshold.\n\n- **Categories** — `animals`, `packages`, `people`, `vehicles`. Select one or more; the sensor fires on any of them.\n- **Name** — optional. Leave blank to auto-name it (prefixed with the stream name, e.g. *Garden Animals & People Sensor*). A name you enter is used verbatim and must be unique across all streams.\n- **Threshold** — optional confidence cutoff from 0–1 (default `0.5`). Lower = more sensitive, more false positives.",
   "schema": {
     "type": "object",
     "properties": {
@@ -16,89 +18,88 @@
               "title": "Stream Name",
               "type": "string",
               "required": true,
-              "description": "Used as a prefix for every sensor, e.g. \"Garden\" → \"Garden Animals\""
+              "description": "Used as a prefix for auto-named sensors, e.g. \"Garden\" → \"Garden Animals Sensor\""
             },
             "url": {
               "title": "Stream URL",
               "type": "string",
               "required": true,
               "format": "uri",
-              "description": "RTSP stream URL, e.g. rtsp://camera-host:8554/ch2"
+              "description": "Video stream URL, e.g. rtsp://username:password@camera-host:8554/ch2"
             },
             "sensors": {
               "title": "Sensors",
               "type": "array",
-              "description": "Each entry becomes one HomeKit motion sensor, triggering when any of its categories are detected. Write a sensor as a single category (\"animals\"), a list of categories ([\"animals\", \"people\"]), or an object with an explicit name and per-category thresholds.",
               "items": {
                 "title": "Sensor",
-                "oneOf": [
-                  {
-                    "title": "Single category",
-                    "type": "string",
-                    "enum": ["animals", "packages", "people", "vehicles"]
-                  },
-                  {
-                    "title": "Category list",
+                "type": "object",
+                "properties": {
+                  "categories": {
+                    "title": "Categories",
                     "type": "array",
                     "uniqueItems": true,
                     "items": {
-                      "title": "Category",
                       "type": "string",
                       "enum": ["animals", "packages", "people", "vehicles"]
                     }
                   },
-                  {
-                    "title": "Named sensor",
-                    "type": "object",
-                    "properties": {
-                      "name": {
-                        "title": "Sensor Name",
-                        "type": "string",
-                        "required": true,
-                        "description": "Used verbatim (no stream prefix). Must be unique across all streams."
-                      },
-                      "source": {
-                        "title": "Sources",
-                        "type": "array",
-                        "description": "Sensor fires when any source clears its threshold.",
-                        "items": {
-                          "title": "Source",
-                          "oneOf": [
-                            {
-                              "title": "Category",
-                              "type": "string",
-                              "enum": ["animals", "packages", "people", "vehicles"]
-                            },
-                            {
-                              "title": "Category with threshold",
-                              "type": "object",
-                              "properties": {
-                                "type": {
-                                  "title": "Category",
-                                  "type": "string",
-                                  "required": true,
-                                  "enum": ["animals", "packages", "people", "vehicles"]
-                                },
-                                "threshold": {
-                                  "title": "Confidence threshold",
-                                  "type": "number",
-                                  "minimum": 0,
-                                  "maximum": 1,
-                                  "description": "Minimum detection confidence (0–1). Defaults to 0.5."
-                                }
-                              }
-                            }
-                          ]
-                        }
-                      }
-                    }
+                  "name": {
+                    "title": "Name (optional)",
+                    "type": "string",
+                    "description": "Leave blank to auto-name. If set, used verbatim and must be unique."
+                  },
+                  "threshold": {
+                    "title": "Threshold (optional)",
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "placeholder": 0.5,
+                    "description": "Minimum detection confidence (0–1). Defaults to 0.5."
                   }
-                ]
+                }
               }
             }
           }
         }
       }
     }
-  }
+  },
+  "layout": [
+    {
+      "key": "streams",
+      "type": "array",
+      "title": "Streams",
+      "buttonText": "Add Camera Stream",
+      "expandable": true,
+      "expanded": true,
+      "items": [
+        { "key": "streams[].name", "title": "Stream Name", "placeholder": "Garden" },
+        { "key": "streams[].url", "title": "Stream URL", "placeholder": "rtsp://user:pass@192.168.1.50:8554/ch2" },
+        {
+          "key": "streams[].sensors",
+          "type": "array",
+          "title": "Sensors",
+          "description": "Add at least one sensor. Each becomes a HomeKit motion sensor that triggers when its selected categories are detected.",
+          "buttonText": "Add Sensor",
+          "expandable": true,
+          "expanded": true,
+          "items": [
+            {
+              "key": "streams[].sensors[].categories",
+              "title": "Categories",
+              "type": "checkboxes",
+              "titleMap": [
+                { "value": "animals", "name": "Animals" },
+                { "value": "packages", "name": "Packages" },
+                { "value": "people", "name": "People" },
+                { "value": "vehicles", "name": "Vehicles" }
+              ]
+            },
+            { "key": "streams[].sensors[].name", "placeholder": "(auto-named)" },
+            { "key": "streams[].sensors[].threshold", "placeholder": "0.5" }
+          ]
+        }
+      ]
+    }
+  ]
 }

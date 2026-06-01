@@ -16,8 +16,8 @@ vi.mock('../src/ffmpeg.js', () => ({
 
 const URL = 'rtsp://test/stream';
 const sensors: SensorSpec[] = [
-  { name: 'Test Animals Sensor', sources: [{ category: 'animals', threshold: 0.5 }] },
-  { name: 'Test People Sensor', sources: [{ category: 'people', threshold: 0.5 }] },
+  { name: 'Test Animals Sensor', categories: ['animals'], threshold: 0.5 },
+  { name: 'Test People Sensor', categories: ['people'], threshold: 0.5 },
 ];
 
 const fakeLog = {
@@ -107,7 +107,7 @@ describe('per-source thresholds', () => {
 
   it('fires a low-threshold sensor that the default threshold would miss', async () => {
     const lowThreshold: SensorSpec[] = [
-      { name: 'Sensitive Animals', sources: [{ category: 'animals', threshold: 0.25 }] },
+      { name: 'Sensitive Animals', categories: ['animals'], threshold: 0.25 },
     ];
     const fired: Array<[number, boolean]> = [];
     const worker = new StreamWorker(URL, lowThreshold, (i, a) => fired.push([i, a]),

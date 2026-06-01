@@ -1,4 +1,4 @@
-import type { Category, RawSensor, RawSource, SensorSpec, SourceSpec } from './types.js';
+import type { Category, RawSensor, SensorSpec } from './types.js';
 import { THRESHOLD } from './settings.js';
 
 // Display labels are the category keys with the first letter capitalized.
@@ -25,30 +25,13 @@ export function isCategory(s: string): s is Category {
   return s in CATEGORY_CLASS_IDS;
 }
 
-// Parse one source (a bare category string, or {type, threshold}) into a
-// SourceSpec. Returns null and warns if the category is unknown; clamps an
-// out-of-range threshold back to the global default.
-function resolveSource(raw: RawSource, warn: (msg: string) => void): SourceSpec | null {
-  const type = typeof raw === 'string' ? raw : raw.type;
-  let threshold = typeof raw === 'string' ? THRESHOLD : raw.threshold ?? THRESHOLD;
-
-  if (!isCategory(type)) {
-    warn(`Unknown category "${type}" — valid values: ${VALID_CATEGORIES}`);
-    return null;
-  }
-  if (typeof threshold !== 'number' || threshold < 0 || threshold > 1) {
-    warn(`Threshold "${threshold}" for "${type}" is out of range [0, 1]; using ${THRESHOLD}`);
-    threshold = THRESHOLD;
-  }
-  return { category: type, threshold };
-}
-
-// Normalize every supported sensor shape into a SensorSpec.
-//   "animals"                                  → auto-named, stream-prefixed
-//   ["animals", "people"]                      → auto-named, stream-prefixed
-//   { name, source: [{type, threshold?}, …] }  → explicit name used verbatim
-// Invalid entries are warned about and dropped; name collisions are handled by
-// the caller, which has the full cross-stream view.
+// Normalize one raw sensor — { categories, name?, threshold? } — into a
+// SensorSpec. The sensor fires when ANY listed category is detected at or above
+// `threshold`. Unknown categories are warned about and dropped; a sensor left
+// with no valid category is skipped. An out-of-range threshold falls back to the
+// default. Name is optional: blank → auto-named with the stream prefix; an
+// explicit name is used verbatim. Name collisions are handled by the caller,
+// which has the full cross-stream view.
 export function resolveSensors(
   streamName: string,
   sensors: RawSensor[],
@@ -57,36 +40,33 @@ export function resolveSensors(
   const resolved: SensorSpec[] = [];
 
   for (const raw of sensors) {
-    if (typeof raw === 'string' || Array.isArray(raw)) {
-      const list = Array.isArray(raw) ? raw : [raw];
-      const sources: SourceSpec[] = [];
-      for (const c of list) {
-        const s = resolveSource(c, warn);
-        if (s) sources.push(s);
+    const categories: Category[] = [];
+    for (const c of raw?.categories ?? []) {
+      if (isCategory(c)) {
+        if (!categories.includes(c)) categories.push(c);
+      } else {
+        warn(`Unknown category "${c}" — valid values: ${VALID_CATEGORIES}`);
       }
-      if (sources.length === 0) {
-        warn(`Sensor ${JSON.stringify(raw)} has no valid categories, skipping`);
-        continue;
-      }
-      const label = sensorName(sources.map(s => s.category));
-      resolved.push({ name: streamName ? `${streamName} ${label}` : label, sources });
-    } else {
-      const name = typeof raw?.name === 'string' ? raw.name.trim() : '';
-      if (!name) {
-        warn('A sensor object is missing a required "name", skipping');
-        continue;
-      }
-      const sources: SourceSpec[] = [];
-      for (const rs of raw.source ?? []) {
-        const s = resolveSource(rs, warn);
-        if (s) sources.push(s);
-      }
-      if (sources.length === 0) {
-        warn(`Sensor "${name}" has no valid sources, skipping`);
-        continue;
-      }
-      resolved.push({ name, sources });
     }
+
+    if (categories.length === 0) {
+      warn(`Sensor ${raw?.name ? `"${raw.name}"` : JSON.stringify(raw)} has no valid categories, skipping`);
+      continue;
+    }
+
+    let threshold = raw?.threshold ?? THRESHOLD;
+    if (typeof threshold !== 'number' || threshold < 0 || threshold > 1) {
+      warn(`Threshold "${threshold}" is out of range [0, 1]; using ${THRESHOLD}`);
+      threshold = THRESHOLD;
+    }
+
+    // Optional sensor name: blank → auto-named with the stream prefix; an
+    // explicit name is used verbatim. (streamName is guaranteed non-empty: the
+    // platform skips streams without a name before calling this.)
+    const name = typeof raw?.name === 'string' ? raw.name.trim() : '';
+    const label = name || `${streamName} ${sensorName(categories)}`;
+
+    resolved.push({ name: label, categories, threshold });
   }
 
   return resolved;

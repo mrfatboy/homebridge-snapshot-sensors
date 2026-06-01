@@ -60,11 +60,13 @@ export class StreamSensorsPlatform implements DynamicPlatformPlugin {
     const claimedNames = new Set<string>();
 
     for (const stream of streams) {
-      if (!stream.name) {
-        this.log.warn(`Stream ${stream.url} is missing a "name" — add one to your config`);
+      const streamName = typeof stream.name === 'string' ? stream.name.trim() : '';
+      if (!streamName) {
+        this.log.error(`Stream ${stream.url ?? '(no url)'} is missing a required "name" — skipping this stream`);
+        continue;
       }
 
-      const resolved = resolveSensors(stream.name, stream.sensors ?? [], msg => this.log.warn(msg));
+      const resolved = resolveSensors(streamName, stream.sensors ?? [], msg => this.log.warn(msg));
 
       // Drop sensors whose final name collides with one already claimed.
       const sensors: SensorSpec[] = [];

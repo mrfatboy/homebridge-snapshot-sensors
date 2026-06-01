@@ -64,67 +64,59 @@ describe('sensorName()', () => {
 describe('resolveSensors()', () => {
   const THRESHOLD = 0.5;
 
-  it('resolves a bare string into a stream-prefixed, default-threshold sensor', () => {
-    const [s, ...rest] = resolveSensors('Garden', ['animals'], () => {});
+  it('one category, no name → auto-named with the stream prefix, default threshold', () => {
+    const [s, ...rest] = resolveSensors('Garden', [{ categories: ['animals'] }], () => {});
     expect(rest).toHaveLength(0);
-    expect(s.name).toBe('Garden Animals Sensor');
-    expect(s.sources).toEqual([{ category: 'animals', threshold: THRESHOLD }]);
+    expect(s).toEqual({ name: 'Garden Animals Sensor', categories: ['animals'], threshold: THRESHOLD });
   });
 
-  it('resolves a category array into one OR-sensor with all sources', () => {
-    const [s] = resolveSensors('Garden', [['animals', 'people']], () => {});
-    expect(s.name).toBe('Garden Animals & People Sensor');
-    expect(s.sources).toEqual([
-      { category: 'animals', threshold: THRESHOLD },
-      { category: 'people', threshold: THRESHOLD },
-    ]);
+  it('multiple categories → one OR-sensor, auto-named', () => {
+    const [s] = resolveSensors('Garden', [{ categories: ['animals', 'people'] }], () => {});
+    expect(s).toEqual({
+      name: 'Garden Animals & People Sensor',
+      categories: ['animals', 'people'],
+      threshold: THRESHOLD,
+    });
   });
 
-  it('resolves the object form: verbatim name (no prefix) + per-source threshold', () => {
-    const [s] = resolveSensors('Garden', [
-      { name: 'Animals & People Quirky Sensor', source: [{ type: 'animals', threshold: 0.25 }, 'people'] },
-    ], () => {});
-    expect(s.name).toBe('Animals & People Quirky Sensor'); // NOT prefixed
-    expect(s.sources).toEqual([
-      { category: 'animals', threshold: 0.25 },
-      { category: 'people', threshold: THRESHOLD },
-    ]);
+  it('one threshold applies to the whole sensor', () => {
+    const [s] = resolveSensors('Garden', [{ categories: ['animals', 'vehicles'], threshold: 0.3 }], () => {});
+    expect(s.threshold).toBe(0.3);
+    expect(s.categories).toEqual(['animals', 'vehicles']);
   });
 
-  it('handles all three forms together', () => {
-    const out = resolveSensors('Garden', [
-      'animals',
-      ['animals', 'people'],
-      { name: 'Quirky', source: [{ type: 'animals', threshold: 0.25 }] },
-    ], () => {});
-    expect(out.map(s => s.name)).toEqual([
-      'Garden Animals Sensor',
-      'Garden Animals & People Sensor',
-      'Quirky',
-    ]);
+  it('explicit name is used verbatim (no stream prefix)', () => {
+    const [s] = resolveSensors('Garden', [{ name: 'Front Door', categories: ['people'] }], () => {});
+    expect(s).toEqual({ name: 'Front Door', categories: ['people'], threshold: THRESHOLD });
   });
 
-  it('warns and drops unknown categories; skips a sensor left empty', () => {
+  it('warns and drops unknown categories; skips a sensor left with none', () => {
     const warn = vi.fn();
-    const out = resolveSensors('Garden', [['animals', 'banana'], ['banana']], warn);
+    const out = resolveSensors('Garden', [
+      { categories: ['animals', 'banana'] },
+      { categories: ['banana'] },
+    ], warn);
     expect(out).toHaveLength(1);
-    expect(out[0].sources).toEqual([{ category: 'animals', threshold: THRESHOLD }]);
+    expect(out[0].categories).toEqual(['animals']);
     expect(warn).toHaveBeenCalled();
   });
 
-  it('warns and drops an object sensor missing its name', () => {
+  it('de-duplicates repeated categories', () => {
+    const [s] = resolveSensors('Garden', [{ categories: ['animals', 'animals'] }], () => {});
+    expect(s.categories).toEqual(['animals']);
+  });
+
+  it('a sensor with no categories is dropped with a warning', () => {
     const warn = vi.fn();
-    const out = resolveSensors('Garden', [{ source: ['animals'] } as never], warn);
+    const out = resolveSensors('Garden', [{ name: 'Empty' }], warn);
     expect(out).toHaveLength(0);
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('name'));
+    expect(warn).toHaveBeenCalled();
   });
 
   it('clamps an out-of-range threshold back to the default', () => {
     const warn = vi.fn();
-    const [s] = resolveSensors('Garden', [
-      { name: 'Bad', source: [{ type: 'animals', threshold: 5 }] },
-    ], warn);
-    expect(s.sources[0].threshold).toBe(THRESHOLD);
+    const [s] = resolveSensors('Garden', [{ categories: ['animals'], threshold: 5 }], warn);
+    expect(s.threshold).toBe(THRESHOLD);
     expect(warn).toHaveBeenCalled();
   });
 });

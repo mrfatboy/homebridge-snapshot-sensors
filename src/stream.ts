@@ -85,8 +85,8 @@ export class StreamWorker {
     if (!this.running) return;
 
     this.sensors.forEach((sensor, i) => {
-      // Sensor fires when ANY source clears its own threshold.
-      const triggered = sensor.sources.some(s => (scores.get(s.category) ?? 0) >= s.threshold);
+      // Sensor fires when ANY of its categories clears the threshold.
+      const triggered = sensor.categories.some(c => (scores.get(c) ?? 0) >= sensor.threshold);
       if (!triggered) return;
 
       const now = Date.now();
