@@ -1,12 +1,16 @@
+export type Category = 'animal' | 'package' | 'person' | 'vehicle';
+
 export interface StreamConfig {
-  id: string;
   name: string;
   url: string;
-  pollInterval?: number;
+  sensors: Category[][];
 }
 
-export interface StreamStatus {
-  online: boolean;
-  bitrate?: number;
-  viewers?: number;
+export interface Detection {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  score: number;
+  classId: number;
 }

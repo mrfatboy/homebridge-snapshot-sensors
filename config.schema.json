@@ -5,12 +5,6 @@
   "schema": {
     "type": "object",
     "properties": {
-      "name": {
-        "title": "Name",
-        "type": "string",
-        "default": "Stream Sensors",
-        "required": true
-      },
       "streams": {
         "title": "Streams",
         "type": "array",
@@ -18,28 +12,33 @@
           "title": "Stream",
           "type": "object",
           "properties": {
-            "id": {
-              "title": "ID",
+            "name": {
+              "title": "Stream Name",
               "type": "string",
               "required": true,
-              "description": "Unique identifier for this stream."
-            },
-            "name": {
-              "title": "Name",
-              "type": "string",
-              "required": true
+              "description": "Used as a prefix for every sensor, e.g. \"Garden\" → \"Garden Animals\""
             },
             "url": {
               "title": "Stream URL",
               "type": "string",
               "required": true,
-              "format": "uri"
+              "format": "uri",
+              "description": "RTSP stream URL, e.g. rtsp://camera-host:8554/ch2"
             },
-            "pollInterval": {
-              "title": "Poll Interval (seconds)",
-              "type": "integer",
-              "default": 30,
-              "minimum": 5
+            "sensors": {
+              "title": "Sensors",
+              "type": "array",
+              "description": "Each entry becomes one HomeKit motion sensor. It triggers when any of its listed categories are detected.",
+              "items": {
+                "title": "Sensor",
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "title": "Category",
+                  "type": "string",
+                  "enum": ["animal", "package", "person", "vehicle"]
+                }
+              }
             }
           }
         }

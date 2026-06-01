@@ -1,0 +1,62 @@
+import { IR_GAMMA, IR_CLIP_LOW_PCT, IR_CLIP_HIGH_PCT } from './settings.js';
+
+// Near-gray frames with very low chroma variance → likely IR/night vision.
+function isIRFrame(buf: Buffer): boolean {
+  const stride = 9 * 50;
+  let n = 0, varSum = 0, lumSum = 0;
+  for (let i = 0; i < buf.length - 2; i += stride) {
+    const r = buf[i], g = buf[i + 1], b = buf[i + 2];
+    const mean = (r + g + b) / 3;
+    varSum += ((r - mean) ** 2 + (g - mean) ** 2 + (b - mean) ** 2) / 3;
+    lumSum += mean;
+    n++;
+  }
+  if (n === 0) return false;
+  const chromaVar = varSum / n;
+  const avgLum = lumSum / n;
+  return chromaVar < 30 && (avgLum < 90 || avgLum > 200);
+}
+
+// Contrast-stretch + gamma LUT derived from the frame's own luma histogram.
+function buildIRLUT(buf: Buffer): Uint8Array {
+  const g = Math.max(0.2, Math.min(3.5, IR_GAMMA));
+  const hist = new Uint32Array(256);
+  let total = 0;
+  const stride = 3 * 37;
+  for (let i = 0; i + 2 < buf.length; i += stride) {
+    const y = ((buf[i] + buf[i + 1] + buf[i + 2]) / 3) | 0;
+    hist[y]++;
+    total++;
+  }
+
+  let inMin = 0, inMax = 255;
+  if (total > 0) {
+    const loCount = total * IR_CLIP_LOW_PCT;
+    const hiCount = total * IR_CLIP_HIGH_PCT;
+    let acc = 0;
+    for (let v = 0; v < 256; v++) { acc += hist[v]; if (acc >= loCount) { inMin = v; break; } }
+    acc = 0;
+    for (let v = 0; v < 256; v++) { acc += hist[v]; if (acc >= hiCount) { inMax = v; break; } }
+  }
+  const span = Math.max(1, inMax - inMin);
+
+  const lut = new Uint8Array(256);
+  for (let x = 0; x < 256; x++) {
+    const y = Math.max(0, Math.min(1, (x - inMin) / span));
+    lut[x] = Math.round(Math.pow(y, g) * 255);
+  }
+  return lut;
+}
+
+function applyLUT(buf: Buffer, lut: Uint8Array): void {
+  for (let i = 0; i < buf.length; i += 3) {
+    const v = lut[((buf[i] + buf[i + 1] + buf[i + 2]) / 3) | 0];
+    buf[i] = v; buf[i + 1] = v; buf[i + 2] = v;
+  }
+}
+
+// Enhance IR frames in-place. Color (daytime) frames are left untouched.
+export function normalizeFrame(buf: Buffer): void {
+  if (!isIRFrame(buf)) return;
+  applyLUT(buf, buildIRLUT(buf));
+}

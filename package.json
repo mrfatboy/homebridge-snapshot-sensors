@@ -5,12 +5,18 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist/",
+    "model/"
+  ],
   "scripts": {
     "build": "tsc",
     "watch": "tsc --watch",
     "prepublishOnly": "npm run build",
     "lint": "eslint src/",
-    "lint:fix": "eslint src/ --fix"
+    "lint:fix": "eslint src/ --fix",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [
     "homebridge-plugin",
@@ -30,9 +36,14 @@
     "@typescript-eslint/parser": "^8.0.0",
     "eslint": "^9.0.0",
     "homebridge": "^2.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^4.1.7"
   },
   "peerDependencies": {
     "homebridge": "^2.0.0"
+  },
+  "dependencies": {
+    "ffmpeg-static": "^5.3.0",
+    "onnxruntime-node": "^1.26.0"
   }
 }
