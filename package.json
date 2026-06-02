@@ -23,13 +23,30 @@
     "homebridge-plugin",
     "homebridge",
     "homekit",
-    "stream",
-    "sensors"
+    "camera",
+    "rtsp",
+    "object-detection",
+    "yolo",
+    "onnx",
+    "motion-sensor",
+    "person-detection",
+    "package-detection",
+    "vehicle-detection",
+    "animal-detection",
+    "smart-home"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nikitakatchik/homebridge-stream-sensors.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nikitakatchik/homebridge-stream-sensors/issues"
+  },
+  "homepage": "https://github.com/nikitakatchik/homebridge-stream-sensors#readme",
   "license": "AGPL-3.0-only",
   "engines": {
     "node": ">=18.0.0",
-    "homebridge": ">=2.0.0"
+    "homebridge": "^1.8.0 || ^2.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
@@ -41,7 +58,7 @@
     "vitest": "^4.1.7"
   },
   "peerDependencies": {
-    "homebridge": "^2.0.0"
+    "homebridge": "^1.8.0 || ^2.0.0"
   },
   "dependencies": {
     "ffmpeg-static": "^5.3.0",
