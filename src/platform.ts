@@ -79,6 +79,13 @@ export class StreamSensorsPlatform implements DynamicPlatformPlugin {
         sensors.push(sensor);
       }
 
+      // No sensors → nothing to detect. Don't spawn ffmpeg or run inference for
+      // this stream; its stale accessories (if any) are cleaned up below.
+      if (sensors.length === 0) {
+        this.log.warn(`Stream "${streamName}" has no sensors — not starting it`);
+        continue;
+      }
+
       const sensorAccessories: StreamSensorAccessory[] = sensors.map(sensor => {
         const uuid = this.api.hap.uuid.generate(sensor.name);
         seenUUIDs.add(uuid);

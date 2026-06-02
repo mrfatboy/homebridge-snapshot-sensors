@@ -16,6 +16,7 @@ const MODEL_PATH = join(
 // during its own initialisation and suppresses GPU-detection warnings.
 let ort: typeof OrtType | null = null;
 let session: OrtType.InferenceSession | null = null;
+let loading: Promise<void> | null = null;
 
 async function getOrt(): Promise<typeof OrtType> {
   if (ort) return ort;
@@ -26,12 +27,18 @@ async function getOrt(): Promise<typeof OrtType> {
 
 export async function loadModel(): Promise<void> {
   if (session) return;
-  const o = await getOrt();
-  session = await o.InferenceSession.create(MODEL_PATH, {
-    executionProviders: ['cpu'],
-    graphOptimizationLevel: 'all',
-    extra: { session: { intra_op_num_threads: '2', inter_op_num_threads: '1' } },
-  });
+  // Coalesce concurrent first-calls so we only ever create one session.
+  if (!loading) {
+    loading = (async () => {
+      const o = await getOrt();
+      session = await o.InferenceSession.create(MODEL_PATH, {
+        executionProviders: ['cpu'],
+        graphOptimizationLevel: 'all',
+        extra: { session: { intra_op_num_threads: '2', inter_op_num_threads: '1' } },
+      });
+    })().finally(() => { loading = null; });
+  }
+  return loading;
 }
 
 export async function closeModel(): Promise<void> {
