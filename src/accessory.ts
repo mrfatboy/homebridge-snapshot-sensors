@@ -29,7 +29,14 @@ export class StreamSensorAccessory {
     // Called every sample with the current level; only notify HomeKit on change.
     if (active === this.active) return;
     this.active = active;
-    this.platform.log.info(`${this.name}: ${active ? 'detected' : 'idle'}`);
+    // Status logging is opt-in (off by default) to keep the log quiet; when
+    // muted the change still goes out at debug level for troubleshooting.
+    const msg = `${this.name}: ${active ? 'detected' : 'idle'}`;
+    if (this.platform.config.logSensorStatus === true) {
+      this.platform.log.info(msg);
+    } else {
+      this.platform.log.debug(msg);
+    }
     this.motionService.updateCharacteristic(this.platform.Characteristic.MotionDetected, active);
   }
 

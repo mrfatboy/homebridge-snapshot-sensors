@@ -31,11 +31,7 @@ npm install -g homebridge-stream-sensors
 
 ### Homebridge UI
 
-Configure everything from the settings form — add a stream, paste your camera URL, and tick the categories you want.
-
-<p align="center">
-  <img src="docs/config-ui.png" alt="Configuring a stream and its sensors in the Homebridge UI" width="640">
-</p>
+Configure everything from the settings form — add a stream, paste your camera URL, tick the categories you want.
 
 ### Manual (config.json)
 

@@ -138,7 +138,7 @@ export class FfmpegPump {
     const pastCooldown = this.restarting === null || Date.now() - this.restarting > FFMPEG_TIMEOUT_RESTART_MS;
     if (stale && pastCooldown) {
       this.restarting = null;
-      this.restart('watchdog timeout (no frames — check the camera URL/credentials and that the stream is reachable)');
+      this.restart('watchdog timeout (no frames — check the stream URL/credentials and that the stream is reachable)');
     }
   }
 

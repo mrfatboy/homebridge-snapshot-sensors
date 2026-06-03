@@ -2,11 +2,17 @@
   "pluginAlias": "StreamSensors",
   "pluginType": "platform",
   "singular": true,
-  "headerDisplay": "Expose camera streams as HomeKit motion sensors using on-device object detection. Add one **Stream** per camera, then add **Sensors** to it.",
+  "headerDisplay": "Expose video streams as HomeKit motion sensors using on-device object detection. Add one **Stream** per source/camera, then add **Sensors** to it.",
   "footerDisplay": "### How sensors work\n\nEach **Sensor** becomes one HomeKit motion sensor that triggers when **any** of its selected categories is detected above the threshold.\n\n- **Categories** — `animals`, `packages`, `people`, `vehicles`. Select one or more; the sensor fires on any of them.\n- **Name** — optional. Leave blank to auto-name it (prefixed with the stream name, e.g. *Garden Animals & People Sensor*). A name you enter is used verbatim and must be unique across all streams.\n- **Threshold** — optional confidence cutoff from 0–1 (default `0.5`). Lower = more sensitive, more false positives.",
   "schema": {
     "type": "object",
     "properties": {
+      "logSensorStatus": {
+        "title": "Log sensor status changes",
+        "type": "boolean",
+        "default": false,
+        "description": "When enabled, each sensor logs to the Homebridge log whenever it switches between detected and idle. Leave unchecked to keep the log quiet (changes are still logged at debug level)."
+      },
       "streams": {
         "title": "Streams",
         "type": "array",
@@ -68,19 +74,19 @@
     {
       "key": "streams",
       "type": "array",
-      "title": "Streams",
-      "buttonText": "Add Camera Stream",
+      "title": "📹 Video Streams",
+      "buttonText": "➕ Add Video Stream",
       "expandable": true,
       "expanded": true,
       "items": [
-        { "key": "streams[].name", "title": "Stream Name", "placeholder": "Garden" },
-        { "key": "streams[].url", "title": "Stream URL", "placeholder": "rtsp://user:pass@192.168.1.50:8554/ch2" },
+        { "key": "streams[].name", "title": "🏷️ Stream Name", "placeholder": "Garden" },
+        { "key": "streams[].url", "title": "🔗 Stream URL", "placeholder": "rtsp://user:pass@192.168.1.50:8554/ch2" },
         {
           "key": "streams[].sensors",
           "type": "array",
-          "title": "Sensors",
+          "title": "📡 Sensors",
           "description": "Add at least one sensor. Each becomes a HomeKit motion sensor that triggers when its selected categories are detected.",
-          "buttonText": "Add Sensor",
+          "buttonText": "➕ Add Sensor",
           "expandable": true,
           "expanded": true,
           "items": [
@@ -89,17 +95,18 @@
               "title": "Categories",
               "type": "checkboxes",
               "titleMap": [
-                { "value": "animals", "name": "Animals" },
-                { "value": "packages", "name": "Packages" },
-                { "value": "people", "name": "People" },
-                { "value": "vehicles", "name": "Vehicles" }
+                { "value": "animals", "name": "🐶 Animals" },
+                { "value": "packages", "name": "📦 Packages" },
+                { "value": "people", "name": "🧍 People" },
+                { "value": "vehicles", "name": "🚗 Vehicles" }
               ]
             },
-            { "key": "streams[].sensors[].name", "placeholder": "(auto-named)" },
-            { "key": "streams[].sensors[].threshold", "placeholder": "0.5" }
+            { "key": "streams[].sensors[].name", "title": "✏️ Name (optional)", "placeholder": "Auto" },
+            { "key": "streams[].sensors[].threshold", "title": "🎚️ Threshold (optional)", "placeholder": "0.5" }
           ]
         }
       ]
-    }
+    },
+    { "key": "logSensorStatus", "title": "📝 Log sensor status changes" }
   ]
 }
