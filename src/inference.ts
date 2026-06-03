@@ -12,8 +12,8 @@ const MODEL_PATH = join(
   'yolo26n.onnx',
 );
 
-// Lazily set before the first dynamic import so the native library reads it
-// during its own initialisation and suppresses GPU-detection warnings.
+// Initialize ONNX Runtime lazily and set its global log level before the
+// first session is created so startup-only GPU probing warnings stay hidden.
 let ort: typeof OrtType | null = null;
 let session: OrtType.InferenceSession | null = null;
 let loading: Promise<void> | null = null;
@@ -41,9 +41,9 @@ async function getOrt(): Promise<typeof OrtType> {
   if (!SUPPORTED_ARCHS[process.platform]?.includes(process.arch)) {
     throw new Error(unsupportedPlatformMessage());
   }
-  process.env['ORT_LOGGING_LEVEL'] ??= '3'; // error-only; suppresses GPU detection noise
   try {
     ort = await import('onnxruntime-node');
+    ort.env.logLevel = 'error';
   } catch (e) {
     // Nominally supported, but the native binding still failed to load (missing
     // or corrupt download, glibc mismatch, etc.) — surface the original error
@@ -62,6 +62,7 @@ export async function loadModel(): Promise<void> {
       session = await o.InferenceSession.create(MODEL_PATH, {
         executionProviders: ['cpu'],
         graphOptimizationLevel: 'all',
+        logSeverityLevel: 3,
         extra: { session: { intra_op_num_threads: '2', inter_op_num_threads: '1' } },
       });
     })().finally(() => { loading = null; });
