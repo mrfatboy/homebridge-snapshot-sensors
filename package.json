@@ -1,6 +1,6 @@
 {
   "name": "homebridge-stream-sensors",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Homebridge plugin that turns camera/video streams into HomeKit motion sensors using on-device object detection (animals, people, vehicles, packages)",
   "type": "module",
   "main": "dist/index.js",
