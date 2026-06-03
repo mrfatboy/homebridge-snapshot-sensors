@@ -2,6 +2,7 @@
 
 **Turn any camera stream into HomeKit motion sensors powered by local YOLO object detection.**
 
+[![CI](https://github.com/nikitakatchik/homebridge-stream-sensors/actions/workflows/ci.yml/badge.svg)](https://github.com/nikitakatchik/homebridge-stream-sensors/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/homebridge-stream-sensors)](https://www.npmjs.com/package/homebridge-stream-sensors)
 [![npm downloads](https://img.shields.io/npm/dt/homebridge-stream-sensors)](https://www.npmjs.com/package/homebridge-stream-sensors)
 [![GitHub stars](https://img.shields.io/github/stars/nikitakatchik/homebridge-stream-sensors?style=flat)](https://github.com/nikitakatchik/homebridge-stream-sensors/stargazers)
@@ -68,7 +69,7 @@ Add a `StreamSensors` platform to your Homebridge config. Each **stream** is one
 ## Requirements
 
 - **Homebridge** v1.8 or newer
-- **Node.js** v18 or newer
+- **Node.js** v20 or newer
 - A **supported platform** (see below)
 - A camera or video stream URL that ffmpeg can open (RTSP, etc.)
 - Enough CPU headroom for inference — each camera stream runs one detection pass per sampling interval
@@ -100,6 +101,7 @@ There is **no build for 32-bit ARM (armv7/armhf)** — including the legacy 32-b
 - **ffmpeg can't decode the stream** — check the URL, credentials, and that the camera is reachable from the Homebridge host (use an IP address if a hostname won't resolve).
 - **Too many false triggers** — raise the sensor's `threshold`.
 - **Detections are missed** — lower the `threshold`, or make sure the subject is large enough in frame.
+- **Homebridge feels sluggish** — detection is CPU-intensive. Try [running this plugin as a child bridge](https://github.com/homebridge/homebridge/wiki/Child-Bridges) to isolate it in its own process, and/or reduce the number of streams.
 
 ## License
 
