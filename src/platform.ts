@@ -40,6 +40,17 @@ export class StreamSensorsPlatform implements DynamicPlatformPlugin {
     });
 
     this.api.on('didFinishLaunching', () => {
+      // Don't load the model or spawn any workers until the plugin is configured.
+      // With no streams, discoverDevices() still runs to unregister any stale
+      // cached accessories (e.g. left over after the user removed every stream),
+      // but it creates no workers — so nothing heavyweight starts.
+      const streams: StreamConfig[] = this.config.streams ?? [];
+      if (streams.length === 0) {
+        this.log.info('No streams configured — nothing to detect.');
+        this.discoverDevices();
+        return;
+      }
+
       loadModel()
         .then(() => this.log.info('YOLO model loaded'))
         .catch(err => { this.log.error('Failed to load YOLO model:', String(err)); throw err; })
