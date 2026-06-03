@@ -69,10 +69,23 @@ Add a `StreamSensors` platform to your Homebridge config. Each **stream** is one
 
 - **Homebridge** v1.8 or newer
 - **Node.js** v18 or newer
+- A **supported platform** (see below)
 - A camera or video stream URL that ffmpeg can open (RTSP, etc.)
 - Enough CPU headroom for inference — each camera stream runs one detection pass per sampling interval
 
 A bundled static **ffmpeg** binary and the **ONNX** runtime are installed automatically; there's no separate setup.
+
+### Supported platforms
+
+The on-device detector uses [`onnxruntime-node`](https://www.npmjs.com/package/onnxruntime-node), which ships prebuilt native binaries only for:
+
+| OS | Architectures |
+| --- | --- |
+| macOS | x64, arm64 |
+| Linux | x64, arm64 |
+| Windows | x64, arm64 |
+
+There is **no build for 32-bit ARM (armv7/armhf)** — including the legacy 32-bit Raspberry Pi OS. On a Raspberry Pi, install the **64-bit (arm64) Raspberry Pi OS**. On an unsupported platform the plugin logs a clear error and stays idle rather than crashing Homebridge.
 
 ## Performance & privacy
 

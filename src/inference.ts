@@ -18,10 +18,38 @@ let ort: typeof OrtType | null = null;
 let session: OrtType.InferenceSession | null = null;
 let loading: Promise<void> | null = null;
 
+// Platforms onnxruntime-node ships a prebuilt native binary for. There is no
+// build for 32-bit ARM (armv7/armhf) — notably the legacy 32-bit Raspberry Pi
+// OS — so the native load there fails with an opaque error. We check up front
+// and, as a backstop, translate any load failure into actionable guidance.
+const SUPPORTED_ARCHS: Record<string, readonly string[]> = {
+  darwin: ['x64', 'arm64'],
+  linux: ['x64', 'arm64'],
+  win32: ['x64', 'arm64'],
+};
+
+function unsupportedPlatformMessage(): string {
+  return (
+    `onnxruntime-node has no prebuilt binary for ${process.platform}/${process.arch}. ` +
+    'Supported: macOS (x64/arm64), Linux (x64/arm64), Windows (x64/arm64). ' +
+    'On a Raspberry Pi, install the 64-bit (arm64) Raspberry Pi OS — the 32-bit (armv7) build is not supported.'
+  );
+}
+
 async function getOrt(): Promise<typeof OrtType> {
   if (ort) return ort;
+  if (!SUPPORTED_ARCHS[process.platform]?.includes(process.arch)) {
+    throw new Error(unsupportedPlatformMessage());
+  }
   process.env['ORT_LOGGING_LEVEL'] ??= '3'; // error-only; suppresses GPU detection noise
-  ort = await import('onnxruntime-node');
+  try {
+    ort = await import('onnxruntime-node');
+  } catch (e) {
+    // Nominally supported, but the native binding still failed to load (missing
+    // or corrupt download, glibc mismatch, etc.) — surface the original error
+    // alongside the platform context so the cause isn't buried.
+    throw new Error(`${unsupportedPlatformMessage()} (failed to load native binding: ${String(e)})`);
+  }
   return ort;
 }
 
