@@ -6,7 +6,14 @@
   "footerDisplay": "### How sensors work\n\nEach **Sensor** becomes one HomeKit motion sensor that triggers when **any** of its selected categories is detected above the threshold.\n\n- **Categories** — `animals`, `packages`, `people`, `vehicles`. Select one or more; the sensor fires on any of them.\n- **Name** — optional. Leave blank to auto-name it (prefixed with the stream name, e.g. *Garden Animals & People Sensor*). A name you enter is used verbatim and must be unique across all streams.\n- **Threshold** — optional confidence cutoff from 0–1 (default `0.5`). Lower = more sensitive, more false positives.",
   "schema": {
     "type": "object",
+    "required": ["name"],
     "properties": {
+      "name": {
+        "title": "Name",
+        "type": "string",
+        "default": "StreamSensors",
+        "description": "Plugin name as displayed in the Homebridge log."
+      },
       "logSensorStatus": {
         "title": "Log sensor status changes",
         "type": "boolean",
@@ -19,17 +26,16 @@
         "items": {
           "title": "Stream",
           "type": "object",
+          "required": ["name", "url"],
           "properties": {
             "name": {
               "title": "Stream Name",
               "type": "string",
-              "required": true,
               "description": "Used as a prefix for auto-named sensors, e.g. \"Garden\" → \"Garden Animals Sensor\""
             },
             "url": {
               "title": "Stream URL",
               "type": "string",
-              "required": true,
               "format": "uri",
               "description": "Video stream URL, e.g. rtsp://username:password@camera-host:8554/ch2"
             },
