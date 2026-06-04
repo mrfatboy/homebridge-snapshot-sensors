@@ -8,18 +8,17 @@
 [![GitHub stars](https://img.shields.io/github/stars/nikitakatchik/homebridge-stream-sensors?style=flat)](https://github.com/nikitakatchik/homebridge-stream-sensors/stargazers)
 [![license](https://img.shields.io/npm/l/homebridge-stream-sensors)](./LICENSE)
 
-Point the plugin at an RTSP (or other ffmpeg-readable) camera URL and it runs object detection on the stream, exposing a HomeKit motion sensor for each category you enable:
+Point the plugin at an RTSP (or other ffmpeg-readable) camera URL and it runs object detection on the stream, exposing a HomeKit motion sensor for each category you enable.
 
-- 🐶 Animals
-- 📦 Packages
-- 🧍 People
-- 🚗 Vehicles
+`🐶 Animals` `📦 Packages`  `🧍 People` `🚗 Vehicles`
 
 ## Installation
 
-### Homebridge UI (recommended)
+### Homebridge UI
 
-Open the **Plugins** tab in the Homebridge UI, search for `homebridge-stream-sensors`, and click **Install**.
+1. Open the **Plugins** tab in the Homebridge UI.
+1. Search for `homebridge-stream-sensors`.
+1. Click **Install**.
 
 ### Command line
 
@@ -31,7 +30,11 @@ npm install -g homebridge-stream-sensors
 
 ### Homebridge UI
 
-Configure everything from the settings form — add a stream, paste your camera URL, tick the categories you want.
+Configure everything from the plugin settings form.
+1. Add a **video stream**.
+2. Paste your **camera/stream URL**.
+3. Tick the **categories** you want.
+4. Click **Save**.
 
 ### Manual (config.json)
 
