@@ -80,12 +80,12 @@
     {
       "key": "streams",
       "type": "array",
-      "title": "📹 Video Streams",
-      "buttonText": "➕ Add Video Stream",
+      "title": "📹 Your video streams",
+      "buttonText": "➕ Add video stream",
       "expandable": true,
       "expanded": true,
       "items": [
-        { "key": "streams[].name", "title": "🏷️ Stream Name", "placeholder": "Garden" },
+        { "key": "streams[].name", "title": "🏷️ Stream name", "placeholder": "Garden" },
         { "key": "streams[].url", "title": "🔗 Stream URL", "placeholder": "rtsp://user:pass@192.168.1.50:8554/ch2" },
         {
           "key": "streams[].sensors",
