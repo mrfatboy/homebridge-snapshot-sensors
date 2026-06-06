@@ -9,6 +9,7 @@ export class StreamSensorAccessory {
     private readonly platform: StreamSensorsPlatform,
     private readonly accessory: PlatformAccessory,
     private readonly name: string,
+    private readonly logStatus: boolean,
   ) {
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
       .setCharacteristic(this.platform.Characteristic.Manufacturer, 'homebridge-stream-sensors')
@@ -29,10 +30,11 @@ export class StreamSensorAccessory {
     // Called every sample with the current level; only notify HomeKit on change.
     if (active === this.active) return;
     this.active = active;
-    // Status logging is opt-in (off by default) to keep the log quiet; when
-    // muted the change still goes out at debug level for troubleshooting.
+    // Status logging is opt-in per sensor (off by default) to keep the log
+    // quiet; when muted the change still goes out at debug level for
+    // troubleshooting.
     const msg = `${this.name}: ${active ? 'detected' : 'idle'}`;
-    if (this.platform.config.logSensorStatus === true) {
+    if (this.logStatus) {
       this.platform.log.info(msg);
     } else {
       this.platform.log.debug(msg);

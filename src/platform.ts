@@ -113,7 +113,7 @@ export class StreamSensorsPlatform implements DynamicPlatformPlugin {
           this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [pa]);
         }
 
-        return new StreamSensorAccessory(this, pa, sensor.name);
+        return new StreamSensorAccessory(this, pa, sensor.name, sensor.logStatus);
       });
 
       const worker = new StreamWorker(

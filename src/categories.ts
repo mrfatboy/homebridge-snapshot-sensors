@@ -66,7 +66,7 @@ export function resolveSensors(
     const name = typeof raw?.name === 'string' ? raw.name.trim() : '';
     const label = name || `${streamName} ${sensorName(categories)}`;
 
-    resolved.push({ name: label, categories, threshold });
+    resolved.push({ name: label, categories, threshold, logStatus: raw?.logStatus === true });
   }
 
   return resolved;

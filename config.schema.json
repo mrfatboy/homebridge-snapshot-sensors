@@ -14,12 +14,6 @@
         "default": "StreamSensors",
         "description": "Plugin name as displayed in the Homebridge log."
       },
-      "logSensorStatus": {
-        "title": "Log sensor status changes",
-        "type": "boolean",
-        "default": false,
-        "description": "When enabled, each sensor logs to the Homebridge log whenever it switches between detected and idle. Leave unchecked to keep the log quiet (changes are still logged at debug level)."
-      },
       "streams": {
         "title": "Streams",
         "type": "array",
@@ -67,6 +61,12 @@
                     "maximum": 1,
                     "placeholder": 0.5,
                     "description": "Minimum detection confidence (0–1). Defaults to 0.5."
+                  },
+                  "logStatus": {
+                    "title": "Log sensor status changes",
+                    "type": "boolean",
+                    "default": false,
+                    "description": "When enabled, this sensor logs to the Homebridge log whenever it switches between detected and idle. Leave unchecked to keep the log quiet (changes are still logged at debug level)."
                   }
                 }
               }
@@ -108,11 +108,11 @@
               ]
             },
             { "key": "streams[].sensors[].name", "title": "✏️ Name (optional)", "placeholder": "Auto" },
-            { "key": "streams[].sensors[].threshold", "title": "🎚️ Threshold (optional)", "placeholder": "0.5" }
+            { "key": "streams[].sensors[].threshold", "title": "🎚️ Threshold (optional)", "placeholder": "0.5" },
+            { "key": "streams[].sensors[].logStatus", "title": "📝 Log sensor status changes" }
           ]
         }
       ]
-    },
-    { "key": "logSensorStatus", "title": "📝 Log sensor status changes" }
+    }
   ]
 }

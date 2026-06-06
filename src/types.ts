@@ -9,6 +9,7 @@ export interface RawSensor {
   name?: string;
   categories?: string[];
   threshold?: number;
+  logStatus?: boolean;
 }
 
 export interface StreamConfig {
@@ -23,6 +24,7 @@ export interface SensorSpec {
   name: string;
   categories: Category[];
   threshold: number;
+  logStatus: boolean;
 }
 
 export interface Detection {
