@@ -7,10 +7,10 @@ const capitalize = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1)
 // COCO class IDs mapped to each HomeKit category.
 // 'packages' is approximate — COCO has no delivery-parcel class.
 export const CATEGORY_CLASS_IDS: Record<Category, ReadonlySet<number>> = {
-  animals:  new Set([14, 15, 16, 17, 18, 19, 20, 21, 22, 23]), // bird, cat, dog, horse, sheep, cow, elephant, bear, zebra, giraffe
-  people:   new Set([0]),
-  vehicles: new Set([1, 2, 3, 5, 6, 7, 8]),                   // bicycle, car, motorcycle, bus, train, truck, boat
-  packages:  new Set([24, 26, 28]),                             // backpack, handbag, suitcase
+  animals: new Set([14, 15, 16, 17, 18, 19, 20, 21, 22, 23]), // bird, cat, dog, horse, sheep, cow, elephant, bear, zebra, giraffe
+  people: new Set([0]),
+  vehicles: new Set([1, 2, 3, 5, 6, 7, 8]), // bicycle, car, motorcycle, bus, train, truck, boat
+  packages: new Set([24, 26, 28]), // backpack, handbag, suitcase
 };
 
 export const VALID_CATEGORIES = Object.keys(CATEGORY_CLASS_IDS).join(', ');
@@ -50,7 +50,9 @@ export function resolveSensors(
     }
 
     if (categories.length === 0) {
-      warn(`Sensor ${raw?.name ? `"${raw.name}"` : JSON.stringify(raw)} has no valid categories, skipping`);
+      warn(
+        `Sensor ${raw?.name ? `"${raw.name}"` : JSON.stringify(raw)} has no valid categories, skipping`,
+      );
       continue;
     }
 
@@ -66,14 +68,22 @@ export function resolveSensors(
     const name = typeof raw?.name === 'string' ? raw.name.trim() : '';
     const label = name || `${streamName} ${sensorName(categories)}`;
 
-    resolved.push({ name: label, categories, threshold, logStatus: raw?.logStatus === true });
+    resolved.push({
+      name: label,
+      categories,
+      threshold,
+      logStatus: raw?.logStatus === true,
+    });
   }
 
   return resolved;
 }
 
 export function categoryOfClass(classId: number): Category | null {
-  for (const [cat, ids] of Object.entries(CATEGORY_CLASS_IDS) as [Category, ReadonlySet<number>][]) {
+  for (const [cat, ids] of Object.entries(CATEGORY_CLASS_IDS) as [
+    Category,
+    ReadonlySet<number>,
+  ][]) {
     if (ids.has(classId)) return cat;
   }
   return null;

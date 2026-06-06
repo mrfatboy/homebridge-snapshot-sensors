@@ -31,7 +31,7 @@ export class StreamWorker {
 
   stop(): void {
     this.running = false;
-    this.wakeUp?.();          // interrupt any in-progress sleep immediately
+    this.wakeUp?.(); // interrupt any in-progress sleep immediately
     this.pump.stop();
   }
 
@@ -67,9 +67,12 @@ export class StreamWorker {
   // or can be cut short by stop() calling this.wakeUp().
   private sleep(ms: number): Promise<void> {
     if (!this.running) return Promise.resolve();
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       const timer = setTimeout(resolve, ms);
-      this.wakeUp = () => { clearTimeout(timer); resolve(); };
+      this.wakeUp = () => {
+        clearTimeout(timer);
+        resolve();
+      };
     });
   }
 
@@ -82,9 +85,8 @@ export class StreamWorker {
     // (every SAMPLE_MS) clears it once the subject leaves. The accessory dedupes
     // unchanged values, so this is a no-op when nothing changed.
     this.sensors.forEach((sensor, i) => {
-      const detected = sensor.categories.some(c => (scores.get(c) ?? 0) >= sensor.threshold);
+      const detected = sensor.categories.some((c) => (scores.get(c) ?? 0) >= sensor.threshold);
       this.onSensorState(i, detected);
     });
   }
 }
-

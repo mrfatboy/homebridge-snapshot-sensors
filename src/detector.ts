@@ -11,7 +11,7 @@ export type CategoryScores = Map<Category, number>;
 export function scoreCategories(detections: Detection[]): CategoryScores {
   const scores: CategoryScores = new Map();
   for (const d of detections) {
-    const area = (d.x2 - d.x1) * (d.y2 - d.y1) / (FRAME_WIDTH * FRAME_HEIGHT);
+    const area = ((d.x2 - d.x1) * (d.y2 - d.y1)) / (FRAME_WIDTH * FRAME_HEIGHT);
     if (area < AREA_MIN_FRAC) continue;
     const cat = categoryOfClass(d.classId);
     if (cat === null) continue;

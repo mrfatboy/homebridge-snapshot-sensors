@@ -11,7 +11,8 @@ export class StreamSensorAccessory {
     private readonly name: string,
     private readonly logStatus: boolean,
   ) {
-    this.accessory.getService(this.platform.Service.AccessoryInformation)!
+    this.accessory
+      .getService(this.platform.Service.AccessoryInformation)!
       .setCharacteristic(this.platform.Characteristic.Manufacturer, 'homebridge-stream-sensors')
       .setCharacteristic(this.platform.Characteristic.Model, 'Stream Sensor')
       .setCharacteristic(this.platform.Characteristic.SerialNumber, accessory.UUID);
@@ -22,7 +23,8 @@ export class StreamSensorAccessory {
 
     this.motionService.setCharacteristic(this.platform.Characteristic.Name, name);
 
-    this.motionService.getCharacteristic(this.platform.Characteristic.MotionDetected)
+    this.motionService
+      .getCharacteristic(this.platform.Characteristic.MotionDetected)
       .onGet(this.getMotionDetected.bind(this));
   }
 

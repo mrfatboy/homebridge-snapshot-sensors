@@ -1,8 +1,11 @@
 import { spawn, ChildProcess } from 'child_process';
 import { createRequire } from 'module';
 import {
-  FRAME_WIDTH, FRAME_HEIGHT, FFMPEG_FPS,
-  FFMPEG_TIMEOUT_FRAME_MS, FFMPEG_TIMEOUT_RESTART_MS,
+  FRAME_WIDTH,
+  FRAME_HEIGHT,
+  FFMPEG_FPS,
+  FFMPEG_TIMEOUT_FRAME_MS,
+  FFMPEG_TIMEOUT_RESTART_MS,
 } from './settings.js';
 
 // ffmpeg-static is a CJS module exporting a plain string via module.exports.
@@ -28,10 +31,17 @@ export function takeLatestFrame(
   frameBytes: number,
 ): { latest: Buffer | null; rest: Buffer } {
   const whole = Math.floor(buf.length / frameBytes);
-  if (whole === 0) return { latest: null, rest: buf };
+  if (whole === 0)
+    return {
+      latest: null,
+      rest: buf,
+    };
   const lastStart = (whole - 1) * frameBytes;
   const latest = Buffer.from(buf.subarray(lastStart, lastStart + frameBytes));
-  return { latest, rest: Buffer.from(buf.subarray(whole * frameBytes)) };
+  return {
+    latest,
+    rest: Buffer.from(buf.subarray(whole * frameBytes)),
+  };
 }
 
 const FFMPEG_ARGS = (url: string): string[] => {
@@ -41,12 +51,17 @@ const FFMPEG_ARGS = (url: string): string[] => {
   // contain any stream" and the watchdog then restarts forever. TCP keeps the
   // media on the connection that already works.
   return [
-    '-loglevel', 'error',
-    '-i', url,
+    '-loglevel',
+    'error',
+    '-i',
+    url,
     '-an',
-    '-vf', `fps=${FFMPEG_FPS},scale=${FRAME_WIDTH}:${FRAME_HEIGHT}:force_original_aspect_ratio=decrease,pad=${FRAME_WIDTH}:${FRAME_HEIGHT}:(ow-iw)/2:(oh-ih)/2:color=black`,
-    '-f', 'rawvideo',
-    '-pix_fmt', 'rgb24',
+    '-vf',
+    `fps=${FFMPEG_FPS},scale=${FRAME_WIDTH}:${FRAME_HEIGHT}:force_original_aspect_ratio=decrease,pad=${FRAME_WIDTH}:${FRAME_HEIGHT}:(ow-iw)/2:(oh-ih)/2:color=black`,
+    '-f',
+    'rawvideo',
+    '-pix_fmt',
+    'rgb24',
     'pipe:1',
   ];
 };
@@ -95,18 +110,20 @@ export class FfmpegPump {
     this.latestFrameDate = Date.now();
 
     child.stderr!.setEncoding('utf8');
-    child.stderr!.on('data', (chunk: string) => { stderrTail = (stderrTail + chunk).slice(-1024); });
+    child.stderr!.on('data', (chunk: string) => {
+      stderrTail = (stderrTail + chunk).slice(-1024);
+    });
 
     let buf: Buffer = Buffer.alloc(0);
     child.stdout!.on('data', (chunk: Buffer) => {
       if (child !== this.ff) return;
       this.restarting = null;
-      this.latestFrameDate = Date.now();   // any bytes = ffmpeg alive
+      this.latestFrameDate = Date.now(); // any bytes = ffmpeg alive
       buf = Buffer.concat([buf, chunk]);
       const { latest, rest } = takeLatestFrame(buf, BYTES_PER_FRAME);
       buf = rest;
       if (latest) {
-        this.latestFrame = latest;   // overwrite: only the newest frame is kept
+        this.latestFrame = latest; // overwrite: only the newest frame is kept
         if (!this.gotFrame) {
           this.gotFrame = true;
           this.log.info(`Receiving frames from ${this.url}`);
@@ -114,7 +131,7 @@ export class FfmpegPump {
       }
     });
 
-    child.on('error', err => {
+    child.on('error', (err) => {
       if (child === this.ff) this.restart(`spawn error: ${err.message}`, stderrTail);
     });
     child.on('close', (code, signal) => {
@@ -135,16 +152,23 @@ export class FfmpegPump {
   private watchdog(): void {
     if (!this.ff || this.stopped) return;
     const stale = Date.now() - this.latestFrameDate > FFMPEG_TIMEOUT_FRAME_MS;
-    const pastCooldown = this.restarting === null || Date.now() - this.restarting > FFMPEG_TIMEOUT_RESTART_MS;
+    const pastCooldown =
+      this.restarting === null || Date.now() - this.restarting > FFMPEG_TIMEOUT_RESTART_MS;
     if (stale && pastCooldown) {
       this.restarting = null;
-      this.restart('watchdog timeout (no frames — check the stream URL/credentials and that the stream is reachable)');
+      this.restart(
+        'watchdog timeout (no frames — check the stream URL/credentials and that the stream is reachable)',
+      );
     }
   }
 
   private kill(): void {
     if (!this.ff) return;
-    try { this.ff.kill('SIGKILL'); } catch { /* already gone */ }
+    try {
+      this.ff.kill('SIGKILL');
+    } catch {
+      /* already gone */
+    }
     this.ff = null;
   }
 }

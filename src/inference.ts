@@ -5,12 +5,7 @@ import { normalizeFrame } from './ir.js';
 import type * as OrtType from 'onnxruntime-node';
 import type { Detection } from './types.js';
 
-const MODEL_PATH = join(
-  dirname(fileURLToPath(import.meta.url)),
-  '..',
-  'model',
-  'yolo26n.onnx',
-);
+const MODEL_PATH = join(dirname(fileURLToPath(import.meta.url)), '..', 'model', 'yolo26n.onnx');
 
 // Initialize ONNX Runtime lazily and set its global log level before the
 // first session is created so startup-only GPU probing warnings stay hidden.
@@ -48,7 +43,9 @@ async function getOrt(): Promise<typeof OrtType> {
     // Nominally supported, but the native binding still failed to load (missing
     // or corrupt download, glibc mismatch, etc.) — surface the original error
     // alongside the platform context so the cause isn't buried.
-    throw new Error(`${unsupportedPlatformMessage()} (failed to load native binding: ${String(e)})`);
+    throw new Error(
+      `${unsupportedPlatformMessage()} (failed to load native binding: ${String(e)})`,
+    );
   }
   return ort;
 }
@@ -63,9 +60,16 @@ export async function loadModel(): Promise<void> {
         executionProviders: ['cpu'],
         graphOptimizationLevel: 'all',
         logSeverityLevel: 3,
-        extra: { session: { intra_op_num_threads: '2', inter_op_num_threads: '1' } },
+        extra: {
+          session: {
+            intra_op_num_threads: '2',
+            inter_op_num_threads: '1',
+          },
+        },
       });
-    })().finally(() => { loading = null; });
+    })().finally(() => {
+      loading = null;
+    });
   }
   return loading;
 }
@@ -84,8 +88,8 @@ export async function runInference(frameRGB: Buffer): Promise<Detection[]> {
   const wh = FRAME_WIDTH * FRAME_HEIGHT;
   const data = new Float32Array(3 * wh);
   for (let i = 0, j = 0; i < wh; i++, j += 3) {
-    data[i]          = frameRGB[j]     / 255;
-    data[i + wh]     = frameRGB[j + 1] / 255;
+    data[i] = frameRGB[j] / 255;
+    data[i + wh] = frameRGB[j + 1] / 255;
     data[i + 2 * wh] = frameRGB[j + 2] / 255;
   }
   const tensor = new ort.Tensor('float32', data, [1, 3, FRAME_HEIGHT, FRAME_WIDTH]);
@@ -109,9 +113,9 @@ function postprocess(outputs: Record<string, OrtType.Tensor>): Detection[] {
     const score = data[base + 4];
     if (score < THRESHOLD_KEEP) continue;
     result.push({
-      x1: Math.max(0, Math.min(FRAME_WIDTH,  data[base + 0])),
+      x1: Math.max(0, Math.min(FRAME_WIDTH, data[base + 0])),
       y1: Math.max(0, Math.min(FRAME_HEIGHT, data[base + 1])),
-      x2: Math.max(0, Math.min(FRAME_WIDTH,  data[base + 2])),
+      x2: Math.max(0, Math.min(FRAME_WIDTH, data[base + 2])),
       y2: Math.max(0, Math.min(FRAME_HEIGHT, data[base + 3])),
       score,
       classId: Math.round(data[base + 5]),

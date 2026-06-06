@@ -3,9 +3,13 @@ import { IR_GAMMA, IR_CLIP_LOW_PCT, IR_CLIP_HIGH_PCT } from './settings.js';
 // Near-gray frames with very low chroma variance → likely IR/night vision.
 function isIRFrame(buf: Buffer): boolean {
   const stride = 9 * 50;
-  let n = 0, varSum = 0, lumSum = 0;
+  let n = 0,
+    varSum = 0,
+    lumSum = 0;
   for (let i = 0; i < buf.length - 2; i += stride) {
-    const r = buf[i], g = buf[i + 1], b = buf[i + 2];
+    const r = buf[i],
+      g = buf[i + 1],
+      b = buf[i + 2];
     const mean = (r + g + b) / 3;
     varSum += ((r - mean) ** 2 + (g - mean) ** 2 + (b - mean) ** 2) / 3;
     lumSum += mean;
@@ -29,14 +33,27 @@ function buildIRLUT(buf: Buffer): Uint8Array {
     total++;
   }
 
-  let inMin = 0, inMax = 255;
+  let inMin = 0,
+    inMax = 255;
   if (total > 0) {
     const loCount = total * IR_CLIP_LOW_PCT;
     const hiCount = total * IR_CLIP_HIGH_PCT;
     let acc = 0;
-    for (let v = 0; v < 256; v++) { acc += hist[v]; if (acc >= loCount) { inMin = v; break; } }
+    for (let v = 0; v < 256; v++) {
+      acc += hist[v];
+      if (acc >= loCount) {
+        inMin = v;
+        break;
+      }
+    }
     acc = 0;
-    for (let v = 0; v < 256; v++) { acc += hist[v]; if (acc >= hiCount) { inMax = v; break; } }
+    for (let v = 0; v < 256; v++) {
+      acc += hist[v];
+      if (acc >= hiCount) {
+        inMax = v;
+        break;
+      }
+    }
   }
   const span = Math.max(1, inMax - inMin);
 
@@ -51,7 +68,9 @@ function buildIRLUT(buf: Buffer): Uint8Array {
 function applyLUT(buf: Buffer, lut: Uint8Array): void {
   for (let i = 0; i < buf.length; i += 3) {
     const v = lut[((buf[i] + buf[i + 1] + buf[i + 2]) / 3) | 0];
-    buf[i] = v; buf[i + 1] = v; buf[i + 2] = v;
+    buf[i] = v;
+    buf[i + 1] = v;
+    buf[i + 2] = v;
   }
 }
 

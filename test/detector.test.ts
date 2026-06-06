@@ -6,33 +6,33 @@ import { FRAME_WIDTH, FRAME_HEIGHT, AREA_MIN_FRAC } from '../src/settings.js';
 
 // A box big enough to clear the area filter (AREA_MIN_FRAC of the frame).
 // Min area = 0.002 * 1024 * 576 ≈ 1180 px²; a 200×200 box is ~34000 px².
-const det = (classId: number, score: number, w = 200, h = 200): Detection => ({
-  x1: 0, y1: 0, x2: w, y2: h, score, classId,
-});
+const det = (classId: number, score: number, w = 200, h = 200): Detection => {
+  return { x1: 0, y1: 0, x2: w, y2: h, score, classId };
+};
 
 // Smallest box that still passes the filter, and the largest that fails it.
 const MIN_AREA = AREA_MIN_FRAC * FRAME_WIDTH * FRAME_HEIGHT;
 
 describe('categoryOfClass()', () => {
   it('maps representative COCO ids to the right category', () => {
-    expect(categoryOfClass(0)).toBe('people');     // person
-    expect(categoryOfClass(15)).toBe('animals');   // cat
-    expect(categoryOfClass(2)).toBe('vehicles');   // car
-    expect(categoryOfClass(24)).toBe('packages');  // backpack
+    expect(categoryOfClass(0)).toBe('people'); // person
+    expect(categoryOfClass(15)).toBe('animals'); // cat
+    expect(categoryOfClass(2)).toBe('vehicles'); // car
+    expect(categoryOfClass(24)).toBe('packages'); // backpack
   });
 
   it('returns null for an unmapped class id', () => {
-    expect(categoryOfClass(9)).toBeNull();   // traffic light — intentionally unmapped
-    expect(categoryOfClass(99)).toBeNull();  // out of range
+    expect(categoryOfClass(9)).toBeNull(); // traffic light — intentionally unmapped
+    expect(categoryOfClass(99)).toBeNull(); // out of range
   });
 });
 
 describe('scoreCategories()', () => {
   it('returns the highest score seen per category', () => {
     const scores = scoreCategories([
-      det(15, 0.4),  // cat → animals
-      det(16, 0.8),  // dog → animals (higher)
-      det(0, 0.6),   // person → people
+      det(15, 0.4), // cat → animals
+      det(16, 0.8), // dog → animals (higher)
+      det(0, 0.6), // person → people
     ]);
     expect(scores.get('animals')).toBe(0.8);
     expect(scores.get('people')).toBe(0.6);
@@ -72,7 +72,7 @@ describe('scoreCategories()', () => {
 describe('detectCategories()', () => {
   it('includes only categories at or above the default threshold (0.5)', () => {
     const cats = detectCategories([
-      det(0, 0.5),   // person exactly at threshold → included
+      det(0, 0.5), // person exactly at threshold → included
       det(15, 0.49), // cat just below → excluded
     ]);
     expect(cats.has('people')).toBe(true);

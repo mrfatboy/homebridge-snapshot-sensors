@@ -32,11 +32,14 @@ export class StreamSensorsPlatform implements DynamicPlatformPlugin {
       // Stop all workers (sets running=false, kills ffmpeg, interrupts sleeps),
       // then wait for every detection loop to exit before releasing the model —
       // guarantees no runInference() call is in-flight at release.
-      const draining = this.workers.map(w => { w.stop(); return w.waitForStop(); });
+      const draining = this.workers.map((w) => {
+        w.stop();
+        return w.waitForStop();
+      });
       this.workers.length = 0;
       Promise.all(draining)
         .then(() => closeModel())
-        .catch(err => this.log.error('Error during shutdown:', String(err)));
+        .catch((err) => this.log.error('Error during shutdown:', String(err)));
     });
 
     this.api.on('didFinishLaunching', () => {
@@ -53,9 +56,12 @@ export class StreamSensorsPlatform implements DynamicPlatformPlugin {
 
       loadModel()
         .then(() => this.log.info('YOLO model loaded'))
-        .catch(err => { this.log.error('Failed to load YOLO model:', String(err)); throw err; })
+        .catch((err) => {
+          this.log.error('Failed to load YOLO model:', String(err));
+          throw err;
+        })
         .then(() => this.discoverDevices())
-        .catch(err => this.log.error('Failed to initialize accessories:', String(err)));
+        .catch((err) => this.log.error('Failed to initialize accessories:', String(err)));
     });
   }
 
@@ -73,17 +79,23 @@ export class StreamSensorsPlatform implements DynamicPlatformPlugin {
     for (const stream of streams) {
       const streamName = typeof stream.name === 'string' ? stream.name.trim() : '';
       if (!streamName) {
-        this.log.error(`Stream ${stream.url ?? '(no url)'} is missing a required "name" — skipping this stream`);
+        this.log.error(
+          `Stream ${stream.url ?? '(no url)'} is missing a required "name" — skipping this stream`,
+        );
         continue;
       }
 
-      const resolved = resolveSensors(streamName, stream.sensors ?? [], msg => this.log.warn(msg));
+      const resolved = resolveSensors(streamName, stream.sensors ?? [], (msg) =>
+        this.log.warn(msg),
+      );
 
       // Drop sensors whose final name collides with one already claimed.
       const sensors: SensorSpec[] = [];
       for (const sensor of resolved) {
         if (claimedNames.has(sensor.name)) {
-          this.log.error(`Duplicate sensor name "${sensor.name}" — names must be unique; skipping the duplicate`);
+          this.log.error(
+            `Duplicate sensor name "${sensor.name}" — names must be unique; skipping the duplicate`,
+          );
           continue;
         }
         claimedNames.add(sensor.name);
@@ -97,11 +109,11 @@ export class StreamSensorsPlatform implements DynamicPlatformPlugin {
         continue;
       }
 
-      const sensorAccessories: StreamSensorAccessory[] = sensors.map(sensor => {
+      const sensorAccessories: StreamSensorAccessory[] = sensors.map((sensor) => {
         const uuid = this.api.hap.uuid.generate(sensor.name);
         seenUUIDs.add(uuid);
 
-        const existing = this.accessories.find(a => a.UUID === uuid);
+        const existing = this.accessories.find((a) => a.UUID === uuid);
         let pa: PlatformAccessory;
 
         if (existing) {
@@ -120,17 +132,17 @@ export class StreamSensorsPlatform implements DynamicPlatformPlugin {
         stream.url,
         sensors,
         (i, active) => sensorAccessories[i]?.setMotion(active),
-        frame => runInference(frame),
+        (frame) => runInference(frame),
         this.log,
       );
       worker.start();
       this.workers.push(worker);
     }
 
-    const stale = this.accessories.filter(a => !seenUUIDs.has(a.UUID));
+    const stale = this.accessories.filter((a) => !seenUUIDs.has(a.UUID));
     if (stale.length > 0) {
       this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, stale);
-      this.log.info('Removing stale accessories:', stale.map(a => a.displayName).join(', '));
+      this.log.info('Removing stale accessories:', stale.map((a) => a.displayName).join(', '));
     }
   }
 }
