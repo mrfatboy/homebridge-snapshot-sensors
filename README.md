@@ -1,16 +1,14 @@
 # homebridge-stream-sensors
 
-**Turn any camera stream into HomeKit motion sensors powered by local YOLO object detection.**
-
 [![CI](https://github.com/nikitakatchik/homebridge-stream-sensors/actions/workflows/ci.yml/badge.svg)](https://github.com/nikitakatchik/homebridge-stream-sensors/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/homebridge-stream-sensors)](https://www.npmjs.com/package/homebridge-stream-sensors)
 [![npm downloads](https://img.shields.io/npm/dt/homebridge-stream-sensors)](https://www.npmjs.com/package/homebridge-stream-sensors)
 [![GitHub stars](https://img.shields.io/github/stars/nikitakatchik/homebridge-stream-sensors?style=flat)](https://github.com/nikitakatchik/homebridge-stream-sensors/stargazers)
 [![license](https://img.shields.io/npm/l/homebridge-stream-sensors)](./LICENSE)
 
-Point the plugin at an RTSP (or other ffmpeg-readable) camera URL and it runs object detection on the stream, exposing a HomeKit motion sensor for each category you enable.
 
-`🐶 Animals` `📦 Packages`  `🧍 People` `🚗 Vehicles`
+**Turn any camera stream into HomeKit motion sensors with local YOLO object** <br />
+**detection for `🐶 Animals`, `📦 Packages`, `🧍 People`, `🚗 Vehicles`.**
 
 ## Installation
 
