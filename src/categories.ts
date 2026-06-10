@@ -1,16 +1,21 @@
 import type { Category, RawSensor, SensorSpec } from './types.js';
 import { THRESHOLD } from './settings.js';
+import { YOLO26_CLASSES, type Yolo26ClassName } from '../model/yolo26/classes.js';
 
 // Display labels are the category keys with the first letter capitalized.
 const capitalize = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 
+function idOf(name: Yolo26ClassName): number {
+  return YOLO26_CLASSES.indexOf(name);
+}
+
 // COCO class IDs mapped to each HomeKit category.
 // 'packages' is approximate — COCO has no delivery-parcel class.
 export const CATEGORY_CLASS_IDS: Record<Category, ReadonlySet<number>> = {
-  animals: new Set([14, 15, 16, 17, 18, 19, 20, 21, 22, 23]), // bird, cat, dog, horse, sheep, cow, elephant, bear, zebra, giraffe
-  people: new Set([0]),
-  vehicles: new Set([1, 2, 3, 5, 6, 7, 8]), // bicycle, car, motorcycle, bus, train, truck, boat
-  packages: new Set([24, 26, 28]), // backpack, handbag, suitcase
+  animals: new Set([idOf('bird'), idOf('cat'), idOf('dog'), idOf('horse'), idOf('sheep'), idOf('cow'), idOf('elephant'), idOf('bear'), idOf('zebra'), idOf('giraffe')]),
+  people: new Set([idOf('person')]),
+  vehicles: new Set([idOf('bicycle'), idOf('car'), idOf('motorcycle'), idOf('bus'), idOf('train'), idOf('truck'), idOf('boat')]),
+  packages: new Set([idOf('backpack'), idOf('handbag'), idOf('suitcase')]),
 };
 
 export const VALID_CATEGORIES = Object.keys(CATEGORY_CLASS_IDS).join(', ');

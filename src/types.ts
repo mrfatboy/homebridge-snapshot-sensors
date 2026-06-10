@@ -34,4 +34,5 @@ export interface Detection {
   y2: number;
   score: number;
   classId: number;
+  className: string;
 }

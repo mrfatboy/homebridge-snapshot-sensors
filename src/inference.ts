@@ -1,11 +1,27 @@
 import { fileURLToPath } from 'url';
 import { join, dirname } from 'path';
+import { existsSync } from 'fs';
 import { FRAME_WIDTH, FRAME_HEIGHT, THRESHOLD_KEEP } from './settings.js';
 import { normalizeFrame } from './ir.js';
 import type * as OrtType from 'onnxruntime-node';
 import type { Detection } from './types.js';
+import { getYolo26ClassName } from '../model/yolo26/classes.js';
 
-const MODEL_PATH = join(dirname(fileURLToPath(import.meta.url)), '..', 'model', 'yolo26n.onnx');
+// Walk up from the current file until we find package.json so the path works
+// in both the Vitest source context (src/) and compiled runtime (dist/src/).
+function findPackageRoot(from: string): string {
+  let dir = from;
+  for (let i = 0; i < 5; i++) {
+    if (existsSync(join(dir, 'package.json'))) return dir;
+    dir = dirname(dir);
+  }
+  throw new Error(`Cannot locate package root from ${from}`);
+}
+
+const MODEL_PATH = join(
+  findPackageRoot(dirname(fileURLToPath(import.meta.url))),
+  'model', 'yolo26', 'model.onnx',
+);
 
 // Initialize ONNX Runtime lazily and set its global log level before the
 // first session is created so startup-only GPU probing warnings stay hidden.
@@ -112,13 +128,15 @@ function postprocess(outputs: Record<string, OrtType.Tensor>): Detection[] {
     const base = i * 6;
     const score = data[base + 4];
     if (score < THRESHOLD_KEEP) continue;
+    const classId = Math.round(data[base + 5]);
     result.push({
       x1: Math.max(0, Math.min(FRAME_WIDTH, data[base + 0])),
       y1: Math.max(0, Math.min(FRAME_HEIGHT, data[base + 1])),
       x2: Math.max(0, Math.min(FRAME_WIDTH, data[base + 2])),
       y2: Math.max(0, Math.min(FRAME_HEIGHT, data[base + 3])),
       score,
-      classId: Math.round(data[base + 5]),
+      classId,
+      className: getYolo26ClassName(classId),
     });
   }
   return result;
