@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { takeLatestFrame } from '../src/ffmpeg.js';
+import { takeLatestFrame, classifyFfmpegError } from '../src/ffmpeg.js';
 
 const F = 6; // pretend a "frame" is 6 bytes for these tests
 const frame = (fill: number): Buffer => Buffer.alloc(F, fill);
@@ -39,5 +39,32 @@ describe('takeLatestFrame() — only ever keeps the newest frame', () => {
     const { latest } = takeLatestFrame(buf, F);
     buf.fill(0); // mutating the source must not corrupt the returned frame
     expect(latest!.equals(frame(0x22))).toBe(true);
+  });
+});
+
+describe('classifyFfmpegError() — actionable hints from stderr', () => {
+  it('flags authentication failures', () => {
+    expect(classifyFfmpegError('rtsp://cam: 401 Unauthorized')).toMatch(/authentication/);
+    expect(classifyFfmpegError('403 Forbidden')).toMatch(/authentication/);
+  });
+
+  it('flags unreachable cameras', () => {
+    expect(classifyFfmpegError('tcp://x: Connection refused')).toMatch(/unreachable/);
+    expect(classifyFfmpegError('No route to host')).toMatch(/unreachable/);
+    expect(classifyFfmpegError('Connection timed out')).toMatch(/unreachable/);
+  });
+
+  it('flags a missing stream path', () => {
+    expect(classifyFfmpegError('Server returned 404 Not Found')).toMatch(/path not found/);
+  });
+
+  it('flags undecodable streams', () => {
+    expect(classifyFfmpegError('Invalid data found when processing input')).toMatch(/decode/);
+    expect(classifyFfmpegError('Could not find codec parameters')).toMatch(/decode/);
+  });
+
+  it('returns null when nothing recognizable matched', () => {
+    expect(classifyFfmpegError('')).toBeNull();
+    expect(classifyFfmpegError('frame= 12 fps=1.0')).toBeNull();
   });
 });

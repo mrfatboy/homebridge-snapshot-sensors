@@ -67,6 +67,31 @@ const FFMPEG_ARGS = (url: string): string[] => {
   ];
 };
 
+// Map an ffmpeg stderr tail onto a short, actionable hint so the dominant
+// first-run failures (wrong URL, bad credentials, unreachable camera) point at a
+// cause instead of a generic "no frames". Returns null when nothing recognizable
+// matched, so the caller falls back to the raw stderr tail.
+export function classifyFfmpegError(stderr: string): string | null {
+  const s = stderr.toLowerCase();
+  if (/401|unauthorized|authentication|auth.*fail|\b403\b|forbidden/.test(s))
+    return 'authentication failed — check the username/password in the stream URL';
+  if (
+    /connection refused|no route to host|network is unreachable|connection timed out|timed out|etimedout|ehostunreach|econnrefused|name or service not known/.test(
+      s,
+    )
+  )
+    return 'camera unreachable — check the host/port and that the camera is reachable from the Homebridge host';
+  if (/\b404\b|not found|no such file/.test(s))
+    return 'stream path not found — check the URL path/channel';
+  if (
+    /invalid data|could not find codec|codec parameters|does not contain any stream|decoder|unknown encoder|unsupported|protocol not found/.test(
+      s,
+    )
+  )
+    return 'could not decode the stream — verify the URL path and that ffmpeg supports the codec/transport';
+  return null;
+}
+
 // Long-lived ffmpeg that decodes an RTSP stream to raw RGB frames on stdout.
 export class FfmpegPump {
   private ff: ChildProcess | null = null;
@@ -78,6 +103,7 @@ export class FfmpegPump {
   private lastFrameAt = 0; // timestamp of the most recent full frame
   private startedAt = 0; // when start() was first called
   private health: StreamHealth = 'connecting';
+  private stderrTail = ''; // rolling tail of the current child's stderr, for diagnostics
   private watchdogTimer: ReturnType<typeof setInterval> | null = null;
   private stopped = false;
 
@@ -109,7 +135,7 @@ export class FfmpegPump {
     if (this.stopped) return;
 
     this.gotFrame = false;
-    let stderrTail = '';
+    this.stderrTail = '';
     const child: ChildProcess = spawn(ffmpegBin, FFMPEG_ARGS(this.url), {
       stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -118,7 +144,8 @@ export class FfmpegPump {
 
     child.stderr!.setEncoding('utf8');
     child.stderr!.on('data', (chunk: string) => {
-      stderrTail = (stderrTail + chunk).slice(-1024);
+      if (child !== this.ff) return;
+      this.stderrTail = (this.stderrTail + chunk).slice(-1024);
     });
 
     let buf: Buffer = Buffer.alloc(0);
@@ -141,18 +168,23 @@ export class FfmpegPump {
     });
 
     child.on('error', (err) => {
-      if (child === this.ff) this.restart(`spawn error: ${err.message}`, stderrTail);
+      if (child === this.ff) this.restart(`spawn error: ${err.message}`);
     });
     child.on('close', (code, signal) => {
-      if (child === this.ff) this.restart(`exited (code=${code}, signal=${signal})`, stderrTail);
+      if (child === this.ff) this.restart(`exited (code=${code}, signal=${signal})`);
     });
   }
 
-  private restart(reason: string, stderr = ''): void {
+  private restart(reason: string): void {
     if (this.stopped || this.restarting !== null) return;
 
-    const detail = stderr.trim().split('\n').filter(Boolean).slice(-3).join(' | ');
-    this.log.warn(`Restarting ffmpeg: ${detail ? `${reason}: ${detail}` : reason}`);
+    // Pull both the raw tail (for context) and a classified hint (for the cause)
+    // off the current child's captured stderr. The watchdog path reaches this too,
+    // so a silent no-frames restart still surfaces any hint ffmpeg did emit.
+    const detail = this.stderrTail.trim().split('\n').filter(Boolean).slice(-3).join(' | ');
+    const hint = classifyFfmpegError(this.stderrTail);
+    const message = (detail ? `${reason}: ${detail}` : reason) + (hint ? ` — ${hint}` : '');
+    this.log.warn(`Restarting ffmpeg: ${message}`);
     this.restarting = Date.now();
     this.kill();
     this.startProcess();
