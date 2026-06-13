@@ -132,6 +132,8 @@ export class StreamSensorsPlatform implements DynamicPlatformPlugin {
         stream.url,
         sensors,
         (i, active) => sensorAccessories[i]?.setMotion(active),
+        // Stream health is per-pump, so fan it out to every sensor on this stream.
+        (health) => sensorAccessories.forEach((a) => a.setHealth(health)),
         (frame) => runInference(frame),
         this.log,
       );

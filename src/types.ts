@@ -1,5 +1,12 @@
 export type Category = 'animals' | 'packages' | 'people' | 'vehicles';
 
+// Liveness of a stream's ffmpeg pump, surfaced to HomeKit via the MotionSensor's
+// StatusActive/StatusFault characteristics so a dead camera/URL is visible.
+//   connecting — started, no frame decoded yet (within the startup grace window)
+//   online     — decoding frames normally
+//   down       — no frames past the watchdog timeout (bad URL/creds, camera offline, …)
+export type StreamHealth = 'connecting' | 'online' | 'down';
+
 // ── Config input shape (exactly what the GUI form emits; the only accepted form) ─
 // A sensor fires when ANY selected category is detected at or above `threshold`.
 //   { categories: [...], name?, threshold? }

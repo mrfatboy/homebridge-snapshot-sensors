@@ -7,6 +7,7 @@ import {
   FFMPEG_TIMEOUT_FRAME_MS,
   FFMPEG_TIMEOUT_RESTART_MS,
 } from './settings.js';
+import type { StreamHealth } from './types.js';
 
 // ffmpeg-static is a CJS module exporting a plain string via module.exports.
 const require = createRequire(import.meta.url);
@@ -73,15 +74,21 @@ export class FfmpegPump {
   private latestFrame: Buffer | null = null;
   private latestFrameDate = 0;
   private gotFrame = false;
+  private everFramed = false; // a full frame has been decoded at least once (pump lifetime)
+  private lastFrameAt = 0; // timestamp of the most recent full frame
+  private startedAt = 0; // when start() was first called
+  private health: StreamHealth = 'connecting';
   private watchdogTimer: ReturnType<typeof setInterval> | null = null;
   private stopped = false;
 
   constructor(
     private readonly url: string,
     private readonly log: PumpLog,
+    private readonly onHealth?: (health: StreamHealth) => void,
   ) {}
 
   start(): void {
+    this.startedAt = Date.now();
     this.startProcess();
     this.watchdogTimer = setInterval(() => this.watchdog(), 500);
   }
@@ -124,6 +131,8 @@ export class FfmpegPump {
       buf = rest;
       if (latest) {
         this.latestFrame = latest; // overwrite: only the newest frame is kept
+        this.lastFrameAt = Date.now();
+        this.everFramed = true;
         if (!this.gotFrame) {
           this.gotFrame = true;
           this.log.info(`Receiving frames from ${this.url}`);
@@ -150,7 +159,9 @@ export class FfmpegPump {
   }
 
   private watchdog(): void {
-    if (!this.ff || this.stopped) return;
+    if (this.stopped) return;
+    this.evaluateHealth();
+    if (!this.ff) return;
     const stale = Date.now() - this.latestFrameDate > FFMPEG_TIMEOUT_FRAME_MS;
     const pastCooldown =
       this.restarting === null || Date.now() - this.restarting > FFMPEG_TIMEOUT_RESTART_MS;
@@ -159,6 +170,28 @@ export class FfmpegPump {
       this.restart(
         'watchdog timeout (no frames — check the stream URL/credentials and that the stream is reachable)',
       );
+    }
+  }
+
+  // Map the pump's frame timing onto a coarse health state and notify on change.
+  // Liveness uses the last COMPLETE frame (lastFrameAt), not the any-bytes
+  // timestamp the restart watchdog uses — a stream emitting partial bytes but no
+  // decodable frame is useless for detection and should read as down. Once a
+  // frame has arrived the state only flips online<->down on the frame timeout,
+  // never back to 'connecting', so a restart can't make it flap.
+  private evaluateHealth(): void {
+    const now = Date.now();
+    let health: StreamHealth;
+    if (this.everFramed && now - this.lastFrameAt <= FFMPEG_TIMEOUT_FRAME_MS) {
+      health = 'online';
+    } else if (!this.everFramed && now - this.startedAt <= FFMPEG_TIMEOUT_FRAME_MS) {
+      health = 'connecting';
+    } else {
+      health = 'down';
+    }
+    if (health !== this.health) {
+      this.health = health;
+      this.onHealth?.(health);
     }
   }
 

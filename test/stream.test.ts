@@ -52,7 +52,7 @@ beforeEach(() => {
 
 describe('StreamWorker.stop()', () => {
   it('interrupts the sleep so the loop exits well under SAMPLE_MS', async () => {
-    const worker = new StreamWorker(URL, sensors, () => {}, noDetections, fakeLog);
+    const worker = new StreamWorker(URL, sensors, () => {}, () => {}, noDetections, fakeLog);
     worker.start();
 
     const t0 = Date.now();
@@ -67,7 +67,7 @@ describe('StreamWorker.stop()', () => {
     const slowInfer = (): Promise<Detection[]> =>
       new Promise((res) => setTimeout(() => res([]), 100));
 
-    const worker = new StreamWorker(URL, sensors, () => {}, slowInfer, fakeLog);
+    const worker = new StreamWorker(URL, sensors, () => {}, () => {}, slowInfer, fakeLog);
     pumpInstances[0]?.takeFrame.mockReturnValueOnce(Buffer.alloc(1024 * 576 * 3));
     worker.start();
 
@@ -105,6 +105,7 @@ describe('StreamWorker.stop()', () => {
       URL,
       sensors,
       (i, active) => sensorEvents.push([i, active]),
+      () => {},
       gatedInfer,
       fakeLog,
     );
@@ -154,6 +155,7 @@ describe('threshold gating', () => {
       URL,
       lowThreshold,
       (i, a) => fired.push([i, a]),
+      () => {},
       () => Promise.resolve(dogAt(0.3)),
       fakeLog,
     );
@@ -172,6 +174,7 @@ describe('threshold gating', () => {
       URL,
       sensors,
       (i, a) => fired.push([i, a]),
+      () => {},
       () => Promise.resolve(dogAt(0.3)),
       fakeLog,
     );

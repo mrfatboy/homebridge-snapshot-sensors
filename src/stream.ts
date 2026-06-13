@@ -2,10 +2,11 @@ import type { Logger } from 'homebridge';
 import { FfmpegPump } from './ffmpeg.js';
 import { scoreCategories } from './detector.js';
 import type { CategoryScores } from './detector.js';
-import type { SensorSpec, Detection } from './types.js';
+import type { SensorSpec, Detection, StreamHealth } from './types.js';
 import { SAMPLE_MS } from './settings.js';
 
 export type SensorStateCallback = (sensorIndex: number, active: boolean) => void;
+export type StreamHealthCallback = (health: StreamHealth) => void;
 export type InferFn = (frame: Buffer) => Promise<Detection[]>;
 
 export class StreamWorker {
@@ -18,10 +19,11 @@ export class StreamWorker {
     url: string,
     private readonly sensors: SensorSpec[],
     private readonly onSensorState: SensorStateCallback,
+    onHealth: StreamHealthCallback,
     private readonly infer: InferFn,
     private readonly log: Logger,
   ) {
-    this.pump = new FfmpegPump(url, log);
+    this.pump = new FfmpegPump(url, log, onHealth);
   }
 
   start(): void {

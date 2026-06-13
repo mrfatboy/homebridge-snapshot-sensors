@@ -1,5 +1,6 @@
 import type { PlatformAccessory, CharacteristicValue } from 'homebridge';
 import type { StreamSensorsPlatform } from './platform.js';
+import type { StreamHealth } from './types.js';
 
 export class StreamSensorAccessory {
   private readonly motionService;
@@ -26,6 +27,27 @@ export class StreamSensorAccessory {
     this.motionService
       .getCharacteristic(this.platform.Characteristic.MotionDetected)
       .onGet(this.getMotionDetected.bind(this));
+
+    // Surface the underlying stream's liveness so a dead camera/URL is visible in
+    // the Home app (StatusActive=false) and faultable in automations
+    // (StatusFault). Starts in the "connecting" state until the first frame.
+    this.motionService
+      .setCharacteristic(this.platform.Characteristic.StatusActive, false)
+      .setCharacteristic(
+        this.platform.Characteristic.StatusFault,
+        this.platform.Characteristic.StatusFault.NO_FAULT,
+      );
+  }
+
+  // Reflect stream health onto the optional MotionSensor status characteristics.
+  // Called for every sensor sharing a stream whenever the pump's liveness changes.
+  setHealth(health: StreamHealth): void {
+    const C = this.platform.Characteristic;
+    this.motionService.updateCharacteristic(C.StatusActive, health === 'online');
+    this.motionService.updateCharacteristic(
+      C.StatusFault,
+      health === 'down' ? C.StatusFault.GENERAL_FAULT : C.StatusFault.NO_FAULT,
+    );
   }
 
   setMotion(active: boolean): void {
