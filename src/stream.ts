@@ -55,6 +55,7 @@ export class StreamWorker {
       try {
         const detections = await this.infer(frame);
         const scores = scoreCategories(detections);
+        this.logScores(scores);
         this.updateSensors(scores);
       } catch (e) {
         this.log.error('Detection error:', String(e));
@@ -76,6 +77,15 @@ export class StreamWorker {
         resolve();
       };
     });
+  }
+
+  // Debug-only: log the best confidence seen per category this sample so users
+  // tuning thresholds can see how close a detection came to firing. Quiet by
+  // default (debug level); only emitted when something cleared the area filter.
+  private logScores(scores: CategoryScores): void {
+    if (scores.size === 0) return;
+    const summary = [...scores.entries()].map(([c, s]) => `${c} ${s.toFixed(2)}`).join(', ');
+    this.log.debug(`Detection scores: ${summary}`);
   }
 
   private updateSensors(scores: CategoryScores): void {
