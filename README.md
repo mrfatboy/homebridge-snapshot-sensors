@@ -63,6 +63,32 @@ Add a `StreamSensors` platform to your Homebridge config. Each **stream** is one
 - **`categories`** — one or more of `animals`, `packages`, `people`, `vehicles`. The sensor triggers on any of them.
 - **`threshold`** *(optional)* — detection confidence from 0–1 (default `0.5`). Lower is more sensitive.
 
+## Camera setup examples
+
+Most cameras expose an RTSP URL — paste it as the stream **URL**. The exact path varies by brand, model, and firmware, so when in doubt look your model up in a community database like the [iSpy camera connection database](https://www.ispyconnect.com/cameras) or your camera's manual.
+
+Common RTSP URL patterns (replace `user`, `pass`, and the IP address):
+
+| Brand | Main stream | Substream (low-res) |
+| --- | --- | --- |
+| **Reolink** | `rtsp://user:pass@IP:554/h264Preview_01_main` | `rtsp://user:pass@IP:554/h264Preview_01_sub` |
+| **Hikvision** | `rtsp://user:pass@IP:554/Streaming/Channels/101` | `rtsp://user:pass@IP:554/Streaming/Channels/102` |
+| **Dahua / Amcrest** | `rtsp://user:pass@IP:554/cam/realmonitor?channel=1&subtype=0` | `rtsp://user:pass@IP:554/cam/realmonitor?channel=1&subtype=1` |
+| **TP-Link Tapo** | `rtsp://user:pass@IP:554/stream1` | `rtsp://user:pass@IP:554/stream2` |
+
+- **UniFi Protect** — enable **RTSP** on the camera in the Protect app (Settings → Advanced), which generates a per-camera `rtsps://…:7441/…` URL to paste here.
+- **ONVIF cameras** — if you can't find the path, an ONVIF discovery tool (e.g. ONVIF Device Manager) will report the exact RTSP URL.
+- **Wyze** — RTSP requires Wyze's separate RTSP firmware, which is unofficial and unmaintained; a standalone bridge that re-exposes the camera as RTSP is more reliable.
+- **Docker** — no special config needed: the plugin forces RTSP over **TCP**, which avoids the dropped-UDP-media problem common on Docker's bridge network.
+
+### Prefer the substream
+
+Point the plugin at your camera's **substream** (the low-resolution secondary stream) when one is available. Every frame is downscaled to a fixed size before inference, so a substream doesn't lower the inference cost — but it does cut the ffmpeg **decode** and **network** load, which is the main per-stream CPU cost on a busy host. Switch to the main stream only if the substream is too low-resolution to detect your subjects reliably.
+
+### Running multiple cameras
+
+Detection is CPU-intensive and each stream runs its own decode + inference loop. As soon as you add a second or third camera, run this plugin as a [child bridge](https://github.com/homebridge/homebridge/wiki/Child-Bridges): it isolates the plugin in its own process, so a busy detection loop can't slow the rest of Homebridge down — and a crash can't take Homebridge with it.
+
 ## Requirements
 
 - **Homebridge** v1.8 or newer
