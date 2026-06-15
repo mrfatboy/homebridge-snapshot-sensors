@@ -17,13 +17,14 @@ export class StreamWorker {
 
   constructor(
     url: string,
+    name: string,
     private readonly sensors: SensorSpec[],
     private readonly onSensorState: SensorStateCallback,
     onHealth: StreamHealthCallback,
     private readonly infer: InferFn,
     private readonly log: Logger,
   ) {
-    this.pump = new FfmpegPump(url, log, onHealth);
+    this.pump = new FfmpegPump(url, name, log, onHealth);
   }
 
   start(): void {

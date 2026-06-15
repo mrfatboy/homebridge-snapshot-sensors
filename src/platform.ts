@@ -130,6 +130,7 @@ export class StreamSensorsPlatform implements DynamicPlatformPlugin {
 
       const worker = new StreamWorker(
         stream.url,
+        streamName,
         sensors,
         (i, active) => sensorAccessories[i]?.setMotion(active),
         // Stream health is per-pump, so fan it out to every sensor on this stream.

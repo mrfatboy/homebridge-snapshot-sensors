@@ -109,6 +109,9 @@ export class FfmpegPump {
 
   constructor(
     private readonly url: string,
+    // Display label for logs. The url carries credentials, so never log it; use
+    // the (validated, non-empty) stream name instead.
+    private readonly name: string,
     private readonly log: PumpLog,
     private readonly onHealth?: (health: StreamHealth) => void,
   ) {}
@@ -162,7 +165,7 @@ export class FfmpegPump {
         this.everFramed = true;
         if (!this.gotFrame) {
           this.gotFrame = true;
-          this.log.info(`Receiving frames from ${this.url}`);
+          this.log.info(`Receiving frames from ${this.name}`);
         }
       }
     });

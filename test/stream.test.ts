@@ -54,6 +54,7 @@ describe('StreamWorker.stop()', () => {
   it('interrupts the sleep so the loop exits well under SAMPLE_MS', async () => {
     const worker = new StreamWorker(
       URL,
+      'Front Door',
       sensors,
       () => {},
       () => {},
@@ -76,6 +77,7 @@ describe('StreamWorker.stop()', () => {
 
     const worker = new StreamWorker(
       URL,
+      'Front Door',
       sensors,
       () => {},
       () => {},
@@ -117,6 +119,7 @@ describe('StreamWorker.stop()', () => {
     const sensorEvents: Array<[number, boolean]> = [];
     const worker = new StreamWorker(
       URL,
+      'Front Door',
       sensors,
       (i, active) => sensorEvents.push([i, active]),
       () => {},
@@ -167,6 +170,7 @@ describe('threshold gating', () => {
     const fired: Array<[number, boolean]> = [];
     const worker = new StreamWorker(
       URL,
+      'Front Door',
       lowThreshold,
       (i, a) => fired.push([i, a]),
       () => {},
@@ -186,6 +190,7 @@ describe('threshold gating', () => {
     const fired: Array<[number, boolean]> = [];
     const worker = new StreamWorker(
       URL,
+      'Front Door',
       sensors,
       (i, a) => fired.push([i, a]),
       () => {},

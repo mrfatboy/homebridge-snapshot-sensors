@@ -129,7 +129,7 @@ describe('FfmpegPump lifecycle', () => {
   });
 
   it('spawns ffmpeg on start', () => {
-    const pump = new FfmpegPump('rtsp://cam', makeLog());
+    const pump = new FfmpegPump('rtsp://cam', 'Front Door', makeLog());
     pump.start();
     expect(spawn).toHaveBeenCalledOnce();
     expect(children).toHaveLength(1);
@@ -137,7 +137,7 @@ describe('FfmpegPump lifecycle', () => {
   });
 
   it('takeFrame() hands back the latest decoded frame, then nulls it', () => {
-    const pump = new FfmpegPump('rtsp://cam', makeLog());
+    const pump = new FfmpegPump('rtsp://cam', 'Front Door', makeLog());
     pump.start();
     children[0].stdout.emit('data', fullFrame);
     expect(pump.takeFrame()?.length).toBe(FRAME_BYTES);
@@ -145,9 +145,22 @@ describe('FfmpegPump lifecycle', () => {
     pump.stop();
   });
 
+  it('logs the camera name, not the credential-bearing url, on first frame', () => {
+    const log = makeLog();
+    const pump = new FfmpegPump('rtsp://user:pass@cam/stream', 'Front Door', log);
+    pump.start();
+    children[0].stdout.emit('data', fullFrame);
+    expect(log.info).toHaveBeenCalledWith('Receiving frames from Front Door');
+    // The url (and any credentials in it) must never reach the log.
+    const logged = log.info.mock.calls.flat().join(' ');
+    expect(logged).not.toContain('rtsp://');
+    expect(logged).not.toContain('pass');
+    pump.stop();
+  });
+
   it('restarts once when the watchdog sees no frames past the timeout', () => {
     const log = makeLog();
-    const pump = new FfmpegPump('rtsp://cam', log);
+    const pump = new FfmpegPump('rtsp://cam', 'Front Door', log);
     pump.start();
     expect(children).toHaveLength(1);
 
@@ -160,7 +173,7 @@ describe('FfmpegPump lifecycle', () => {
   });
 
   it('does not restart again within the restart cooldown window', () => {
-    const pump = new FfmpegPump('rtsp://cam', makeLog());
+    const pump = new FfmpegPump('rtsp://cam', 'Front Door', makeLog());
     pump.start();
     vi.advanceTimersByTime(FFMPEG_TIMEOUT_FRAME_MS + 1000); // first restart
     expect(children).toHaveLength(2);
@@ -173,7 +186,7 @@ describe('FfmpegPump lifecycle', () => {
   });
 
   it('does not restart while frames keep arriving', () => {
-    const pump = new FfmpegPump('rtsp://cam', makeLog());
+    const pump = new FfmpegPump('rtsp://cam', 'Front Door', makeLog());
     pump.start();
     for (let i = 0; i < 25; i++) {
       children.at(-1)!.stdout.emit('data', fullFrame);
@@ -185,7 +198,7 @@ describe('FfmpegPump lifecycle', () => {
 
   it('restarts on an unexpected ffmpeg exit', () => {
     const log = makeLog();
-    const pump = new FfmpegPump('rtsp://cam', log);
+    const pump = new FfmpegPump('rtsp://cam', 'Front Door', log);
     pump.start();
     children[0].emit('close', 1, null);
     expect(children).toHaveLength(2);
@@ -195,7 +208,7 @@ describe('FfmpegPump lifecycle', () => {
 
   it('restarts and reports the cause on a spawn error', () => {
     const log = makeLog();
-    const pump = new FfmpegPump('rtsp://cam', log);
+    const pump = new FfmpegPump('rtsp://cam', 'Front Door', log);
     pump.start();
     children[0].emit('error', new Error('ENOENT'));
     expect(children).toHaveLength(2);
@@ -205,7 +218,7 @@ describe('FfmpegPump lifecycle', () => {
 
   it('surfaces a classified hint from the failing child stderr', () => {
     const log = makeLog();
-    const pump = new FfmpegPump('rtsp://cam', log);
+    const pump = new FfmpegPump('rtsp://cam', 'Front Door', log);
     pump.start();
     children[0].stderr.emit('data', 'method DESCRIBE failed: 401 Unauthorized\n');
     children[0].emit('close', 1, null);
@@ -214,7 +227,7 @@ describe('FfmpegPump lifecycle', () => {
   });
 
   it('stop() kills the child and blocks any further restart', () => {
-    const pump = new FfmpegPump('rtsp://cam', makeLog());
+    const pump = new FfmpegPump('rtsp://cam', 'Front Door', makeLog());
     pump.start();
     pump.stop();
     expect(children[0].killed).toBe(true);
@@ -227,7 +240,7 @@ describe('FfmpegPump lifecycle', () => {
 
   it('reports health: connecting stays silent, then online once frames flow', () => {
     const health: StreamHealth[] = [];
-    const pump = new FfmpegPump('rtsp://cam', makeLog(), (h) => health.push(h));
+    const pump = new FfmpegPump('rtsp://cam', 'Front Door', makeLog(), (h) => health.push(h));
     pump.start();
 
     vi.advanceTimersByTime(1000); // still connecting, within grace → no event
@@ -241,7 +254,7 @@ describe('FfmpegPump lifecycle', () => {
 
   it('reports health: down when a never-connecting stream passes the timeout', () => {
     const health: StreamHealth[] = [];
-    const pump = new FfmpegPump('rtsp://cam', makeLog(), (h) => health.push(h));
+    const pump = new FfmpegPump('rtsp://cam', 'Front Door', makeLog(), (h) => health.push(h));
     pump.start();
     vi.advanceTimersByTime(FFMPEG_TIMEOUT_FRAME_MS + 1000);
     expect(health.at(-1)).toBe('down');
@@ -250,7 +263,7 @@ describe('FfmpegPump lifecycle', () => {
 
   it('reports health: online then down when frames stop', () => {
     const health: StreamHealth[] = [];
-    const pump = new FfmpegPump('rtsp://cam', makeLog(), (h) => health.push(h));
+    const pump = new FfmpegPump('rtsp://cam', 'Front Door', makeLog(), (h) => health.push(h));
     pump.start();
     children.at(-1)!.stdout.emit('data', fullFrame);
     vi.advanceTimersByTime(600);

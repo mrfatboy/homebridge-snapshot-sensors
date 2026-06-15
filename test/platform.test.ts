@@ -3,14 +3,21 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Mock the heavy/native modules so discoverDevices() runs without ffmpeg or ONNX.
 const workerInstances: Array<{
   url: string;
+  name: string;
   sensors: unknown[];
   start: ReturnType<typeof vi.fn>;
   stop: ReturnType<typeof vi.fn>;
   waitForStop: ReturnType<typeof vi.fn>;
 }> = [];
 vi.mock('../src/stream.js', () => ({
-  StreamWorker: vi.fn(function (this: Record<string, unknown>, url: string, sensors: unknown[]) {
+  StreamWorker: vi.fn(function (
+    this: Record<string, unknown>,
+    url: string,
+    name: string,
+    sensors: unknown[],
+  ) {
     this.url = url;
+    this.name = name;
     this.sensors = sensors;
     this.start = vi.fn();
     this.stop = vi.fn();
@@ -133,6 +140,7 @@ describe('discoverDevices()', () => {
       'Garden People Sensor',
     ]);
     expect(workerInstances).toHaveLength(1);
+    expect(workerInstances[0].name).toBe('Garden');
     expect(workerInstances[0].sensors).toHaveLength(2);
     expect(workerInstances[0].start).toHaveBeenCalled();
   });
