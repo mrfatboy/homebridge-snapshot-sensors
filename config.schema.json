@@ -37,14 +37,14 @@
             "snapshotDirectory": {
               "title": "Snapshot Directory",
               "type": "string",
-              "description": "Directory on the Homebridge server where snapshot files can be stored."
+              "description": "Required when Store snapshots is Raw or Annotate."
             },
             "storeSnapshots": {
               "title": "Store snapshots",
               "type": "string",
               "enum": ["never", "raw", "annotate"],
               "default": "never",
-              "description": "Choose whether to save snapshots, and whether to save the raw or annotated image."
+              "description": "Choose whether to save snapshots, and whether to save the raw or annotated image. Raw and Annotate require a Snapshot Directory."
             },
             "sensors": {
               "title": "Sensors",
@@ -84,7 +84,21 @@
                 }
               }
             }
-          }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "storeSnapshots": {
+                    "enum": ["raw", "annotate"]
+                  }
+                }
+              },
+              "then": {
+                "required": ["snapshotDirectory"]
+              }
+            }
+          ]
         }
       }
     }
