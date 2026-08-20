@@ -15,8 +15,8 @@ export class StreamSensorAccessory {
   ) {
     this.accessory
       .getService(this.platform.Service.AccessoryInformation)!
-      .setCharacteristic(this.platform.Characteristic.Manufacturer, 'homebridge-stream-sensors')
-      .setCharacteristic(this.platform.Characteristic.Model, 'Stream Sensor (YOLO26n)')
+      .setCharacteristic(this.platform.Characteristic.Manufacturer, 'homebridge-snap-sensors')
+      .setCharacteristic(this.platform.Characteristic.Model, 'Snap Sensor (YOLO26n)')
       .setCharacteristic(this.platform.Characteristic.SerialNumber, accessory.UUID)
       .setCharacteristic(this.platform.Characteristic.FirmwareRevision, PLUGIN_VERSION);
 
