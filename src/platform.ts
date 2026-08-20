@@ -14,7 +14,7 @@ import { loadModel, closeModel, runInference } from './inference.js';
 import { resolveSensors } from './categories.js';
 import type { StreamConfig, SensorSpec } from './types.js';
 
-export class StreamSensorsPlatform implements DynamicPlatformPlugin {
+export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service;
   public readonly Characteristic: typeof Characteristic;
   public readonly accessories: PlatformAccessory[] = [];
@@ -29,9 +29,6 @@ export class StreamSensorsPlatform implements DynamicPlatformPlugin {
     this.Characteristic = api.hap.Characteristic;
 
     this.api.on('shutdown', () => {
-      // Stop all workers (sets running=false, kills ffmpeg, interrupts sleeps),
-      // then wait for every detection loop to exit before releasing the model —
-      // guarantees no runInference() call is in-flight at release.
       const draining = this.workers.map((w) => {
         w.stop();
         return w.waitForStop();
@@ -43,10 +40,6 @@ export class StreamSensorsPlatform implements DynamicPlatformPlugin {
     });
 
     this.api.on('didFinishLaunching', () => {
-      // Don't load the model or spawn any workers until the plugin is configured.
-      // With no streams, discoverDevices() still runs to unregister any stale
-      // cached accessories (e.g. left over after the user removed every stream),
-      // but it creates no workers — so nothing heavyweight starts.
       const streams: StreamConfig[] = this.config.streams ?? [];
       if (streams.length === 0) {
         this.log.info('No streams configured — nothing to detect.');
@@ -72,8 +65,6 @@ export class StreamSensorsPlatform implements DynamicPlatformPlugin {
   private discoverDevices(): void {
     const streams: StreamConfig[] = this.config.streams ?? [];
     const seenUUIDs = new Set<string>();
-    // Sensor names are the accessory identity, so they must be unique across the
-    // whole config — a collision would map two sensors onto one HomeKit accessory.
     const claimedNames = new Set<string>();
 
     for (const stream of streams) {
@@ -89,7 +80,6 @@ export class StreamSensorsPlatform implements DynamicPlatformPlugin {
         this.log.warn(msg),
       );
 
-      // Drop sensors whose final name collides with one already claimed.
       const sensors: SensorSpec[] = [];
       for (const sensor of resolved) {
         if (claimedNames.has(sensor.name)) {
@@ -102,8 +92,6 @@ export class StreamSensorsPlatform implements DynamicPlatformPlugin {
         sensors.push(sensor);
       }
 
-      // No sensors → nothing to detect. Don't spawn ffmpeg or run inference for
-      // this stream; its stale accessories (if any) are cleaned up below.
       if (sensors.length === 0) {
         this.log.warn(`Stream "${streamName}" has no sensors — not starting it`);
         continue;
@@ -133,7 +121,6 @@ export class StreamSensorsPlatform implements DynamicPlatformPlugin {
         streamName,
         sensors,
         (i, active) => sensorAccessories[i]?.setMotion(active),
-        // Stream health is per-pump, so fan it out to every sensor on this stream.
         (health) => sensorAccessories.forEach((a) => a.setHealth(health)),
         (frame) => runInference(frame),
         this.log,
