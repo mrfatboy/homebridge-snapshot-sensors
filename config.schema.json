@@ -81,7 +81,7 @@
       "key": "streams",
       "type": "array",
       "title": "📷 Your camera snapshots",
-      "buttonText": "➕ Add camera snapshot",
+      "buttonText": "ADD SNAPSHOT",
       "expandable": true,
       "expanded": true,
       "items": [
