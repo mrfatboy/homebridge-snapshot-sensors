@@ -1,24 +1,24 @@
+<div id="snapshot-sensors-ui" class="mb-3">
+  <div class="text-muted">Snapshot Sensors configuration</div>
+</div>
+
 <script>
+(() => {
   let correcting = false;
 
-  homebridge.showSchemaForm();
-
-  homebridge.addEventListener('configChanged', async (event) => {
-    if (correcting) return;
-
-    const config = event.data;
-    if (!Array.isArray(config)) return;
+  function validateConfig(config) {
+    if (!Array.isArray(config)) return { config, changed: false };
 
     let changed = false;
 
-    const correctedConfig = config.map((platform) => {
+    const corrected = config.map((platform) => {
       if (!platform || !Array.isArray(platform.streams)) return platform;
 
       const streams = platform.streams.map((stream) => {
         if (!stream) return stream;
 
-        const hasDirectory = typeof stream.snapshotDirectory === 'string' &&
-          stream.snapshotDirectory.trim().length > 0;
+        const hasDirectory = typeof stream.snapshotDirectory === 'string'
+          && stream.snapshotDirectory.trim().length > 0;
 
         if (!hasDirectory &&
             (stream.storeSnapshots === 'raw' || stream.storeSnapshots === 'annotate')) {
@@ -32,18 +32,40 @@
       return { ...platform, streams };
     });
 
-    if (!changed) return;
+    return { config: corrected, changed };
+  }
+
+  async function handleConfigChanged(event) {
+    if (correcting) return;
+
+    const result = validateConfig(event.data);
+    if (!result.changed) return;
 
     correcting = true;
 
     try {
-      await homebridge.updatePluginConfig(correctedConfig);
+      await homebridge.updatePluginConfig(result.config);
       homebridge.toast.warning(
         'Enter a Snapshot Directory before selecting Raw or Annotate. The setting has been changed back to Never.',
         'Snapshot Directory Required'
       );
+    } catch (error) {
+      console.error('Failed to correct snapshot storage setting:', error);
+      homebridge.toast.error(
+        'The snapshot storage setting could not be corrected.',
+        'Configuration Error'
+      );
     } finally {
       correcting = false;
     }
+  }
+
+  homebridge.addEventListener('configChanged', handleConfigChanged);
+
+  // Wait until Homebridge has finished initializing the custom UI before
+  // asking it to render the normal schema-generated configuration form.
+  homebridge.addEventListener('ready', () => {
+    homebridge.showSchemaForm();
   });
+})();
 </script>
