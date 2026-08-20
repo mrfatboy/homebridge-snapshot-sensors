@@ -1,5 +1,5 @@
-export const PLATFORM_NAME = 'SnapSensors';
-export const PLUGIN_NAME = 'homebridge-snap-sensors';
+export const PLATFORM_NAME = 'SnapshotSensors';
+export const PLUGIN_NAME = 'homebridge-snapshot-sensors';
 
 // Frame dimensions — must match yolo26n.onnx (non-dynamic [1,3,576,1024])
 export const FRAME_WIDTH = 1024;
