@@ -1,85 +1,58 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Snapshot Sensors</title>
+</head>
+<body>
 <script>
-  let reverting = false;
+  let correcting = false;
 
   homebridge.showSchemaForm();
 
-  async function validateSnapshotStorage() {
-    if (reverting) return;
+  homebridge.addEventListener('configChanged', async (event) => {
+    if (correcting) return;
 
-    const config = await homebridge.getPluginConfig();
+    const config = event.data;
     if (!Array.isArray(config)) return;
 
-    let invalidSelection = false;
+    let changed = false;
 
     const correctedConfig = config.map((platform) => {
       if (!platform || !Array.isArray(platform.streams)) return platform;
 
-      const streams = platform.streams.map((stream) => {
-        if (!stream) return stream;
+      return {
+        ...platform,
+        streams: platform.streams.map((stream) => {
+          if (!stream) return stream;
 
-        const hasDirectory = typeof stream.snapshotDirectory === 'string' &&
-          stream.snapshotDirectory.trim().length > 0;
+          const hasDirectory = typeof stream.snapshotDirectory === 'string' &&
+            stream.snapshotDirectory.trim().length > 0;
 
-        if ((stream.storeSnapshots === 'raw' || stream.storeSnapshots === 'annotate') && !hasDirectory) {
-          invalidSelection = true;
-          return { ...stream, storeSnapshots: 'never' };
-        }
+          if (!hasDirectory &&
+              (stream.storeSnapshots === 'raw' || stream.storeSnapshots === 'annotate')) {
+            changed = true;
+            return { ...stream, storeSnapshots: 'never' };
+          }
 
-        return stream;
-      });
-
-      return { ...platform, streams };
+          return stream;
+        })
+      };
     });
 
-    if (!invalidSelection) return;
+    if (!changed) return;
 
-    reverting = true;
+    correcting = true;
 
     try {
       await homebridge.updatePluginConfig(correctedConfig);
-      homebridge.toast.warning(
-        'A Snapshot Directory is required before you can select Raw or Annotate. The setting has been changed back to Never.',
-        'Snapshot Directory Required'
+      window.alert(
+        'Snapshot Directory Required\n\nEnter a Snapshot Directory before selecting Raw or Annotate. The Store snapshots setting has been changed back to Never.'
       );
     } finally {
-      reverting = false;
+      correcting = false;
     }
-  }
-
-  // configChanged is the normal event from the schema form. The DOM listener
-  // provides immediate protection when the select itself is changed.
-  homebridge.addEventListener('configChanged', validateSnapshotStorage);
-
-  document.addEventListener('change', async (event) => {
-    const select = event.target;
-    if (!(select instanceof HTMLSelectElement)) return;
-
-    const values = Array.from(select.options).map((option) => option.value);
-    if (!values.includes('raw') || !values.includes('annotate')) return;
-    if (select.value !== 'raw' && select.value !== 'annotate') return;
-
-    const config = await homebridge.getPluginConfig();
-    const streams = config?.[0]?.streams;
-    if (!Array.isArray(streams)) return;
-
-    const hasDirectory = streams.some((stream) =>
-      typeof stream?.snapshotDirectory === 'string' && stream.snapshotDirectory.trim().length > 0
-    );
-
-    if (hasDirectory) return;
-
-    event.preventDefault();
-    reverting = true;
-
-    try {
-      select.value = 'never';
-      await validateSnapshotStorage();
-      homebridge.toast.warning(
-        'Enter a Snapshot Directory before selecting Raw or Annotate.',
-        'Snapshot Directory Required'
-      );
-    } finally {
-      reverting = false;
-    }
-  }, true);
+  });
 </script>
+</body>
+</html>
