@@ -1,44 +1,12 @@
+<div class="card mb-3">
+  <div class="card-body">
+    <h5 class="card-title">Snapshot Sensors</h5>
+    <p class="card-text">Configuration interface</p>
+  </div>
+</div>
+
 <script>
-(() => {
-  let lastWarning = 0;
-
-  function showWarningIfNeeded(config) {
-    if (!Array.isArray(config)) return;
-
-    for (const platform of config) {
-      if (!platform || !Array.isArray(platform.streams)) continue;
-
-      for (const stream of platform.streams) {
-        if (!stream) continue;
-
-        const storage = stream.storeSnapshots;
-        const directory = typeof stream.snapshotDirectory === 'string'
-          ? stream.snapshotDirectory.trim()
-          : '';
-
-        if ((storage === 'raw' || storage === 'annotate') && !directory) {
-          const now = Date.now();
-          if (now - lastWarning > 1000) {
-            lastWarning = now;
-            homebridge.toast.warning(
-              'Please enter a Snapshot Directory when storing snapshots as Raw or Annotate.',
-              'Snapshot Directory Required'
-            );
-          }
-          return;
-        }
-      }
-    }
-  }
-
-  homebridge.addEventListener('configChanged', (event) => {
-    showWarningIfNeeded(event.data);
-  });
-
-  // Homebridge injects the UI API before loading this file. The ready event
-  // is the supported point at which the schema-generated form can be shown.
   homebridge.addEventListener('ready', () => {
-    homebridge.showSchemaForm();
-  });
-})();
+    homebridge.showSchemaForm()
+  })
 </script>
