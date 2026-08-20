@@ -14,7 +14,7 @@ import { loadModel, closeModel, runInference } from './inference.js';
 import { resolveSensors } from './categories.js';
 import type { StreamConfig, SensorSpec } from './types.js';
 
-export class StreamSensorsPlatform implements DynamicPlatformPlugin {
+export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service;
   public readonly Characteristic: typeof Characteristic;
   public readonly accessories: PlatformAccessory[] = [];

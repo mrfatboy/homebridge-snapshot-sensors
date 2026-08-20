@@ -1,5 +1,5 @@
 import type { PlatformAccessory, CharacteristicValue } from 'homebridge';
-import type { StreamSensorsPlatform } from './platform.js';
+import type { SnapshotSensorsPlatform } from './platform.js';
 import type { StreamHealth } from './types.js';
 import { PLUGIN_VERSION } from './version.js';
 
@@ -8,15 +8,15 @@ export class StreamSensorAccessory {
   private active = false;
 
   constructor(
-    private readonly platform: StreamSensorsPlatform,
+    private readonly platform: SnapshotSensorsPlatform,
     private readonly accessory: PlatformAccessory,
     private readonly name: string,
     private readonly logStatus: boolean,
   ) {
     this.accessory
       .getService(this.platform.Service.AccessoryInformation)!
-      .setCharacteristic(this.platform.Characteristic.Manufacturer, 'homebridge-stream-sensors')
-      .setCharacteristic(this.platform.Characteristic.Model, 'Stream Sensor (YOLO26n)')
+      .setCharacteristic(this.platform.Characteristic.Manufacturer, 'homebridge-snapshot-sensors')
+      .setCharacteristic(this.platform.Characteristic.Model, 'Snapshot Sensor (YOLO26n)')
       .setCharacteristic(this.platform.Characteristic.SerialNumber, accessory.UUID)
       .setCharacteristic(this.platform.Characteristic.FirmwareRevision, PLUGIN_VERSION);
 

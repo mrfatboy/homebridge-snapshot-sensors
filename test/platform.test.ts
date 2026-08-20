@@ -36,7 +36,7 @@ vi.mock('../src/accessory.js', () => ({
   }),
 }));
 
-import { StreamSensorsPlatform } from '../src/platform.js';
+import { SnapshotSensorsPlatform } from '../src/platform.js';
 import type { API, Logger, PlatformConfig } from 'homebridge';
 
 // Minimal fake homebridge API that records registrations.
@@ -103,7 +103,7 @@ async function launch(
   log: Logger,
   listeners: Record<string, () => void>,
 ) {
-  new StreamSensorsPlatform(log, config, api);
+  new SnapshotSensorsPlatform(log, config, api);
   listeners['didFinishLaunching']?.();
   // loadModel() is mocked-resolved; flush the promise chain.
   await new Promise((r) => setImmediate(r));
@@ -121,7 +121,7 @@ describe('discoverDevices()', () => {
     const log = makeLog();
     await launch(
       {
-        platform: 'StreamSensors',
+        platform: 'SnapshotSensors',
         streams: [
           {
             name: 'Garden',
@@ -150,7 +150,7 @@ describe('discoverDevices()', () => {
     const log = makeLog();
     await launch(
       {
-        platform: 'StreamSensors',
+        platform: 'SnapshotSensors',
         streams: [
           {
             url: 'rtsp://noname',
@@ -178,7 +178,7 @@ describe('discoverDevices()', () => {
     const log = makeLog();
     await launch(
       {
-        platform: 'StreamSensors',
+        platform: 'SnapshotSensors',
         streams: [
           {
             name: 'Empty',
@@ -202,7 +202,7 @@ describe('discoverDevices()', () => {
     const log = makeLog();
     await launch(
       {
-        platform: 'StreamSensors',
+        platform: 'SnapshotSensors',
         streams: [
           {
             name: 'A',
@@ -238,10 +238,10 @@ describe('discoverDevices()', () => {
   it('unregisters cached accessories that are no longer in the config', async () => {
     const { api, unregistered, listeners } = makeApi();
     const log = makeLog();
-    const platform = new StreamSensorsPlatform(
+    const platform = new SnapshotSensorsPlatform(
       log,
       {
-        platform: 'StreamSensors',
+        platform: 'SnapshotSensors',
         streams: [
           {
             name: 'Garden',
