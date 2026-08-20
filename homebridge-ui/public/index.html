@@ -90,6 +90,9 @@
             <input class="form-control snapshot-directory" type="text" placeholder="/path/to/snapshots">
           </div>
           <div class="form-group mb-3">
+            <button type="button" class="btn btn-outline-secondary test-snapshot">📸 Test Snapshot</button>
+          </div>
+          <div class="form-group mb-3">
             <label>💾 Store snapshots</label>
             <select class="form-control store-snapshots">
               <option value="never">Never</option>
@@ -124,12 +127,55 @@
     }
   });
 
-  snapshots.addEventListener('click', (event) => {
+  snapshots.addEventListener('click', async (event) => {
     const snapshot = event.target.closest('.snapshot-card');
     if (!snapshot) return;
 
     if (event.target.closest('.remove-snapshot')) {
       snapshot.remove();
+      return;
+    }
+
+    if (event.target.closest('.test-snapshot')) {
+      const button = event.target.closest('.test-snapshot');
+      const url = snapshot.querySelector('.snapshot-url').value.trim();
+
+      if (!url) {
+        homebridge.toast.warning('Please enter a Snapshot URL first.', 'Snapshot URL Required');
+        return;
+      }
+
+      button.disabled = true;
+      const originalText = button.textContent;
+      button.textContent = '📸 Testing...';
+
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = 'snapshot.jpg';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+
+        homebridge.toast.success('Snapshot downloaded successfully.', 'Test Snapshot');
+      } catch (error) {
+        console.error('Test Snapshot failed:', error);
+        homebridge.toast.error(
+          'Unable to download the snapshot. The camera may block browser requests (CORS) or the URL may be invalid.',
+          'Test Snapshot Failed'
+        );
+      } finally {
+        button.disabled = false;
+        button.textContent = originalText;
+      }
       return;
     }
 
