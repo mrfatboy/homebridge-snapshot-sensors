@@ -81,7 +81,7 @@
       "key": "streams",
       "type": "array",
       "title": "📷 Your camera snapshots",
-      "buttonText": "+ ADD SNAPSHOT",
+      "buttonText": "➕ ADD SNAPSHOT",
       "expandable": true,
       "expanded": true,
       "items": [
@@ -92,7 +92,7 @@
           "type": "array",
           "title": "📡 Sensors",
           "description": "Add at least one sensor. Each becomes a HomeKit motion sensor that triggers when its selected categories are detected.",
-          "buttonText": "+ ADD SENSOR",
+          "buttonText": "➕ ADD SENSOR",
           "expandable": true,
           "expanded": true,
           "items": [
