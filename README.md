@@ -6,16 +6,21 @@
 [![GitHub stars](https://img.shields.io/github/stars/mrfatboy/homebridge-snapshot-sensors?style=flat)](https://github.com/mrfatboy/homebridge-snapshot-sensors/stargazers)
 [![license](https://img.shields.io/npm/l/homebridge-snapshot-sensors)](./LICENSE)
 
-**Turn any camera stream into HomeKit motion sensors with local YOLO object** <br />
-**detection for `🐶 Animals`, `📦 Packages`, `🧍 People`, `🚗 Vehicles`.**
+**Turn camera/video streams into HomeKit motion sensors with local YOLO object detection for `🐶 Animals`, `📦 Packages`, `🧍 People`, `🚗 Vehicles`.**
+
+## About this project
+
+**homebridge-snapshot-sensors is a fork of the original [homebridge-stream-sensors](https://github.com/nkatchik/homebridge-stream-sensors) project.** This project keeps the original project's core purpose while providing a separately developed and maintained implementation under the new **Snapshot Sensors** name.
+
+This new project was **vibe coded** — developed collaboratively with AI assistance, with the resulting code tested, reviewed, and validated through automated tests and real Homebridge installation testing.
 
 ## Installation
 
 ### Homebridge UI
 
 1. Open the **Plugins** tab in the Homebridge UI.
-1. Search for `homebridge-snapshot-sensors`.
-1. Click **Install**.
+2. Search for `homebridge-snapshot-sensors`.
+3. Click **Install**.
 
 ### Command line
 
