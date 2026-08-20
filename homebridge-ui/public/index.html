@@ -1,0 +1,140 @@
+<div class="mb-3">
+  <button id="showSchema" type="button" class="btn btn-link p-0">Configure Snapshot Sensors</button>
+</div>
+
+<script>
+(() => {
+  function init() {
+    if (typeof homebridge === 'undefined') return;
+
+    // Always display the normal Homebridge schema form first. The custom UI
+    // only adds the directory browser button and does not replace the form.
+    homebridge.showSchemaForm();
+
+    const addBrowseButtons = () => {
+      document.querySelectorAll('input').forEach((input) => {
+        if (input.dataset.snapshotDirectoryBrowse === 'true') return;
+
+        const placeholder = input.getAttribute('placeholder') || '';
+        const aria = input.getAttribute('aria-label') || '';
+        const title = input.closest('.form-group, .mb-3, .form-control')?.textContent || '';
+
+        if (placeholder !== '/path/to/snapshots' && !/snapshot directory/i.test(`${aria} ${title}`)) return;
+
+        input.dataset.snapshotDirectoryBrowse = 'true';
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn btn-outline-secondary mt-2';
+        button.textContent = 'Browse';
+        button.addEventListener('click', () => openBrowser(input));
+        input.insertAdjacentElement('afterend', button);
+      });
+    };
+
+    async function openBrowser(input) {
+      const backdrop = document.createElement('div');
+      backdrop.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px;';
+
+      const modal = document.createElement('div');
+      modal.className = 'card shadow';
+      modal.style.cssText = 'width:min(720px,100%);max-height:90vh;overflow:hidden;';
+      modal.innerHTML = `
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <strong>📁 Select Snapshot Directory</strong>
+          <button type="button" class="btn btn-secondary btn-sm cancel">Cancel</button>
+        </div>
+        <div class="card-body">
+          <div class="input-group mb-3">
+            <input type="text" class="form-control path" placeholder="/">
+            <button type="button" class="btn btn-primary go">Go</button>
+          </div>
+          <div class="directories list-group" style="max-height:45vh;overflow-y:auto;"></div>
+          <div class="error alert alert-danger mt-3 d-none"></div>
+        </div>
+        <div class="card-footer text-end">
+          <button type="button" class="btn btn-primary select">Select This Directory</button>
+        </div>`;
+
+      backdrop.appendChild(modal);
+      document.body.appendChild(backdrop);
+
+      const pathInput = modal.querySelector('.path');
+      const directories = modal.querySelector('.directories');
+      const error = modal.querySelector('.error');
+      let currentPath = input.value.trim() || '/';
+
+      const close = () => backdrop.remove();
+      modal.querySelector('.cancel').addEventListener('click', close);
+      backdrop.addEventListener('click', (event) => {
+        if (event.target === backdrop) close();
+      });
+
+      const browse = async (directoryPath) => {
+        directories.innerHTML = '<div class="list-group-item">Loading...</div>';
+        error.classList.add('d-none');
+
+        try {
+          const result = await homebridge.request('/browse', { path: directoryPath });
+          currentPath = result.path;
+          pathInput.value = currentPath;
+          directories.innerHTML = '';
+
+          if (currentPath !== '/') {
+            const parent = document.createElement('button');
+            parent.type = 'button';
+            parent.className = 'list-group-item list-group-item-action';
+            parent.textContent = '⬆️ ..';
+            parent.addEventListener('click', () => browse(result.parent));
+            directories.appendChild(parent);
+          }
+
+          if (!result.directories.length) {
+            const empty = document.createElement('div');
+            empty.className = 'list-group-item text-muted';
+            empty.textContent = 'No subdirectories.';
+            directories.appendChild(empty);
+          }
+
+          result.directories.forEach((entry) => {
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'list-group-item list-group-item-action';
+            item.textContent = `📁 ${entry.name}`;
+            item.addEventListener('click', () => browse(entry.path));
+            directories.appendChild(item);
+          });
+        } catch (err) {
+          directories.innerHTML = '';
+          error.textContent = err?.message || 'Unable to read this directory.';
+          error.classList.remove('d-none');
+        }
+      };
+
+      modal.querySelector('.go').addEventListener('click', () => browse(pathInput.value.trim() || '/'));
+      pathInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') browse(pathInput.value.trim() || '/');
+      });
+      modal.querySelector('.select').addEventListener('click', () => {
+        input.value = currentPath;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        close();
+      });
+
+      await browse(currentPath);
+    }
+
+    const observer = new MutationObserver(addBrowseButtons);
+    observer.observe(document.body, { childList: true, subtree: true });
+    addBrowseButtons();
+  }
+
+  // Give Homebridge a moment to finish injecting the UI bridge and schema form.
+  if (typeof homebridge !== 'undefined') {
+    init();
+  } else {
+    window.addEventListener('load', init, { once: true });
+  }
+})();
+</script>
