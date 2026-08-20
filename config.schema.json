@@ -1,5 +1,5 @@
 {
-  "pluginAlias": "StreamSensors",
+  "pluginAlias": "SnapSensors",
   "pluginType": "platform",
   "singular": true,
   "headerDisplay": "Expose video streams as HomeKit motion sensors using on-device object detection. Add one **Stream** per source/camera, then add **Sensors** to it.",
@@ -11,7 +11,7 @@
       "name": {
         "title": "Name",
         "type": "string",
-        "default": "StreamSensors",
+        "default": "SnapSensors",
         "description": "Plugin name as displayed in the Homebridge log."
       },
       "streams": {
