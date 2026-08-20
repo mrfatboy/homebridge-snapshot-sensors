@@ -1,14 +1,36 @@
 <div class="card card-body">
-  <div class="text-center">
+  <h4>Snapshot Sensors</h4>
+
+  <div class="form-group mb-3">
+    <label for="snapshotName">Snapshot sensor name</label>
+    <input id="snapshotName" class="form-control" type="text" placeholder="CameraSensor1">
+  </div>
+
+  <div class="form-group mb-3">
+    <label for="snapshotUrl">Snapshot URL</label>
+    <input id="snapshotUrl" class="form-control" type="url" placeholder="http://192.168.1.50:88/cgi-bin/CGIProxy.fcgi?...">
+  </div>
+
+  <div class="form-group mb-3">
+    <label for="snapshotDirectory">Snapshot Directory</label>
+    <input id="snapshotDirectory" class="form-control" type="text" placeholder="/path/to/snapshots">
+  </div>
+
+  <div class="form-group mb-3">
+    <label for="storeSnapshots">Store snapshots</label>
+    <select id="storeSnapshots" class="form-control">
+      <option value="never">Never</option>
+      <option value="raw">Raw</option>
+      <option value="annotate">Annotate</option>
+    </select>
+  </div>
+
+  <div class="text-center mt-3">
     <button id="testPopupButton" type="button" class="btn btn-primary">TEST POPUP</button>
   </div>
 </div>
 
 <script>
-  homebridge.addEventListener('ready', () => {
-    homebridge.showSchemaForm();
-  });
-
   document.querySelector('#testPopupButton').addEventListener('click', () => {
     homebridge.toast.success('Test popup works!', 'Success');
   });
