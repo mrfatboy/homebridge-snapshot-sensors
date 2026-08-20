@@ -1,12 +1,50 @@
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Snapshot Sensors</title>
-</head>
-<body>
+<link rel="stylesheet" href="bootstrap.min.css">
+
 <script>
+  let reverting = false;
+
   homebridge.showSchemaForm();
+
+  homebridge.addEventListener('configChanged', async (event) => {
+    if (reverting) return;
+
+    const config = event.data;
+    if (!Array.isArray(config)) return;
+
+    let invalidSelection = false;
+
+    const correctedConfig = config.map((platform) => {
+      if (!platform || !Array.isArray(platform.streams)) return platform;
+
+      const streams = platform.streams.map((stream) => {
+        if (!stream) return stream;
+
+        const hasDirectory = typeof stream.snapshotDirectory === 'string' &&
+          stream.snapshotDirectory.trim().length > 0;
+
+        if ((stream.storeSnapshots === 'raw' || stream.storeSnapshots === 'annotate') && !hasDirectory) {
+          invalidSelection = true;
+          return { ...stream, storeSnapshots: 'never' };
+        }
+
+        return stream;
+      });
+
+      return { ...platform, streams };
+    });
+
+    if (!invalidSelection) return;
+
+    reverting = true;
+
+    try {
+      await homebridge.updatePluginConfig(correctedConfig);
+      homebridge.toast.warning(
+        'A Snapshot Directory is required before you can select Raw or Annotate. The setting has been changed back to Never.',
+        'Snapshot Directory Required'
+      );
+    } finally {
+      reverting = false;
+    }
+  });
 </script>
-</body>
-</html>
