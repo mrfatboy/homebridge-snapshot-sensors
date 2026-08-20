@@ -4,6 +4,7 @@
   "singular": true,
   "customUi": true,
   "schema": {
+    "type": "object",
     "properties": {
       "test": {
         "title": "Test",
