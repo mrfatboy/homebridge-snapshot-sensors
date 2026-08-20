@@ -108,6 +108,22 @@
     snapshots.insertAdjacentHTML('beforeend', snapshotHtml(index));
   }
 
+  snapshots.addEventListener('change', (event) => {
+    if (!event.target.classList.contains('store-snapshots')) return;
+
+    const snapshot = event.target.closest('.snapshot-card');
+    const directory = snapshot.querySelector('.snapshot-directory').value.trim();
+    const selected = event.target.value;
+
+    if ((selected === 'raw' || selected === 'annotate') && !directory) {
+      event.target.value = 'never';
+      homebridge.toast.warning(
+        'Please fill in the Snapshot Directory before selecting Raw or Annotate.',
+        'Snapshot Directory Required'
+      );
+    }
+  });
+
   snapshots.addEventListener('click', (event) => {
     const snapshot = event.target.closest('.snapshot-card');
     if (!snapshot) return;
