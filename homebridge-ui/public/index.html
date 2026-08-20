@@ -5,9 +5,9 @@
 </div>
 
 <script>
-  const { homebridge } = window;
-
-  homebridge.showSchemaForm();
+  homebridge.addEventListener('ready', () => {
+    homebridge.showSchemaForm();
+  });
 
   document.querySelector('#testPopupButton').addEventListener('click', () => {
     homebridge.toast.success('Test popup works!', 'Success');
