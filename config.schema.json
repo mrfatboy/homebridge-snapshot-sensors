@@ -92,7 +92,7 @@
           "type": "array",
           "title": "📡 Sensors",
           "description": "Add at least one sensor. Each becomes a HomeKit motion sensor that triggers when its selected categories are detected.",
-          "buttonText": "➕ Add Sensor",
+          "buttonText": "+ ADD SENSOR",
           "expandable": true,
           "expanded": true,
           "items": [
