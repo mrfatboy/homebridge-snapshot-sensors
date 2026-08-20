@@ -1,0 +1,192 @@
+<style>
+  .snapshot-directory-browser {
+    margin-top: 8px;
+  }
+
+  .snapshot-directory-browser .browse-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .snapshot-directory-browser .browse-row input {
+    flex: 1;
+  }
+
+  .snapshot-directory-browser .browse-button {
+    white-space: nowrap;
+  }
+
+  .snapshot-directory-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+
+  .snapshot-directory-modal {
+    width: min(720px, 100%);
+    max-height: min(700px, 90vh);
+    overflow: hidden;
+  }
+
+  .snapshot-directory-list {
+    max-height: 50vh;
+    overflow-y: auto;
+  }
+
+  .snapshot-directory-list button {
+    width: 100%;
+    text-align: left;
+  }
+</style>
+
+<script>
+(async () => {
+  // The schema form remains the source of truth for all existing configuration.
+  // We only add the server-backed directory browser to the Snapshot Directory field.
+  homebridge.showSchemaForm();
+
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  function findDirectoryInputs() {
+    return [...document.querySelectorAll('input')].filter((input) => {
+      const placeholder = input.getAttribute('placeholder') || '';
+      const name = input.getAttribute('name') || '';
+      const aria = input.getAttribute('aria-label') || '';
+      return placeholder === '/path/to/snapshots' || /snapshot.*directory/i.test(`${name} ${aria}`);
+    });
+  }
+
+  function createBrowser(input) {
+    if (input.dataset.snapshotDirectoryBrowser === 'true') return;
+    input.dataset.snapshotDirectoryBrowser = 'true';
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'snapshot-directory-browser';
+
+    const row = document.createElement('div');
+    row.className = 'browse-row';
+
+    input.parentElement.insertBefore(wrapper, input);
+    wrapper.appendChild(row);
+    row.appendChild(input);
+
+    const browse = document.createElement('button');
+    browse.type = 'button';
+    browse.className = 'btn btn-secondary browse-button';
+    browse.textContent = 'Browse';
+    row.appendChild(browse);
+
+    browse.addEventListener('click', () => openBrowser(input));
+  }
+
+  async function waitForDirectoryInputs() {
+    for (let i = 0; i < 100; i += 1) {
+      const inputs = findDirectoryInputs();
+      if (inputs.length) {
+        inputs.forEach(createBrowser);
+        return;
+      }
+      await sleep(100);
+    }
+  }
+
+  async function openBrowser(input) {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'snapshot-directory-modal-backdrop';
+
+    const modal = document.createElement('div');
+    modal.className = 'snapshot-directory-modal card shadow';
+    modal.innerHTML = `
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Select Snapshot Directory</strong>
+        <button type="button" class="btn-close" aria-label="Close"></button>
+      </div>
+      <div class="card-body">
+        <div class="input-group mb-3">
+          <input type="text" class="form-control directory-path" placeholder="/">
+          <button type="button" class="btn btn-secondary go-button">Go</button>
+        </div>
+        <div class="directory-list list-group"></div>
+      </div>
+      <div class="card-footer d-flex justify-content-end gap-2">
+        <button type="button" class="btn btn-secondary cancel-button">Cancel</button>
+        <button type="button" class="btn btn-primary select-button">Select This Directory</button>
+      </div>
+    `;
+
+    backdrop.appendChild(modal);
+    document.body.appendChild(backdrop);
+
+    const pathInput = modal.querySelector('.directory-path');
+    const list = modal.querySelector('.directory-list');
+    let currentPath = input.value.trim() || '/';
+
+    const close = () => backdrop.remove();
+    modal.querySelector('.btn-close').addEventListener('click', close);
+    modal.querySelector('.cancel-button').addEventListener('click', close);
+    backdrop.addEventListener('click', (event) => {
+      if (event.target === backdrop) close();
+    });
+
+    async function browse(path) {
+      list.innerHTML = '<div class="text-muted p-2">Loading...</div>';
+      try {
+        const result = await homebridge.request('/browse', { path });
+        currentPath = result.path;
+        pathInput.value = currentPath;
+        list.innerHTML = '';
+
+        if (currentPath !== '/') {
+          const parent = document.createElement('button');
+          parent.type = 'button';
+          parent.className = 'list-group-item list-group-item-action';
+          parent.textContent = '⬆️  ..';
+          parent.addEventListener('click', () => browse(result.parent));
+          list.appendChild(parent);
+        }
+
+        if (!result.directories.length) {
+          const empty = document.createElement('div');
+          empty.className = 'text-muted p-2';
+          empty.textContent = 'No subdirectories.';
+          list.appendChild(empty);
+        }
+
+        for (const directory of result.directories) {
+          const item = document.createElement('button');
+          item.type = 'button';
+          item.className = 'list-group-item list-group-item-action';
+          item.textContent = `📁  ${directory.name}`;
+          item.addEventListener('click', () => browse(directory.path));
+          list.appendChild(item);
+        }
+      } catch (error) {
+        list.innerHTML = '<div class="alert alert-danger mb-0">Unable to read this directory.</div>';
+      }
+    }
+
+    modal.querySelector('.go-button').addEventListener('click', () => browse(pathInput.value.trim() || '/'));
+    pathInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') browse(pathInput.value.trim() || '/');
+    });
+    modal.querySelector('.select-button').addEventListener('click', () => {
+      input.value = currentPath;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      close();
+    });
+
+    await browse(currentPath);
+  }
+
+  const observer = new MutationObserver(() => waitForDirectoryInputs());
+  observer.observe(document.body, { childList: true, subtree: true });
+  await waitForDirectoryInputs();
+})();
+</script>
