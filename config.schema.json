@@ -86,7 +86,7 @@
     {
       "key": "streams",
       "type": "array",
-      "title": "📷 Your camera snapshots",
+      "title": "📷 Your Snapshot sensors",
       "buttonText": "➕ ADD SNAPSHOT",
       "expandable": true,
       "expanded": true,
