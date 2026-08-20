@@ -1,16 +1,7 @@
 <style>
   .snapshot-directory-browser {
-    margin-top: 8px;
-  }
-
-  .snapshot-directory-browser .browse-row {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  }
-
-  .snapshot-directory-browser .browse-row input {
-    flex: 1;
+    display: inline-block;
+    margin-left: 8px;
   }
 
   .snapshot-directory-browser .browse-button {
@@ -47,8 +38,6 @@
 
 <script>
 (async () => {
-  // The schema form remains the source of truth for all existing configuration.
-  // We only add the server-backed directory browser to the Snapshot Directory field.
   homebridge.showSchemaForm();
 
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -66,22 +55,11 @@
     if (input.dataset.snapshotDirectoryBrowser === 'true') return;
     input.dataset.snapshotDirectoryBrowser = 'true';
 
-    const wrapper = document.createElement('div');
-    wrapper.className = 'snapshot-directory-browser';
-
-    const row = document.createElement('div');
-    row.className = 'browse-row';
-
-    input.parentElement.insertBefore(wrapper, input);
-    wrapper.appendChild(row);
-    row.appendChild(input);
-
     const browse = document.createElement('button');
     browse.type = 'button';
     browse.className = 'btn btn-secondary browse-button';
     browse.textContent = 'Browse';
-    row.appendChild(browse);
-
+    input.insertAdjacentElement('afterend', browse);
     browse.addEventListener('click', () => openBrowser(input));
   }
 
@@ -134,10 +112,10 @@
       if (event.target === backdrop) close();
     });
 
-    async function browse(path) {
+    async function browse(directoryPath) {
       list.innerHTML = '<div class="text-muted p-2">Loading...</div>';
       try {
-        const result = await homebridge.request('/browse', { path });
+        const result = await homebridge.request('/browse', { path: directoryPath });
         currentPath = result.path;
         pathInput.value = currentPath;
         list.innerHTML = '';
