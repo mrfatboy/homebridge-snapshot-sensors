@@ -2,7 +2,7 @@
   "pluginAlias": "SnapshotSensors",
   "pluginType": "platform",
   "singular": true,
-  "customUi": true,
+  "customUi": false,
   "headerDisplay": "Expose camera snapshots as HomeKit motion sensors using on-device object detection. Add one **Snapshot** per source/camera, then add **Sensors** to it.",
   "footerDisplay": "### How sensors work\n\nEach **Sensor** becomes one HomeKit motion sensor that triggers when **any** of its selected categories is detected above the threshold.\n\n- **Categories** — `animals`, `people`, `vehicles`. Select one or more; the sensor fires on any of them.\n- **Name** — optional. Leave blank to auto-name it (prefixed with the snapshot name). A name you enter is used verbatim and must be unique across all snapshots.\n- **Threshold** — optional confidence cutoff from 0–1 (default `0.5`). Lower = more sensitive, more false positives.",
   "schema": {
