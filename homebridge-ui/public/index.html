@@ -1,69 +1,42 @@
-<div id="snapshot-sensors-ui" class="mb-3">
-  <div class="text-muted">Snapshot Sensors configuration</div>
-</div>
-
 <script>
 (() => {
-  let correcting = false;
+  let lastWarning = 0;
 
-  function validateConfig(config) {
-    if (!Array.isArray(config)) return { config, changed: false };
+  function showWarningIfNeeded(config) {
+    if (!Array.isArray(config)) return;
 
-    let changed = false;
+    for (const platform of config) {
+      if (!platform || !Array.isArray(platform.streams)) continue;
 
-    const corrected = config.map((platform) => {
-      if (!platform || !Array.isArray(platform.streams)) return platform;
+      for (const stream of platform.streams) {
+        if (!stream) continue;
 
-      const streams = platform.streams.map((stream) => {
-        if (!stream) return stream;
+        const storage = stream.storeSnapshots;
+        const directory = typeof stream.snapshotDirectory === 'string'
+          ? stream.snapshotDirectory.trim()
+          : '';
 
-        const hasDirectory = typeof stream.snapshotDirectory === 'string'
-          && stream.snapshotDirectory.trim().length > 0;
-
-        if (!hasDirectory &&
-            (stream.storeSnapshots === 'raw' || stream.storeSnapshots === 'annotate')) {
-          changed = true;
-          return { ...stream, storeSnapshots: 'never' };
+        if ((storage === 'raw' || storage === 'annotate') && !directory) {
+          const now = Date.now();
+          if (now - lastWarning > 1000) {
+            lastWarning = now;
+            homebridge.toast.warning(
+              'Please enter a Snapshot Directory when storing snapshots as Raw or Annotate.',
+              'Snapshot Directory Required'
+            );
+          }
+          return;
         }
-
-        return stream;
-      });
-
-      return { ...platform, streams };
-    });
-
-    return { config: corrected, changed };
-  }
-
-  async function handleConfigChanged(event) {
-    if (correcting) return;
-
-    const result = validateConfig(event.data);
-    if (!result.changed) return;
-
-    correcting = true;
-
-    try {
-      await homebridge.updatePluginConfig(result.config);
-      homebridge.toast.warning(
-        'Enter a Snapshot Directory before selecting Raw or Annotate. The setting has been changed back to Never.',
-        'Snapshot Directory Required'
-      );
-    } catch (error) {
-      console.error('Failed to correct snapshot storage setting:', error);
-      homebridge.toast.error(
-        'The snapshot storage setting could not be corrected.',
-        'Configuration Error'
-      );
-    } finally {
-      correcting = false;
+      }
     }
   }
 
-  homebridge.addEventListener('configChanged', handleConfigChanged);
+  homebridge.addEventListener('configChanged', (event) => {
+    showWarningIfNeeded(event.data);
+  });
 
-  // Wait until Homebridge has finished initializing the custom UI before
-  // asking it to render the normal schema-generated configuration form.
+  // Homebridge injects the UI API before loading this file. The ready event
+  // is the supported point at which the schema-generated form can be shown.
   homebridge.addEventListener('ready', () => {
     homebridge.showSchemaForm();
   });
