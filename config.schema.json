@@ -80,13 +80,13 @@
     {
       "key": "streams",
       "type": "array",
-      "title": "📹 Your video streams",
-      "buttonText": "➕ Add video stream",
+      "title": "📷 Your camera snapshots",
+      "buttonText": "➕ Add camera snapshot",
       "expandable": true,
       "expanded": true,
       "items": [
-        { "key": "streams[].name", "title": "🏷️ Stream name", "placeholder": "Garden" },
-        { "key": "streams[].url", "title": "🔗 Stream URL", "placeholder": "rtsp://user:pass@192.168.1.50:8554/ch2" },
+        { "key": "streams[].name", "title": "🏷️ Snapshot name", "placeholder": "Garden" },
+        { "key": "streams[].url", "title": "🔗 Snapshot URL", "placeholder": "rtsp://user:pass@192.168.1.50:8554/ch2" },
         {
           "key": "streams[].sensors",
           "type": "array",
