@@ -1,11 +1,10 @@
-# homebridge-snap-sensors
+# homebridge-snapshot-sensors
 
-[![CI](https://github.com/mrfatboy/homebridge-snap-sensors/actions/workflows/ci.yml/badge.svg)](https://github.com/mrfatboy/homebridge-snap-sensors/actions/workflows/ci.yml)
-[![npm version](https://img.shields.io/npm/v/homebridge-snap-sensors)](https://www.npmjs.com/package/homebridge-snap-sensors)
-[![npm downloads](https://img.shields.io/npm/dt/homebridge-snap-sensors)](https://www.npmjs.com/package/homebridge-snap-sensors)
-[![GitHub stars](https://img.shields.io/github/stars/mrfatboy/homebridge-snap-sensors?style=flat)](https://github.com/mrfatboy/homebridge-snap-sensors/stargazers)
-[![license](https://img.shields.io/npm/l/homebridge-snap-sensors)](./LICENSE)
-
+[![CI](https://github.com/mrfatboy/homebridge-snapshot-sensors/actions/workflows/ci.yml/badge.svg)](https://github.com/mrfatboy/homebridge-snapshot-sensors/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/homebridge-snapshot-sensors)](https://www.npmjs.com/package/homebridge-snapshot-sensors)
+[![npm downloads](https://img.shields.io/npm/dt/homebridge-snapshot-sensors)](https://www.npmjs.com/package/homebridge-snapshot-sensors)
+[![GitHub stars](https://img.shields.io/github/stars/mrfatboy/homebridge-snapshot-sensors?style=flat)](https://github.com/mrfatboy/homebridge-snapshot-sensors/stargazers)
+[![license](https://img.shields.io/npm/l/homebridge-snapshot-sensors)](./LICENSE)
 
 **Turn any camera stream into HomeKit motion sensors with local YOLO object** <br />
 **detection for `🐶 Animals`, `📦 Packages`, `🧍 People`, `🚗 Vehicles`.**
@@ -15,13 +14,13 @@
 ### Homebridge UI
 
 1. Open the **Plugins** tab in the Homebridge UI.
-1. Search for `homebridge-snap-sensors`.
+1. Search for `homebridge-snapshot-sensors`.
 1. Click **Install**.
 
 ### Command line
 
 ```bash
-npm install -g homebridge-snap-sensors
+npm install -g homebridge-snapshot-sensors
 ```
 
 ## Configuration
@@ -36,13 +35,13 @@ Configure everything from the plugin settings form.
 
 ### Manual (config.json)
 
-Add a `SnapSensors` platform to your Homebridge config. Each **stream** is one camera; each **sensor** fires when any of its selected categories is detected.
+Add a `SnapshotSensors` platform to your Homebridge config. Each **stream** is one camera; each **sensor** fires when any of its selected categories is detected.
 
 ```json
 {
   "platforms": [
     {
-      "platform": "SnapSensors",
+      "platform": "SnapshotSensors",
       "streams": [
         {
           "name": "Front Door",
