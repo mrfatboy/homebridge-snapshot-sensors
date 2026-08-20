@@ -9,7 +9,6 @@ export type StreamHealth = 'connecting' | 'online' | 'down';
 
 // ── Config input shape (exactly what the GUI form emits; the only accepted form) ─
 // A sensor fires when ANY selected category is detected at or above `threshold`.
-//   { categories: [...], name?, threshold? }
 // Values are untrusted JSON, so every field is optional/loose here and validated
 // in resolveSensors.
 export interface RawSensor {
@@ -22,6 +21,7 @@ export interface RawSensor {
 export interface StreamConfig {
   name: string;
   url: string;
+  snapshotDirectory?: string;
   sensors: RawSensor[];
 }
 
