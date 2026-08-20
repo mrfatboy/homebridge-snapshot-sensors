@@ -1,11 +1,13 @@
-<button type="button" class="btn btn-primary" id="test-popup">TEST POPUP</button>
+<div class="form-group">
+  <button type="button" class="btn btn-primary" id="test-popup">TEST POPUP</button>
+</div>
 
 <script>
-  document.getElementById('test-popup').addEventListener('click', () => {
-    homebridge.toast.warning('Test popup works!', 'Snapshot Sensors')
-  })
-
   homebridge.addEventListener('ready', () => {
+    document.getElementById('test-popup').addEventListener('click', () => {
+      homebridge.toast.warning('Test popup works!', 'Snapshot Sensors')
+    })
+
     homebridge.showSchemaForm()
   })
 </script>
