@@ -1,17 +1,11 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Snapshot Sensors</title>
-</head>
-<body>
-  <h2>Snapshot Sensors</h2>
-  <button type="button" id="test-popup">TEST POPUP</button>
-  <script>
-    document.getElementById('test-popup').addEventListener('click', () => {
-      window.alert('Test popup works!');
-    });
-  </script>
-</body>
-</html>
+<button type="button" class="btn btn-primary" id="test-popup">TEST POPUP</button>
+
+<script>
+  document.getElementById('test-popup').addEventListener('click', () => {
+    homebridge.toast.warning('Test popup works!', 'Snapshot Sensors')
+  })
+
+  homebridge.addEventListener('ready', () => {
+    homebridge.showSchemaForm()
+  })
+</script>
