@@ -1,14 +1,12 @@
-<link rel="stylesheet" href="bootstrap.min.css">
-
 <script>
   let reverting = false;
 
   homebridge.showSchemaForm();
 
-  homebridge.addEventListener('configChanged', async (event) => {
+  async function validateSnapshotStorage() {
     if (reverting) return;
 
-    const config = event.data;
+    const config = await homebridge.getPluginConfig();
     if (!Array.isArray(config)) return;
 
     let invalidSelection = false;
@@ -46,5 +44,42 @@
     } finally {
       reverting = false;
     }
-  });
+  }
+
+  // configChanged is the normal event from the schema form. The DOM listener
+  // provides immediate protection when the select itself is changed.
+  homebridge.addEventListener('configChanged', validateSnapshotStorage);
+
+  document.addEventListener('change', async (event) => {
+    const select = event.target;
+    if (!(select instanceof HTMLSelectElement)) return;
+
+    const values = Array.from(select.options).map((option) => option.value);
+    if (!values.includes('raw') || !values.includes('annotate')) return;
+    if (select.value !== 'raw' && select.value !== 'annotate') return;
+
+    const config = await homebridge.getPluginConfig();
+    const streams = config?.[0]?.streams;
+    if (!Array.isArray(streams)) return;
+
+    const hasDirectory = streams.some((stream) =>
+      typeof stream?.snapshotDirectory === 'string' && stream.snapshotDirectory.trim().length > 0
+    );
+
+    if (hasDirectory) return;
+
+    event.preventDefault();
+    reverting = true;
+
+    try {
+      select.value = 'never';
+      await validateSnapshotStorage();
+      homebridge.toast.warning(
+        'Enter a Snapshot Directory before selecting Raw or Annotate.',
+        'Snapshot Directory Required'
+      );
+    } finally {
+      reverting = false;
+    }
+  }, true);
 </script>
