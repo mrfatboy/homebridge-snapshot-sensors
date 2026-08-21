@@ -6,9 +6,11 @@
   .snapshot-card .form-control, .snapshot-card .store-snapshots, .snapshot-card .notifications-select { font-size: 1rem; height: 1.9rem; padding: .2rem .4rem; }
   .snapshot-card button { font-size: 12px; padding: .2rem .4rem; }
   .snapshot-card .test-snapshot,
-  .snapshot-card .add-sensor { background-color: #800080; border-color: #800080; color: #fff; }
+  .snapshot-card .add-sensor,
+  .snapshot-card .test-notification { background-color: #800080; border-color: #800080; color: #fff; }
   .snapshot-card .test-snapshot:hover,
-  .snapshot-card .add-sensor:hover { background-color: #6a006a; border-color: #6a006a; color: #fff; }
+  .snapshot-card .add-sensor:hover,
+  .snapshot-card .test-notification:hover { background-color: #6a006a; border-color: #6a006a; color: #fff; }
 </style>
 
 <div class="card card-body">
@@ -38,109 +40,18 @@
   const snapshots = document.querySelector('#snapshots');
   function sensorHtml() { return `<div class="card card-body sensor-card"><div class="d-flex justify-content-between align-items-center mb-2"><strong>📡 Sensor</strong><button type="button" class="btn btn-sm btn-outline-danger remove-sensor">REMOVE</button></div><div class="form-group mb-3"><label>Categories</label><div class="form-check"><input class="form-check-input category" type="checkbox" value="animals"><label class="form-check-label">🐶 Animals</label></div><div class="form-check"><input class="form-check-input category" type="checkbox" value="people"><label class="form-check-label">🧍 People</label></div><div class="form-check"><input class="form-check-input category" type="checkbox" value="vehicles"><label class="form-check-label">🚗 Vehicles</label></div></div><div class="form-group mb-3"><label>✏️ Name (optional)</label><input class="form-control sensor-name" type="text" placeholder="Auto"></div><div class="form-group mb-3"><label>🎚️ Threshold (optional)</label><input class="form-control sensor-threshold" type="number" min="0" max="1" step="0.01" placeholder="0.5"></div><div class="form-check mb-2"><input class="form-check-input sensor-log" type="checkbox"><label class="form-check-label">📝 Log sensor status changes</label></div></div>`; }
   function snapshotHtml() { return `<div class="card snapshot-card"><div class="card-header d-flex justify-content-between align-items-center"><strong>📷 Your Snapshot sensor</strong><button type="button" class="btn btn-sm btn-outline-danger remove-snapshot">REMOVE</button></div><div class="card-body"><div class="form-group mb-3"><label>🏷️ Snapshot sensor name</label><input class="form-control snapshot-name" type="text" placeholder="CameraSensor1"></div><div class="form-group mb-3"><label>🔗 Snapshot URL</label><input class="form-control snapshot-url" type="url" placeholder="http://192.168.1.50:88/cgi-bin/CGIProxy.fcgi?cmd=snapPicture2&usr=USERNAME&pwd=PASSWORD"></div><div class="form-group mb-3"><label>Snapshot prefix</label><input class="form-control snapshot-prefix" type="text" placeholder="CameraSensor1"><div class="help-text mt-1">This name will be used as the prefix to the saved snapshot</div></div><div class="form-group mb-3"><button type="button" class="btn btn-outline-secondary test-snapshot">📸 Test Snapshot</button></div><div class="form-group mb-3"><label>💾 Store snapshots</label><select class="form-control store-snapshots"><option value="never">Never</option><option value="raw">Raw</option><option value="annotate">Annotate</option></select></div><div class="form-group mb-3"><label>🔔 Notifications</label><select class="form-control notifications-select"><option value="none">None</option><option value="pushover">Pushover</option></select></div><div class="pushover-controls form-group mb-3" style="display:none"><div class="form-group mb-3"><label>Pushover Application Token</label><input class="form-control pushover-token" type="password" autocomplete="off" placeholder="Application API token"></div><div class="form-group mb-3"><label>Pushover User Key</label><input class="form-control pushover-user" type="password" autocomplete="off" placeholder="User or group key"></div><div class="form-group mb-3"><label>Pushover Device (optional)</label><input class="form-control pushover-device" type="text" placeholder="Device name (optional)"></div><div class="form-group mb-3"><label>Pushover Sound</label><input class="form-control pushover-sound" type="text" value="pushover" placeholder="pushover"></div><div class="form-group mb-3"><label>Pushover Title</label><input class="form-control pushover-title" type="text" placeholder="Snapshot Sensors"></div><div class="form-group mb-3"><button type="button" class="btn btn-outline-secondary test-notification">🔔 Test Notification</button></div></div><div class="snapshot-directory-controls form-group mb-3"><label>📁 Snapshot Directory</label><input class="form-control snapshot-directory" type="text" placeholder="/path/to/snapshots"><div class="mt-2"><button type="button" class="btn btn-outline-secondary test-directory">📁 Test Directory</button></div></div><div class="sensors"></div><button type="button" class="btn btn-outline-primary add-sensor">➕ ADD SENSOR</button></div></div>`; }
-  function updateDirectoryVisibility(snapshot) {
-    const store = snapshot.querySelector('.store-snapshots');
-    const controls = snapshot.querySelector('.snapshot-directory-controls');
-    controls.style.display = store.value === 'never' ? 'none' : '';
-  }
-  function updateNotificationVisibility(snapshot) {
-    const notifications = snapshot.querySelector('.notifications-select');
-    const controls = snapshot.querySelector('.pushover-controls');
-    controls.style.display = notifications.value === 'pushover' ? '' : 'none';
-  }
-  function addSnapshot() {
-    snapshots.insertAdjacentHTML('beforeend', snapshotHtml());
-    const snapshot = snapshots.lastElementChild;
-    updateDirectoryVisibility(snapshot);
-    updateNotificationVisibility(snapshot);
-    snapshot.querySelector('.snapshot-name').addEventListener('input', event => {
-      const prefix = snapshot.querySelector('.snapshot-prefix');
-      if (!prefix.dataset.userEdited || !prefix.value.trim()) prefix.value = event.target.value;
-    });
-    snapshot.querySelector('.snapshot-prefix').addEventListener('input', event => {
-      event.target.dataset.userEdited = 'true';
-    });
-  }
-
-  snapshots.addEventListener('change', event => {
-    const snapshot = event.target.closest('.snapshot-card');
-    if (!snapshot) return;
-    if (event.target.classList.contains('store-snapshots')) updateDirectoryVisibility(snapshot);
-    if (event.target.classList.contains('notifications-select')) updateNotificationVisibility(snapshot);
-  });
-
+  function updateDirectoryVisibility(snapshot) { const store = snapshot.querySelector('.store-snapshots'); const controls = snapshot.querySelector('.snapshot-directory-controls'); controls.style.display = store.value === 'never' ? 'none' : ''; }
+  function updateNotificationVisibility(snapshot) { const notifications = snapshot.querySelector('.notifications-select'); const controls = snapshot.querySelector('.pushover-controls'); controls.style.display = notifications.value === 'pushover' ? '' : 'none'; }
+  function addSnapshot() { snapshots.insertAdjacentHTML('beforeend', snapshotHtml()); const snapshot = snapshots.lastElementChild; updateDirectoryVisibility(snapshot); updateNotificationVisibility(snapshot); snapshot.querySelector('.snapshot-name').addEventListener('input', event => { const prefix = snapshot.querySelector('.snapshot-prefix'); if (!prefix.dataset.userEdited || !prefix.value.trim()) prefix.value = event.target.value; }); snapshot.querySelector('.snapshot-prefix').addEventListener('input', event => { event.target.dataset.userEdited = 'true'; }); }
+  snapshots.addEventListener('change', event => { const snapshot = event.target.closest('.snapshot-card'); if (!snapshot) return; if (event.target.classList.contains('store-snapshots')) updateDirectoryVisibility(snapshot); if (event.target.classList.contains('notifications-select')) updateNotificationVisibility(snapshot); });
   snapshots.addEventListener('click', async event => {
     const snapshot = event.target.closest('.snapshot-card'); if (!snapshot) return;
     if (event.target.closest('.remove-snapshot')) { snapshot.remove(); return; }
-
-    if (event.target.closest('.test-notification')) {
-      const button = event.target.closest('.test-notification');
-      const token = snapshot.querySelector('.pushover-token').value.trim();
-      const user = snapshot.querySelector('.pushover-user').value.trim();
-      const device = snapshot.querySelector('.pushover-device').value.trim();
-      const sound = snapshot.querySelector('.pushover-sound').value.trim();
-      const title = snapshot.querySelector('.pushover-title').value.trim();
-      if (!token) { homebridge.toast.error('Please enter the Pushover Application Token.', 'Invalid Pushover Settings'); return; }
-      if (!user) { homebridge.toast.error('Please enter the Pushover User Key.', 'Invalid Pushover Settings'); return; }
-      if (!sound) { homebridge.toast.error('Please enter the Pushover Sound.', 'Invalid Pushover Settings'); return; }
-      if (!title) { homebridge.toast.error('Please enter the Pushover Title.', 'Invalid Pushover Settings'); return; }
-      button.disabled = true; const originalText = button.textContent; button.textContent = '🔔 Testing...';
-      try {
-        await homebridge.request('/test-notification', { token, user, device, sound, title });
-        homebridge.toast.success('Test notification sent successfully.', 'Pushover');
-      } catch (error) {
-        console.error('Test Notification failed:', error);
-        homebridge.toast.error(error?.message || 'Unable to send the Pushover notification.', 'Test Notification Failed');
-      } finally { button.disabled = false; button.textContent = originalText; }
-      return;
-    }
-
-    if (event.target.closest('.test-snapshot')) {
-      const button = event.target.closest('.test-snapshot');
-      const url = snapshot.querySelector('.snapshot-url').value.trim();
-      const directory = snapshot.querySelector('.snapshot-directory').value.trim();
-      const prefix = snapshot.querySelector('.snapshot-prefix').value.trim() || snapshot.querySelector('.snapshot-name').value.trim();
-      if (!url) { homebridge.toast.error('Please enter a valid Snapshot URL.', 'Invalid Snapshot URL'); return; }
-      if (!directory) { homebridge.toast.error('Please enter a Snapshot Directory.', 'Invalid Snapshot Directory'); return; }
-      if (!prefix) { homebridge.toast.error('Please enter a Snapshot prefix.', 'Invalid Snapshot Prefix'); return; }
-      button.disabled = true; const originalText = button.textContent; button.textContent = '📸 Testing...';
-      try {
-        const result = await homebridge.request('/test-snapshot', { url, directory, prefix });
-        if (!result?.image) throw new Error('The camera did not return an image.');
-        document.querySelector('#snapshotResult').src = `data:${result.contentType || 'image/jpeg'};base64,${result.image}`;
-        const modal = document.querySelector('#snapshotModal');
-        modal.classList.add('show'); modal.style.display = 'block'; modal.removeAttribute('aria-hidden');
-        const backdrop = document.createElement('div'); backdrop.className = 'modal-backdrop fade show'; document.body.appendChild(backdrop);
-        const close = () => { modal.classList.remove('show'); modal.style.display = 'none'; modal.setAttribute('aria-hidden', 'true'); backdrop.remove(); };
-        modal.querySelectorAll('[data-bs-dismiss="modal"], .btn-close').forEach(el => el.onclick = close);
-        if (result.saved === false) homebridge.toast.warning('The Snapshot Directory is empty, so the snapshot was not saved. The snapshot is displayed above.', 'Snapshot Directory Empty');
-      } catch (error) {
-        console.error('Test Snapshot failed:', error);
-        homebridge.toast.error(error?.message || 'Unable to retrieve or save the snapshot.', 'Test Snapshot Failed');
-      } finally { button.disabled = false; button.textContent = originalText; }
-      return;
-    }
-
-    if (event.target.closest('.test-directory')) {
-      const button = event.target.closest('.test-directory');
-      const directory = snapshot.querySelector('.snapshot-directory').value.trim();
-      if (!directory) { homebridge.toast.error('Please enter a Snapshot Directory.', 'Invalid Snapshot Directory'); return; }
-      button.disabled = true; const originalText = button.textContent; button.textContent = '📁 Testing...';
-      try {
-        const result = await homebridge.request('/browse', { path: directory });
-        homebridge.toast.success(`Directory is accessible. ${result.directories?.length || 0} subdirectories found.`, 'Test Directory');
-      } catch (error) {
-        console.error('Test Directory failed:', error);
-        homebridge.toast.error(error?.message || 'Unable to access the Snapshot Directory.', 'Test Directory Failed');
-      } finally { button.disabled = false; button.textContent = originalText; }
-      return;
-    }
-
-    if (event.target.closest('.add-sensor')) { const sensors = snapshot.querySelector('.sensors'); sensors.insertAdjacentHTML('beforeend', sensorHtml()); return; }
-    if (event.target.closest('.remove-sensor')) event.target.closest('.sensor-card').remove();
+    if (event.target.closest('.test-notification')) { const button = event.target.closest('.test-notification'); const token = snapshot.querySelector('.pushover-token').value.trim(); const user = snapshot.querySelector('.pushover-user').value.trim(); const device = snapshot.querySelector('.pushover-device').value.trim(); const sound = snapshot.querySelector('.pushover-sound').value.trim(); const title = snapshot.querySelector('.pushover-title').value.trim(); if (!token) { homebridge.toast.error('Please enter the Pushover Application Token.', 'Invalid Pushover Settings'); return; } if (!user) { homebridge.toast.error('Please enter the Pushover User Key.', 'Invalid Pushover Settings'); return; } if (!sound) { homebridge.toast.error('Please enter the Pushover Sound.', 'Invalid Pushover Settings'); return; } if (!title) { homebridge.toast.error('Please enter the Pushover Title.', 'Invalid Pushover Settings'); return; } button.disabled = true; const originalText = button.textContent; button.textContent = '🔔 Testing...'; try { await homebridge.request('/test-notification', { token, user, device, sound, title }); homebridge.toast.success('Test notification sent successfully.', 'Pushover'); } catch (error) { console.error('Test Notification failed:', error); homebridge.toast.error(error?.message || 'Unable to send the Pushover notification.', 'Test Notification Failed'); } finally { button.disabled = false; button.textContent = originalText; } return; }
+    if (event.target.closest('.test-snapshot')) { const button = event.target.closest('.test-snapshot'); const url = snapshot.querySelector('.snapshot-url').value.trim(); const directory = snapshot.querySelector('.snapshot-directory').value.trim(); const prefix = snapshot.querySelector('.snapshot-prefix').value.trim() || snapshot.querySelector('.snapshot-name').value.trim(); if (!url) { homebridge.toast.error('Please enter a valid Snapshot URL.', 'Invalid Snapshot URL'); return; } if (!directory) { homebridge.toast.error('Please enter a Snapshot Directory.', 'Invalid Snapshot Directory'); return; } if (!prefix) { homebridge.toast.error('Please enter a Snapshot prefix.', 'Invalid Snapshot Prefix'); return; } button.disabled = true; const originalText = button.textContent; button.textContent = '📸 Testing...'; try { const result = await homebridge.request('/test-snapshot', { url, directory, prefix }); if (!result?.image) throw new Error('The camera did not return an image.'); document.querySelector('#snapshotResult').src = `data:${result.contentType || 'image/jpeg'};base64,${result.image}`; const modal = document.querySelector('#snapshotModal'); modal.classList.add('show'); modal.style.display = 'block'; modal.removeAttribute('aria-hidden'); const backdrop = document.createElement('div'); backdrop.className = 'modal-backdrop fade show'; document.body.appendChild(backdrop); const close = () => { modal.classList.remove('show'); modal.style.display = 'none'; modal.setAttribute('aria-hidden', 'true'); backdrop.remove(); }; modal.querySelectorAll('[data-bs-dismiss="modal"], .btn-close').forEach(el => el.onclick = close); if (result.saved === false) homebridge.toast.warning('The Snapshot Directory is empty, so the snapshot was not saved. The snapshot is displayed above.', 'Snapshot Directory Empty'); } catch (error) { console.error('Test Snapshot failed:', error); homebridge.toast.error(error?.message || 'Unable to retrieve or save the snapshot.', 'Test Snapshot Failed'); } finally { button.disabled = false; button.textContent = originalText; } return; }
+    if (event.target.closest('.test-directory')) { const button = event.target.closest('.test-directory'); const directory = snapshot.querySelector('.snapshot-directory').value.trim(); if (!directory) { homebridge.toast.error('Please enter a Snapshot Directory.', 'Invalid Snapshot Directory'); return; } button.disabled = true; const originalText = button.textContent; button.textContent = '📁 Testing...'; try { const result = await homebridge.request('/browse', { path: directory }); homebridge.toast.success(`Directory is accessible. ${result.directories?.length || 0} subdirectories found.`, 'Test Directory'); } catch (error) { console.error('Test Directory failed:', error); homebridge.toast.error(error?.message || 'Unable to access the Snapshot Directory.', 'Test Directory Failed'); } finally { button.disabled = false; button.textContent = originalText; } return; }
+    if (event.target.closest('.add-sensor')) { const sensors = snapshot.querySelector('.sensors'); sensors.insertAdjacentHTML('beforeend', sensorHtml()); return; } if (event.target.closest('.remove-sensor')) event.target.closest('.sensor-card').remove();
   });
-  document.querySelector('#addSnapshot').addEventListener('click', addSnapshot);
-  document.querySelector('#testPopupButton').addEventListener('click', () => homebridge.toast.success('Test popup works!', 'Success'));
-  addSnapshot();
+  document.querySelector('#addSnapshot').addEventListener('click', addSnapshot); document.querySelector('#testPopupButton').addEventListener('click', () => homebridge.toast.success('Test popup works!', 'Success')); addSnapshot();
 })();
 </script>
