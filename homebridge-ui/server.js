@@ -36,14 +36,18 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
     const fs = await import('node:fs/promises');
     const directory = pathModule.resolve(requestedDirectory);
 
+    let entries;
     try {
       const stat = await fs.stat(directory);
       if (!stat.isDirectory()) throw new Error('The Snapshot Directory exists but is not a directory.');
+      entries = await fs.readdir(directory, { withFileTypes: true });
     } catch (error) {
-      if (error?.code === 'ENOENT') throw new RequestError('The Snapshot Directory does not exist or is not accessible.', { status: 400 });
+      if (error?.code === 'ENOENT') throw new RequestError('The Snapshot Directory does not exist.', { status: 400 });
       if (error instanceof RequestError) throw error;
-      throw new RequestError(`The Snapshot Directory is not accessible: ${error?.message || String(error)}`, { status: 400 });
+      throw new RequestError(`The Snapshot Directory is invalid or inaccessible: ${error?.message || String(error)}`, { status: 400 });
     }
+
+    const directoryEmpty = entries.length === 0;
 
     try {
       const response = await fetch(parsed, { signal: AbortSignal.timeout(15000) });
@@ -52,16 +56,19 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
       const data = Buffer.from(await response.arrayBuffer());
       if (!data.length) throw new Error('Camera returned an empty response');
 
+      if (directoryEmpty) {
+        return { contentType, image: data.toString('base64'), saved: false, directoryEmpty: true };
+      }
+
       const extension = contentType.toLowerCase().includes('png') ? '.png' : '.jpg';
       const filename = `test-snapshot-${new Date().toISOString().replace(/[:.]/g, '-')}${extension}`;
       const filePath = pathModule.join(directory, filename);
       await fs.writeFile(filePath, data);
 
-      return { contentType, image: data.toString('base64'), filename, path: filePath };
+      return { contentType, image: data.toString('base64'), filename, path: filePath, saved: true, directoryEmpty: false };
     } catch (error) {
-      if (error instanceof RequestError) throw error;
       const message = error instanceof Error ? error.message : String(error);
-      throw new RequestError(`Unable to retrieve or save snapshot: ${message}`, { status: 502 });
+      throw new RequestError(`Unable to retrieve snapshot: ${message}`, { status: 502 });
     }
   }
 }
