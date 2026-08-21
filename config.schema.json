@@ -13,8 +13,8 @@
       "streams": { "title": "Snapshots", "type": "array", "items": { "title": "Snapshot", "type": "object", "required": ["name", "url", "storeSnapshots"], "properties": {
         "name": { "title": "Snapshot Name", "type": "string", "description": "Used as a prefix for auto-named sensors." },
         "url": { "title": "Snapshot URL", "type": "string", "format": "uri", "description": "Snapshot URL, for example an Foscam CGI snapshot URL." },
-        "snapshotDirectory": { "title": "Snapshot Directory", "type": "string", "description": "Required when Store snapshots is Raw or Annotate." },
         "storeSnapshots": { "title": "Store snapshots", "type": "string", "enum": ["never", "raw", "annotate"], "default": "never", "description": "Choose whether to save snapshots, and whether to save the raw or annotated image. Raw and Annotate require a Snapshot Directory." },
+        "snapshotDirectory": { "title": "Snapshot Directory", "type": "string", "description": "Required when Store snapshots is Raw or Annotate." },
         "sensors": { "title": "Sensors", "type": "array", "items": { "title": "Sensor", "type": "object", "properties": {
           "categories": { "title": "Categories", "type": "array", "uniqueItems": true, "items": { "type": "string", "enum": ["animals", "people", "vehicles"] } },
           "name": { "title": "Name (optional)", "type": "string", "description": "Leave blank to auto-name. If set, used verbatim and must be unique." },
@@ -28,8 +28,8 @@
     { "key": "streams", "type": "array", "title": "📷 Your Snapshot sensors", "buttonText": "➕ ADD SNAPSHOT", "expandable": true, "expanded": true, "items": [
       { "key": "streams[].name", "title": "🏷️ Snapshot sensor name", "placeholder": "CameraSensor1" },
       { "key": "streams[].url", "title": "🔗 Snapshot URL", "placeholder": "http://192.168.1.50:88/cgi-bin/CGIProxy.fcgi?cmd=snapPicture2&usr=USERNAME&pwd=PASSWORD" },
-      { "key": "streams[].snapshotDirectory", "title": "📁 Snapshot Directory", "placeholder": "/path/to/snapshots" },
       { "key": "streams[].storeSnapshots", "title": "💾 Store snapshots", "type": "select", "titleMap": [{ "value": "never", "name": "Never" }, { "value": "raw", "name": "Raw" }, { "value": "annotate", "name": "Annotate" }] },
+      { "key": "streams[].snapshotDirectory", "title": "📁 Snapshot Directory", "placeholder": "/path/to/snapshots" },
       { "key": "streams[].sensors", "type": "array", "title": "📡 Sensors", "buttonText": "➕ ADD SENSOR", "expandable": true, "expanded": true, "items": [
         { "key": "streams[].sensors[].categories", "title": "Categories", "type": "checkboxes", "titleMap": [{ "value": "animals", "name": "🐶 Animals" }, { "value": "people", "name": "🧍 People" }, { "value": "vehicles", "name": "🚗 Vehicles" }] },
         { "key": "streams[].sensors[].name", "title": "✏️ Name (optional)", "placeholder": "Auto" },
