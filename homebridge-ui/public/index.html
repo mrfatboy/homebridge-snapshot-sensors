@@ -64,11 +64,13 @@
       const button = event.target.closest('.test-snapshot');
       const url = snapshot.querySelector('.snapshot-url').value.trim();
       const directory = snapshot.querySelector('.snapshot-directory').value.trim();
+      const prefix = snapshot.querySelector('.snapshot-prefix').value.trim() || snapshot.querySelector('.snapshot-name').value.trim();
       if (!url) { homebridge.toast.error('Please enter a valid Snapshot URL.', 'Invalid Snapshot URL'); return; }
       if (!directory) { homebridge.toast.error('Please enter a Snapshot Directory.', 'Invalid Snapshot Directory'); return; }
+      if (!prefix) { homebridge.toast.error('Please enter a Snapshot prefix.', 'Invalid Snapshot Prefix'); return; }
       button.disabled = true; const originalText = button.textContent; button.textContent = '📸 Testing...';
       try {
-        const result = await homebridge.request('/test-snapshot', { url, directory });
+        const result = await homebridge.request('/test-snapshot', { url, directory, prefix });
         if (!result?.image) throw new Error('The camera did not return an image.');
         document.querySelector('#snapshotResult').src = `data:${result.contentType || 'image/jpeg'};base64,${result.image}`;
         const modal = document.querySelector('#snapshotModal');
