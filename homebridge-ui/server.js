@@ -81,17 +81,15 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
     const user = typeof payload?.user === 'string' ? payload.user.trim() : '';
     const device = typeof payload?.device === 'string' ? payload.device.trim() : '';
     const sound = typeof payload?.sound === 'string' ? payload.sound.trim() : '';
-    const configuredTitle = typeof payload?.title === 'string' ? payload.title.trim() : '';
 
     if (!token) throw new RequestError('Pushover Application Token is required.', { status: 400 });
     if (!user) throw new RequestError('Pushover User Key is required.', { status: 400 });
     if (!sound) throw new RequestError('Pushover Sound is required.', { status: 400 });
-    if (!configuredTitle) throw new RequestError('Pushover Title is required.', { status: 400 });
 
     const form = new URLSearchParams();
     form.set('token', token);
     form.set('user', user);
-    form.set('message', 'Test notification');
+    form.set('message', 'This is a test');
     form.set('title', 'Snapshot Sensor');
     form.set('sound', sound);
     if (device) form.set('device', device);
