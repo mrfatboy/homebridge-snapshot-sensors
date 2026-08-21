@@ -5,6 +5,7 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
     super();
     this.onRequest('/browse', this.handleBrowse.bind(this));
     this.onRequest('/test-snapshot', this.testSnapshot.bind(this));
+    this.onRequest('/test-notification', this.testNotification.bind(this));
     this.ready();
   }
 
@@ -72,6 +73,47 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new RequestError(`Unable to retrieve snapshot: ${message}`, { status: 502 });
+    }
+  }
+
+  async testNotification(payload) {
+    const token = typeof payload?.token === 'string' ? payload.token.trim() : '';
+    const user = typeof payload?.user === 'string' ? payload.user.trim() : '';
+    const device = typeof payload?.device === 'string' ? payload.device.trim() : '';
+    const sound = typeof payload?.sound === 'string' ? payload.sound.trim() : '';
+    const configuredTitle = typeof payload?.title === 'string' ? payload.title.trim() : '';
+
+    if (!token) throw new RequestError('Pushover Application Token is required.', { status: 400 });
+    if (!user) throw new RequestError('Pushover User Key is required.', { status: 400 });
+    if (!sound) throw new RequestError('Pushover Sound is required.', { status: 400 });
+    if (!configuredTitle) throw new RequestError('Pushover Title is required.', { status: 400 });
+
+    const form = new URLSearchParams();
+    form.set('token', token);
+    form.set('user', user);
+    form.set('message', 'Test notification');
+    form.set('title', 'Snapshot Sensor');
+    form.set('sound', sound);
+    if (device) form.set('device', device);
+
+    try {
+      const response = await fetch('https://api.pushover.net/1/messages.json', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: form.toString(),
+        signal: AbortSignal.timeout(15000),
+      });
+
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || body?.status !== 1) {
+        const detail = Array.isArray(body?.errors) ? body.errors.join(', ') : `HTTP ${response.status}`;
+        throw new Error(detail);
+      }
+
+      return { success: true };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new RequestError(`Unable to send Pushover notification: ${message}`, { status: 502 });
     }
   }
 }
