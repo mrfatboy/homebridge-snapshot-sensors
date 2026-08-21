@@ -79,44 +79,44 @@
   while (cards().length < config.streams.length) document.querySelector('#addSnapshot').click();
   if (config.streams.length) config.streams.forEach((stream, i) => fillCard(cards()[i], stream));
 
-  let saveTimer;
   let saving = Promise.resolve();
   const syncConfig = () => {
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => {
-      const streams = cards().map(card => {
-        const sensors = Array.from(card.querySelectorAll('.sensor-settings')).map(sensor => {
-          const threshold = sensor.querySelector('.sensor-threshold').value.trim();
-          return {
-            categories: Array.from(sensor.querySelectorAll('.category:checked')).map(el => el.value),
-            ...(threshold ? { threshold: Number(threshold) } : {}),
-            logStatus: sensor.querySelector('.sensor-log').checked,
-          };
-        });
-        return {
-          name: card.querySelector('.snapshot-name').value.trim(),
-          url: card.querySelector('.snapshot-url').value.trim(),
-          snapshotPrefix: card.querySelector('.snapshot-prefix').value.trim(),
-          storeSnapshots: card.querySelector('.store-snapshots').value,
-          snapshotDirectory: card.querySelector('.snapshot-directory')?.value.trim() || '',
-          sensors,
-          notifications: {
-            provider: card.querySelector('.notifications-select').value,
-            token: card.querySelector('.pushover-token').value.trim(),
-            user: card.querySelector('.pushover-user').value.trim(),
-            device: card.querySelector('.pushover-device').value.trim(),
-            sound: card.querySelector('.pushover-sound').value.trim(),
-            title: card.querySelector('.pushover-title').value.trim(),
-          },
+    const streams = cards().map(card => {
+      const sensors = Array.from(card.querySelectorAll('.sensor-settings')).map(sensor => {
+        const thresholdElement = sensor.querySelector('.sensor-threshold');
+        const thresholdValue = thresholdElement ? thresholdElement.value.trim() : '';
+        const sensorConfig = {
+          categories: Array.from(sensor.querySelectorAll('.category:checked')).map(el => el.value),
+          logStatus: sensor.querySelector('.sensor-log').checked,
         };
+        if (thresholdValue !== '') sensorConfig.threshold = Number(thresholdValue);
+        return sensorConfig;
       });
-      config.streams = streams;
-      saving = saving.then(() => homebridge.updatePluginConfig([config])).catch(error => console.error('Config update failed:', error));
-    }, 250);
+      return {
+        name: card.querySelector('.snapshot-name').value.trim(),
+        url: card.querySelector('.snapshot-url').value.trim(),
+        snapshotPrefix: card.querySelector('.snapshot-prefix').value.trim(),
+        storeSnapshots: card.querySelector('.store-snapshots').value,
+        snapshotDirectory: card.querySelector('.snapshot-directory')?.value.trim() || '',
+        sensors,
+        notifications: {
+          provider: card.querySelector('.notifications-select').value,
+          token: card.querySelector('.pushover-token').value.trim(),
+          user: card.querySelector('.pushover-user').value.trim(),
+          device: card.querySelector('.pushover-device').value.trim(),
+          sound: card.querySelector('.pushover-sound').value.trim(),
+          title: card.querySelector('.pushover-title').value.trim(),
+        },
+      };
+    });
+    config.streams = streams;
+    saving = saving.then(() => homebridge.updatePluginConfig([config])).catch(error => console.error('Config update failed:', error));
+    return saving;
   };
 
   snapshots.addEventListener('input', syncConfig);
   snapshots.addEventListener('change', syncConfig);
+  snapshots.addEventListener('blur', syncConfig, true);
   snapshots.addEventListener('click', event => {
     if (event.target.closest('#addSnapshot') || event.target.closest('.remove-snapshot')) setTimeout(syncConfig, 0);
   });
