@@ -23,8 +23,10 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
   async testSnapshot(payload) {
     const url = typeof payload?.url === 'string' ? payload.url.trim() : '';
     const requestedDirectory = typeof payload?.directory === 'string' ? payload.directory.trim() : '';
+    const prefix = typeof payload?.prefix === 'string' ? payload.prefix.trim() : '';
     if (!url) throw new RequestError('Snapshot URL is required.', { status: 400 });
     if (!requestedDirectory) throw new RequestError('Snapshot Directory is required.', { status: 400 });
+    if (!prefix) throw new RequestError('Snapshot prefix is required.', { status: 400 });
 
     let parsed;
     try { parsed = new URL(url); } catch { throw new RequestError('The Snapshot URL is not valid.', { status: 400 }); }
@@ -61,7 +63,8 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
       }
 
       const extension = contentType.toLowerCase().includes('png') ? '.png' : '.jpg';
-      const filename = `test-snapshot-${new Date().toISOString().replace(/[:.]/g, '-')}${extension}`;
+      const safePrefix = prefix.replace(/[\\/:*?"<>|\x00-\x1F]/g, '_').replace(/\s+/g, '_');
+      const filename = `${safePrefix}-${new Date().toISOString().replace(/[:.]/g, '-')}${extension}`;
       const filePath = pathModule.join(directory, filename);
       await fs.writeFile(filePath, data);
 
