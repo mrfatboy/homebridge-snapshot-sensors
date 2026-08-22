@@ -25,9 +25,13 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
     const url = typeof payload?.url === 'string' ? payload.url.trim() : '';
     const requestedDirectory = typeof payload?.directory === 'string' ? payload.directory.trim() : '';
     const prefix = typeof payload?.prefix === 'string' ? payload.prefix.trim() : '';
+    const storeSnapshots = typeof payload?.storeSnapshots === 'string' ? payload.storeSnapshots.trim().toLowerCase() : 'never';
+
     if (!url) throw new RequestError('Snapshot URL is required.', { status: 400 });
-    if (!requestedDirectory) throw new RequestError('Snapshot Directory is required.', { status: 400 });
     if (!prefix) throw new RequestError('Snapshot prefix is required.', { status: 400 });
+    if (!['never', 'normal', 'annotate'].includes(storeSnapshots)) {
+      throw new RequestError('Store snapshots setting is invalid.', { status: 400 });
+    }
 
     let parsed;
     try { parsed = new URL(url); } catch { throw new RequestError('The Snapshot URL is not valid.', { status: 400 }); }
@@ -37,20 +41,22 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
 
     const pathModule = await import('node:path');
     const fs = await import('node:fs/promises');
-    const directory = pathModule.resolve(requestedDirectory);
+    let directory = null;
 
-    let entries;
-    try {
-      const stat = await fs.stat(directory);
-      if (!stat.isDirectory()) throw new Error('The Snapshot Directory exists but is not a directory.');
-      entries = await fs.readdir(directory, { withFileTypes: true });
-    } catch (error) {
-      if (error?.code === 'ENOENT') throw new RequestError('The Snapshot Directory does not exist.', { status: 400 });
-      if (error instanceof RequestError) throw error;
-      throw new RequestError(`The Snapshot Directory is invalid or inaccessible: ${error?.message || String(error)}`, { status: 400 });
+    // A directory is only required when snapshots are configured to be stored.
+    if (storeSnapshots !== 'never') {
+      if (!requestedDirectory) throw new RequestError('Snapshot Directory is required when Store snapshots is Normal or Annotate.', { status: 400 });
+      directory = pathModule.resolve(requestedDirectory);
+
+      try {
+        const stat = await fs.stat(directory);
+        if (!stat.isDirectory()) throw new Error('The Snapshot Directory exists but is not a directory.');
+      } catch (error) {
+        if (error?.code === 'ENOENT') throw new RequestError('The Snapshot Directory does not exist.', { status: 400 });
+        if (error instanceof RequestError) throw error;
+        throw new RequestError(`The Snapshot Directory is invalid or inaccessible: ${error?.message || String(error)}`, { status: 400 });
+      }
     }
-
-    const directoryEmpty = entries.length === 0;
 
     try {
       const response = await fetch(parsed, { signal: AbortSignal.timeout(15000) });
@@ -59,8 +65,8 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
       const data = Buffer.from(await response.arrayBuffer());
       if (!data.length) throw new Error('Camera returned an empty response');
 
-      if (directoryEmpty) {
-        return { contentType, image: data.toString('base64'), saved: false, directoryEmpty: true };
+      if (storeSnapshots === 'never') {
+        return { contentType, image: data.toString('base64'), saved: false };
       }
 
       const extension = contentType.toLowerCase().includes('png') ? '.png' : '.jpg';
@@ -69,7 +75,7 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
       const filePath = pathModule.join(directory, filename);
       await fs.writeFile(filePath, data);
 
-      return { contentType, image: data.toString('base64'), filename, path: filePath, saved: true, directoryEmpty: false };
+      return { contentType, image: data.toString('base64'), filename, path: filePath, saved: true };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new RequestError(`Unable to retrieve snapshot: ${message}`, { status: 502 });
