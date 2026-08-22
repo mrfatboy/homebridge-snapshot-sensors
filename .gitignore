@@ -5,4 +5,12 @@ dist/
 .claude
 .DS_Store
 .env
-/homebridge-stream-sensors-*.*.*.tgz
+
+# npm package artifacts
+/homebridge-snapshot-sensors-*.*.*.tgz
+
+# Rust build output
+/native/yolo-runner/target/
+
+# Bundled ONNX Runtime download
+/native/yolo-runner/.ort/

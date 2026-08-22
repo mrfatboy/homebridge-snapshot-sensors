@@ -29,7 +29,7 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
 
     if (!url) throw new RequestError('Snapshot URL is required.', { status: 400 });
     if (!prefix) throw new RequestError('Snapshot prefix is required.', { status: 400 });
-    if (!['never', 'normal', 'annotate'].includes(storeSnapshots)) {
+    if (!['never', 'normal', 'annotated'].includes(storeSnapshots)) {
       throw new RequestError('Store snapshots setting is invalid.', { status: 400 });
     }
 
@@ -44,7 +44,7 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
     let directory = null;
 
     if (storeSnapshots !== 'never') {
-      if (!requestedDirectory) throw new RequestError('Snapshot Directory is required when Store snapshots is Normal or Annotate.', { status: 400 });
+      if (!requestedDirectory) throw new RequestError('Snapshot Directory is required when Store snapshots is Normal or Annotated.', { status: 400 });
       directory = pathModule.resolve(requestedDirectory);
 
       try {
@@ -64,20 +64,38 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
       const data = Buffer.from(await response.arrayBuffer());
       if (!data.length) throw new Error('Camera returned an empty response');
 
+      // Match the normal snapshot path: the same embedded YOLO runner/model is
+      // exercised for Normal and Annotated modes. Annotated mode receives the
+      // YOLO-rendered image produced by runYolo; Normal mode stores the original.
+      let outputImage = data;
+      if (storeSnapshots !== 'never') {
+        const { runYolo } = await import('../dist/src/yolo.js');
+        const result = await runYolo(data, storeSnapshots);
+        if (storeSnapshots === 'annotated' && result.annotatedImage) {
+          outputImage = result.annotatedImage;
+        }
+      }
+
       if (storeSnapshots === 'never') {
         return { contentType, image: data.toString('base64'), saved: false };
       }
 
-      const extension = contentType.toLowerCase().includes('png') ? '.png' : '.jpg';
+      const extension = storeSnapshots === 'annotated' ? '.jpg' : (contentType.toLowerCase().includes('png') ? '.png' : '.jpg');
       const safePrefix = prefix.replace(/[\\/:*?"<>|\x00-\x1F]/g, '_').replace(/\s+/g, '_');
       const now = new Date();
       const pad = (value) => String(value).padStart(2, '0');
       const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
       const filename = `${safePrefix}-${timestamp}${extension}`;
       const filePath = pathModule.join(directory, filename);
-      await fs.writeFile(filePath, data);
+      await fs.writeFile(filePath, outputImage);
 
-      return { contentType, image: data.toString('base64'), filename, path: filePath, saved: true };
+      return {
+        contentType: storeSnapshots === 'annotated' ? 'image/jpeg' : contentType,
+        image: outputImage.toString('base64'),
+        filename,
+        path: filePath,
+        saved: true,
+      };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new RequestError(`Unable to retrieve snapshot: ${message}`, { status: 502 });

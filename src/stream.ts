@@ -2,12 +2,13 @@ import type { Logger } from 'homebridge';
 import { FfmpegPump } from './ffmpeg.js';
 import { scoreCategories } from './detector.js';
 import type { CategoryScores } from './detector.js';
-import type { SensorSpec, Detection, StreamHealth } from './types.js';
+import type { SensorSpec, StreamHealth, StoreSnapshots } from './types.js';
 import { SAMPLE_MS } from './settings.js';
+import { saveSnapshot } from './snapshot.js';
+import { runYolo } from './yolo.js';
 
 export type SensorStateCallback = (sensorIndex: number, active: boolean) => void;
 export type StreamHealthCallback = (health: StreamHealth) => void;
-export type InferFn = (frame: Buffer) => Promise<Detection[]>;
 
 export class StreamWorker {
   private readonly pump: FfmpegPump;
@@ -19,70 +20,54 @@ export class StreamWorker {
     url: string,
     name: string,
     private readonly sensors: SensorSpec[],
+    private readonly storeSnapshots: StoreSnapshots,
+    private readonly snapshotDirectory: string,
+    private readonly snapshotPrefix: string,
     private readonly onSensorState: SensorStateCallback,
     onHealth: StreamHealthCallback,
-    private readonly infer: InferFn,
     private readonly log: Logger,
   ) {
     this.pump = new FfmpegPump(url, name, log, onHealth);
   }
 
-  start(): void {
-    this.pump.start();
-    this.loopDone = this.loop();
-  }
+  start(): void { this.pump.start(); this.loopDone = this.loop(); }
 
-  stop(): void {
-    this.running = false;
-    this.wakeUp?.(); // interrupt any in-progress sleep immediately
-    this.pump.stop();
-  }
+  stop(): void { this.running = false; this.wakeUp?.(); this.pump.stop(); }
 
-  // Resolves once the detection loop has fully exited.
-  // Await this before releasing shared resources (e.g. the ONNX session).
-  waitForStop(): Promise<void> {
-    return this.loopDone;
-  }
+  waitForStop(): Promise<void> { return this.loopDone; }
 
   private async loop(): Promise<void> {
     while (this.running) {
-      const frame = this.pump.takeFrame();
-      if (!frame) {
-        await this.sleep(50);
-        continue;
-      }
-
+      const image = this.pump.takeFrame();
+      if (!image) { await this.sleep(50); continue; }
       const t0 = Date.now();
       try {
-        const detections = await this.infer(frame);
-        const scores = scoreCategories(detections);
+        const result = await runYolo(image, this.storeSnapshots);
+        if (!this.running) return;
+        const scores = scoreCategories(result.detections);
         this.logScores(scores);
         this.updateSensors(scores);
+        if (this.storeSnapshots === 'normal') {
+          await saveSnapshot(image, this.snapshotDirectory, this.snapshotPrefix, '.jpg', this.log);
+        } else if (this.storeSnapshots === 'annotated' && result.annotatedImage) {
+          await saveSnapshot(result.annotatedImage, this.snapshotDirectory, this.snapshotPrefix, '.jpg', this.log);
+        }
       } catch (e) {
         this.log.error('Detection error:', String(e));
       }
-
       const elapsed = Date.now() - t0;
       if (elapsed < SAMPLE_MS) await this.sleep(SAMPLE_MS - elapsed);
     }
   }
 
-  // Interruptible sleep: resolves immediately if already stopped,
-  // or can be cut short by stop() calling this.wakeUp().
   private sleep(ms: number): Promise<void> {
     if (!this.running) return Promise.resolve();
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const timer = setTimeout(resolve, ms);
-      this.wakeUp = () => {
-        clearTimeout(timer);
-        resolve();
-      };
+      this.wakeUp = () => { clearTimeout(timer); resolve(); };
     });
   }
 
-  // Debug-only: log the best confidence seen per category this sample so users
-  // tuning thresholds can see how close a detection came to firing. Quiet by
-  // default (debug level); only emitted when something cleared the area filter.
   private logScores(scores: CategoryScores): void {
     if (scores.size === 0) return;
     const summary = [...scores.entries()].map(([c, s]) => `${c} ${s.toFixed(2)}`).join(', ');
@@ -90,15 +75,9 @@ export class StreamWorker {
   }
 
   private updateSensors(scores: CategoryScores): void {
-    // Guard: stop() may have fired while inference was in-flight.
     if (!this.running) return;
-
-    // Level-triggered: each sample reports the sensor's current state directly —
-    // detected this frame, or not. No cooldown or auto-off; the next sample
-    // (every SAMPLE_MS) clears it once the subject leaves. The accessory dedupes
-    // unchanged values, so this is a no-op when nothing changed.
     this.sensors.forEach((sensor, i) => {
-      const detected = sensor.categories.some((c) => (scores.get(c) ?? 0) >= sensor.threshold);
+      const detected = sensor.categories.some(c => (scores.get(c) ?? 0) >= sensor.threshold);
       this.onSensorState(i, detected);
     });
   }
