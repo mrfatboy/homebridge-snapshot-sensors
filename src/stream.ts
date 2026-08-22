@@ -1,7 +1,7 @@
 import type { Logger } from 'homebridge';
 import { scoreCategories } from './detector.js';
 import type { CategoryScores } from './detector.js';
-import type { SensorSpec, Detection, StreamHealth, StoreSnapshots } from './types.js';
+import type { SensorSpec, StreamHealth, StoreSnapshots } from './types.js';
 import { SAMPLE_MS } from './settings.js';
 import { fetchSnapshot, saveSnapshot } from './snapshot.js';
 import { runYolo } from './yolo.js';
@@ -48,7 +48,7 @@ export class StreamWorker {
         const image = await fetchSnapshot(this.url);
         if (!this.running) return;
 
-        const result = await runYolo(image, this.storeSnapshots, this.log);
+        const result = await runYolo(image, this.storeSnapshots);
         if (!this.running) return;
 
         const detections = result.detections;
