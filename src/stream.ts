@@ -1,95 +1,70 @@
 import type { Logger } from 'homebridge';
+import { FfmpegPump } from './ffmpeg.js';
 import { scoreCategories } from './detector.js';
 import type { CategoryScores } from './detector.js';
 import type { SensorSpec, StreamHealth, StoreSnapshots } from './types.js';
 import { SAMPLE_MS } from './settings.js';
-import { fetchSnapshot, saveSnapshot } from './snapshot.js';
+import { saveSnapshot } from './snapshot.js';
 import { runYolo } from './yolo.js';
 
 export type SensorStateCallback = (sensorIndex: number, active: boolean) => void;
 export type StreamHealthCallback = (health: StreamHealth) => void;
 
 export class StreamWorker {
+  private readonly pump: FfmpegPump;
   private running = true;
   private wakeUp: (() => void) | null = null;
   private loopDone: Promise<void> = Promise.resolve();
-  private health: StreamHealth = 'connecting';
 
   constructor(
-    private readonly url: string,
-    private readonly name: string,
+    url: string,
+    name: string,
     private readonly sensors: SensorSpec[],
     private readonly storeSnapshots: StoreSnapshots,
     private readonly snapshotDirectory: string,
     private readonly snapshotPrefix: string,
     private readonly onSensorState: SensorStateCallback,
-    private readonly onHealth: StreamHealthCallback,
+    onHealth: StreamHealthCallback,
     private readonly log: Logger,
-  ) {}
-
-  start(): void {
-    this.loopDone = this.loop();
+  ) {
+    this.pump = new FfmpegPump(url, name, log, onHealth);
   }
 
-  stop(): void {
-    this.running = false;
-    this.wakeUp?.();
-  }
+  start(): void { this.pump.start(); this.loopDone = this.loop(); }
 
-  waitForStop(): Promise<void> {
-    return this.loopDone;
-  }
+  stop(): void { this.running = false; this.wakeUp?.(); this.pump.stop(); }
+
+  waitForStop(): Promise<void> { return this.loopDone; }
 
   private async loop(): Promise<void> {
     while (this.running) {
+      const image = this.pump.takeFrame();
+      if (!image) { await this.sleep(50); continue; }
       const t0 = Date.now();
       try {
-        this.setHealth('connecting');
-        const image = await fetchSnapshot(this.url);
-        if (!this.running) return;
-
         const result = await runYolo(image, this.storeSnapshots);
         if (!this.running) return;
-
-        const detections = result.detections;
-        const scores = scoreCategories(detections);
+        const scores = scoreCategories(result.detections);
         this.logScores(scores);
         this.updateSensors(scores);
-        this.setHealth('online');
-
         if (this.storeSnapshots === 'normal') {
           await saveSnapshot(image, this.snapshotDirectory, this.snapshotPrefix, '.jpg', this.log);
-        } else if (this.storeSnapshots === 'annotated') {
-          if (!result.annotatedImage) {
-            this.log.warn('YOLO did not return an annotated image; the analyzed snapshot was not saved');
-          } else {
-            await saveSnapshot(result.annotatedImage, this.snapshotDirectory, this.snapshotPrefix, '.jpg', this.log);
-          }
+        } else if (this.storeSnapshots === 'annotated' && result.annotatedImage) {
+          await saveSnapshot(result.annotatedImage, this.snapshotDirectory, this.snapshotPrefix, '.jpg', this.log);
         }
-      } catch (error) {
-        this.setHealth('down');
-        this.log.error(`Snapshot detection error for ${this.name}:`, String(error));
+      } catch (e) {
+        this.log.error('Detection error:', String(e));
       }
-
       const elapsed = Date.now() - t0;
       if (elapsed < SAMPLE_MS) await this.sleep(SAMPLE_MS - elapsed);
     }
   }
 
-  private setHealth(health: StreamHealth): void {
-    if (health === this.health) return;
-    this.health = health;
-    this.onHealth(health);
-  }
-
   private sleep(ms: number): Promise<void> {
     if (!this.running) return Promise.resolve();
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const timer = setTimeout(resolve, ms);
-      this.wakeUp = () => {
-        clearTimeout(timer);
-        resolve();
-      };
+      this.wakeUp = () => { clearTimeout(timer); resolve(); };
     });
   }
 
@@ -102,7 +77,7 @@ export class StreamWorker {
   private updateSensors(scores: CategoryScores): void {
     if (!this.running) return;
     this.sensors.forEach((sensor, i) => {
-      const detected = sensor.categories.some((c) => (scores.get(c) ?? 0) >= sensor.threshold);
+      const detected = sensor.categories.some(c => (scores.get(c) ?? 0) >= sensor.threshold);
       this.onSensorState(i, detected);
     });
   }
