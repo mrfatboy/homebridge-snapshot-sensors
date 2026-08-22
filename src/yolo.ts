@@ -44,7 +44,15 @@ function runNative(modelPath: string, imagePath: string, annotatedPath?: string)
         return;
       }
       try {
-        resolve(JSON.parse(stdout.trim()) as NativeResult);
+        // ultralytics-inference writes a human-readable progress line to stdout
+        // before the runner's JSON result. Extract the JSON object from the output.
+        const trimmed = stdout.trim();
+        const jsonStart = trimmed.indexOf('{');
+        const jsonEnd = trimmed.lastIndexOf('}');
+        if (jsonStart < 0 || jsonEnd < jsonStart) {
+          throw new Error('No JSON result found in runner output');
+        }
+        resolve(JSON.parse(trimmed.slice(jsonStart, jsonEnd + 1)) as NativeResult);
       } catch (error) {
         reject(new Error(`Embedded YOLO runner returned invalid JSON: ${String(error)}`));
       }
