@@ -2,7 +2,6 @@ import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings.js';
 import { StreamSensorAccessory } from './accessory.js';
 import { StreamWorker } from './stream.js';
-import { loadModel, closeModel } from './inference.js';
 import { resolveSensors } from './categories.js';
 import type { StreamConfig, SensorSpec, StoreSnapshots } from './types.js';
 
@@ -20,7 +19,6 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
       const draining = this.workers.map((worker) => { worker.stop(); return worker.waitForStop(); });
       this.workers.length = 0;
       await Promise.all(draining).catch((err) => this.log.error('Error stopping workers:', String(err)));
-      await closeModel().catch((err) => this.log.error('Error releasing YOLO model:', String(err)));
     });
 
     this.api.on('didFinishLaunching', () => {
@@ -30,10 +28,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
         this.discoverDevices();
         return;
       }
-      loadModel()
-        .then(() => this.log.info('YOLO model loaded'))
-        .then(() => this.discoverDevices())
-        .catch((err) => this.log.error('Failed to initialize snapshot sensors:', String(err)));
+      this.discoverDevices();
     });
   }
 
@@ -68,17 +63,9 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
       });
 
       const storeSnapshots: StoreSnapshots = stream.storeSnapshots === 'annotated' ? 'annotated' : stream.storeSnapshots === 'normal' ? 'normal' : 'never';
-      const worker = new StreamWorker(
-        stream.url,
-        streamName,
-        sensors,
-        storeSnapshots,
-        stream.snapshotDirectory ?? '',
-        stream.snapshotPrefix ?? streamName,
+      const worker = new StreamWorker(stream.url, streamName, sensors, storeSnapshots, stream.snapshotDirectory ?? '', stream.snapshotPrefix ?? streamName,
         (i, active) => sensorAccessories[i]?.setMotion(active),
-        (health) => sensorAccessories.forEach((accessory) => accessory.setHealth(health)),
-        this.log,
-      );
+        (health) => sensorAccessories.forEach((accessory) => accessory.setHealth(health)), this.log);
       worker.start();
       this.workers.push(worker);
     }
