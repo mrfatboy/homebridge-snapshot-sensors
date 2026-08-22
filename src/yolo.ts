@@ -30,13 +30,15 @@ function decodeImage(value: unknown): Buffer | undefined {
 
 export async function runYolo(image: Buffer, storeSnapshots: StoreSnapshots, log: Logger): Promise<YoloResult> {
   const form = new FormData();
-  form.append('file', new Blob([image], { type: 'image/jpeg' }), 'snapshot.jpg');
+  form.append('file', new Blob([new Uint8Array(image)], { type: 'image/jpeg' }), 'snapshot.jpg');
   form.append('store_snapshots', storeSnapshots);
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), YOLO_TIMEOUT_MS);
   try {
-    const response = await fetch(`${YOLO_URL}/detect`, { method: 'POST', body: form, signal: controller.signal });
+    const response = await fetch(`${YOLO_URL}/detect?store_snapshots=${encodeURIComponent(storeSnapshots)}`, {
+      method: 'POST', body: form, signal: controller.signal,
+    });
     if (!response.ok) {
       const detail = (await response.text()).slice(0, 500);
       throw new Error(`YOLO request failed (${response.status}): ${detail}`);
