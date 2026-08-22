@@ -44,10 +44,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .cloned()
                 .unwrap_or_else(|| "unknown".to_string());
             detections.push(Detection {
-                x1: xyxy[i][0],
-                y1: xyxy[i][1],
-                x2: xyxy[i][2],
-                y2: xyxy[i][3],
+                x1: xyxy[[i, 0]],
+                y1: xyxy[[i, 1]],
+                x2: xyxy[[i, 2]],
+                y2: xyxy[[i, 3]],
                 score: conf[i],
                 class_id,
                 class_name: name,
