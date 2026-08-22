@@ -22,7 +22,7 @@ function packageRoot(): string {
 
 function runnerPath(): string {
   const executable = process.platform === 'win32' ? 'snapshot-sensors-yolo.exe' : 'snapshot-sensors-yolo';
-  return join(packageRoot(), 'native', 'yolo-runner', 'target', 'release', executable);
+  return join(packageRoot(), 'native', 'yolo-runner', 'bin', executable);
 }
 
 function runNative(modelPath: string, imagePath: string, annotatedPath?: string): Promise<NativeResult> {
