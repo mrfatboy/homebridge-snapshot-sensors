@@ -43,7 +43,6 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
     const fs = await import('node:fs/promises');
     let directory = null;
 
-    // A directory is only required when snapshots are configured to be stored.
     if (storeSnapshots !== 'never') {
       if (!requestedDirectory) throw new RequestError('Snapshot Directory is required when Store snapshots is Normal or Annotate.', { status: 400 });
       directory = pathModule.resolve(requestedDirectory);
@@ -71,7 +70,10 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
 
       const extension = contentType.toLowerCase().includes('png') ? '.png' : '.jpg';
       const safePrefix = prefix.replace(/[\\/:*?"<>|\x00-\x1F]/g, '_').replace(/\s+/g, '_');
-      const filename = `${safePrefix}-${new Date().toISOString().replace(/[:.]/g, '-')}${extension}`;
+      const now = new Date();
+      const pad = (value) => String(value).padStart(2, '0');
+      const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+      const filename = `${safePrefix}-${timestamp}${extension}`;
       const filePath = pathModule.join(directory, filename);
       await fs.writeFile(filePath, data);
 
