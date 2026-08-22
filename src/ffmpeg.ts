@@ -60,7 +60,7 @@ export class FfmpegPump {
     this.ff = child; this.latestFrameDate = Date.now();
     child.stderr!.setEncoding('utf8');
     child.stderr!.on('data', (chunk: string) => { if (child === this.ff) this.stderrTail = (this.stderrTail + chunk).slice(-1024); });
-    let buf = Buffer.alloc(0);
+    let buf: Buffer<ArrayBufferLike> = Buffer.alloc(0);
     child.stdout!.on('data', (chunk: Buffer) => {
       if (child !== this.ff) return;
       this.restarting = null; this.latestFrameDate = Date.now(); buf = Buffer.concat([buf, chunk]);
