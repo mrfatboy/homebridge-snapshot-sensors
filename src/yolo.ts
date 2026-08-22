@@ -15,11 +15,14 @@ interface NativeResult {
   annotated_path?: string;
 }
 
+function packageRoot(): string {
+  // Compiled file: <package>/dist/src/yolo.js
+  return dirname(dirname(dirname(fileURLToPath(import.meta.url))));
+}
+
 function runnerPath(): string {
-  const here = dirname(fileURLToPath(import.meta.url));
-  const root = dirname(here);
   const executable = process.platform === 'win32' ? 'snapshot-sensors-yolo.exe' : 'snapshot-sensors-yolo';
-  return join(root, 'native', 'yolo-runner', 'target', 'release', executable);
+  return join(packageRoot(), 'native', 'yolo-runner', 'target', 'release', executable);
 }
 
 function runNative(modelPath: string, imagePath: string, annotatedPath?: string): Promise<NativeResult> {
@@ -50,8 +53,7 @@ function runNative(modelPath: string, imagePath: string, annotatedPath?: string)
 }
 
 export async function runYolo(image: Buffer, storeSnapshots: StoreSnapshots): Promise<YoloResult> {
-  const root = dirname(dirname(fileURLToPath(import.meta.url)));
-  const modelPath = join(root, 'model', 'yolo26', 'model.onnx');
+  const modelPath = join(packageRoot(), 'model', 'yolo26', 'model.onnx');
   const workDir = await mkdtemp(join(tmpdir(), 'snapshot-sensors-yolo-'));
   const imagePath = join(workDir, 'input.jpg');
   const annotatedPath = storeSnapshots === 'annotated' ? join(workDir, 'annotated.jpg') : undefined;
