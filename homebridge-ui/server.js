@@ -85,6 +85,43 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
   }
 
   async testNotification(payload) {
+    const provider = typeof payload?.provider === 'string' ? payload.provider.trim().toLowerCase() : 'pushover';
+
+    if (provider === 'pushcut') {
+      const apiKey = typeof payload?.apiKey === 'string' ? payload.apiKey.trim() : '';
+      const notificationName = typeof payload?.notificationName === 'string' ? payload.notificationName.trim() : '';
+      const device = typeof payload?.device === 'string' ? payload.device.trim() : '';
+      const sound = typeof payload?.sound === 'string' ? payload.sound.trim() : '';
+      const title = typeof payload?.title === 'string' ? payload.title.trim() : '';
+      const text = typeof payload?.text === 'string' ? payload.text.trim() : '';
+
+      if (!apiKey) throw new RequestError('Pushcut API Key is required.', { status: 400 });
+      if (!notificationName) throw new RequestError('Pushcut Notification Name is required.', { status: 400 });
+      if (!sound) throw new RequestError('Pushcut Sound is required.', { status: 400 });
+      if (!title) throw new RequestError('Pushcut Title is required.', { status: 400 });
+      if (!text) throw new RequestError('Pushcut Message is required.', { status: 400 });
+
+      const body = { title: 'Snapshot Sensor', text: 'This is a test', sound };
+      if (device) body.devices = [device];
+
+      try {
+        const encodedName = encodeURIComponent(notificationName);
+        const response = await fetch(`https://api.pushcut.io/v1/notifications/${encodedName}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'API-Key': apiKey },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(15000),
+        });
+
+        const responseText = await response.text();
+        if (!response.ok) throw new Error(responseText || `HTTP ${response.status}`);
+        return { success: true };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        throw new RequestError(`Unable to send Pushcut notification: ${message}`, { status: 502 });
+      }
+    }
+
     const token = typeof payload?.token === 'string' ? payload.token.trim() : '';
     const user = typeof payload?.user === 'string' ? payload.user.trim() : '';
     const device = typeof payload?.device === 'string' ? payload.device.trim() : '';
