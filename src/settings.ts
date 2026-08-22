@@ -9,3 +9,7 @@ export const SAMPLE_MS = 2_000;
 export const THRESHOLD = 0.5;
 export const THRESHOLD_KEEP = 0.05;
 export const AREA_MIN_FRAC = 0.002;
+
+// YOLO input frame dimensions used for normalized detection-area filtering.
+export const FRAME_WIDTH = 1024;
+export const FRAME_HEIGHT = 576;
