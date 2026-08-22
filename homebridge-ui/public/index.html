@@ -1,115 +1,31 @@
-<style>
-  .snapshot-card { margin-bottom: 1rem; }
-  .sensor-card { margin-top: .75rem; }
-  .help-text { font-size: .9rem; opacity: .75; }
-  .button-row { display: flex; gap: .5rem; flex-wrap: wrap; }
-  .snapshot-card .form-control, .snapshot-card .store-snapshots, .snapshot-card .notifications-select { font-size: 1rem; height: 1.9rem; padding: .2rem .4rem; }
-  .snapshot-card button { font-size: 12px; padding: .2rem .4rem; }
-  .snapshot-card .test-snapshot,
-  .snapshot-card .test-notification { background-color: #800080; border-color: #800080; color: #fff; float: right; }
-  .snapshot-card .test-snapshot:hover,
-  .snapshot-card .test-notification:hover { background-color: #6a006a; border-color: #6a006a; color: #fff; }
-  .sensor-heading, .notifications-heading, .camera-snapshot-heading { font-size: 20px !important; line-height: 1.2; }
-  .sensor-heading .sensor-emoji, .notifications-heading .notifications-emoji, .camera-snapshot-heading .camera-snapshot-emoji { font-size: 20px !important; }
-  .notifications-heading { display: block; margin-top: 2rem; margin-bottom: .75rem; }
-  #snapshotModal.snapshot-test-modal { position: fixed; margin: 0; z-index: 1060; }
-  #snapshotModal.snapshot-test-modal .modal-dialog { margin: 0; max-width: min(800px, calc(100vw - 20px)); }
-</style>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Snapshot Sensors</title>
+  <link rel="stylesheet" href="snapshot-sensors.css">
+</head>
+<body>
+  <div class="card card-body">
+    <h3>Snapshot Sensors</h3>
+    <p class="help-text">Expose camera snapshots as HomeKit motion sensors using on-device object detection. Each <strong>Sensor</strong> becomes one HomeKit motion sensor that triggers when any selected category is detected above the threshold.</p>
+    <div id="snapshots"></div>
+    <div class="button-row mt-3"><button id="addSnapshot" type="button" class="btn btn-primary">➕ ADD ANOTHER SNAPSHOT SENSOR</button></div>
+  </div>
 
-<div class="card card-body">
-  <h3>Snapshot Sensors</h3>
-  <p class="help-text">Expose camera snapshots as HomeKit motion sensors using on-device object detection. Each <strong>Sensor</strong> becomes one HomeKit motion sensor that triggers when any selected category is detected above the threshold.</p>
-  <div id="snapshots"></div>
-  <div class="button-row mt-3"><button id="addSnapshot" type="button" class="btn btn-primary">➕ ADD ANOTHER SNAPSHOT SENSOR</button></div>
-</div>
+  <div class="modal fade" id="snapshotModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Test Snapshot</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body text-center"><img id="snapshotResult" alt="Snapshot" style="max-width:100%;height:auto;"></div>
+      </div>
+    </div>
+  </div>
 
-<div class="modal fade" id="snapshotModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Test Snapshot</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body text-center"><img id="snapshotResult" alt="Snapshot" style="max-width:100%;height:auto;"></div></div></div></div>
-
-<script>
-(() => {
-  const snapshots = document.querySelector('#snapshots');
-  function sensorHtml() { return `<div class="sensor-settings"><div class="mb-2 sensor-heading"><strong><span class="sensor-emoji">📡</span> Sensor</strong></div><div class="form-group mb-3"><label>Categories</label><div class="form-check"><input class="form-check-input category" type="checkbox" value="animals" checked><label class="form-check-label">🐶 Animal</label></div><div class="form-check"><input class="form-check-input category" type="checkbox" value="people" checked><label class="form-check-label">🧍 Person</label></div><div class="form-check"><input class="form-check-input category" type="checkbox" value="vehicles" checked><label class="form-check-label">🚗 Vehicle</label></div></div><div class="form-group mb-3"><label>🎚️ Threshold</label><input class="form-control sensor-threshold" type="number" min="0" max="1" step="0.01" value="0.25"></div><div class="form-check mb-2"><input class="form-check-input sensor-log" type="checkbox"><label class="form-check-label">📝 Log sensor status changes</label></div></div>`; }
-  function snapshotHtml() { return `<div class="card snapshot-card"><div class="card-header d-flex justify-content-between align-items-center"><strong>📷 Your Snapshot sensor</strong><button type="button" class="btn btn-sm btn-outline-danger remove-snapshot">REMOVE</button></div><div class="card-body"><div class="mb-2 camera-snapshot-heading"><strong><span class="camera-snapshot-emoji">📷</span> Camera Snapshot</strong></div><div class="form-group mb-3"><label>🏷️ Snapshot sensor name</label><input class="form-control snapshot-name" type="text" placeholder="CameraSensor1"><div class="help-text mt-1">This is the name of the virtual switch that will be exposed in Homekit</div></div><div class="form-group mb-3"><label>🔗 Snapshot URL</label><input class="form-control snapshot-url" type="url" placeholder="http://192.168.1.50:88/cgi-bin/CGIProxy.fcgi?cmd=snapPicture2&usr=USERNAME&pwd=PASSWORD"><div class="help-text mt-1">The URL used to retrieve a snapshot image from your camera.</div></div><div class="form-group mb-3"><label>Snapshot prefix</label><input class="form-control snapshot-prefix" type="text" placeholder="CameraSensor1"><div class="help-text mt-1">This name will be used as the prefix to the saved snapshot</div></div><div class="form-group mb-3"><label>💾 Store snapshots</label><select class="form-control store-snapshots"><option value="never">Never</option><option value="normal">Normal</option><option value="annotate">Annotate</option></select></div><div class="snapshot-directory-controls form-group mb-3" style="display:none"><label>📁 Snapshot Directory</label><input class="form-control snapshot-directory" type="text" placeholder="/path/to/snapshots"></div><div style="height: 1rem;"></div><div class="form-group mb-3"><button type="button" class="btn btn-outline-secondary test-snapshot">📸 Test Snapshot</button><div style="clear:both"></div></div><div class="sensors">${sensorHtml()}</div><div style="clear:both"></div><div class="form-group mb-3"><label class="notifications-heading"><span class="notifications-emoji">🔔</span> Notifications</label><select class="form-control notifications-select"><option value="none">None</option><option value="pushover">Pushover</option><option value="pushcut">Pushcut</option></select></div><div class="pushover-controls form-group mb-3" style="display:none"><div class="form-group mb-3"><label>Pushover Application Token</label><input class="form-control pushover-token" type="password" autocomplete="off" placeholder="Application API token"></div><div class="form-group mb-3"><label>Pushover User Key</label><input class="form-control pushover-user" type="password" autocomplete="off" placeholder="User or group key"></div><div class="form-group mb-3"><label>Pushover Device (optional)</label><input class="form-control pushover-device" type="text" placeholder="Device name (optional)"></div><div class="form-group mb-3"><label>Pushover Sound</label><input class="form-control pushover-sound" type="text" value="pushover" placeholder="pushover"></div><div class="form-group mb-3"><label>Pushover Title</label><input class="form-control pushover-title" type="text" placeholder="Snapshot Sensors"></div><div class="form-group mb-3"><button type="button" class="btn btn-outline-secondary test-notification">🔔 Test Notification</button><div style="clear:both"></div></div></div><div class="pushcut-controls form-group mb-3" style="display:none"><div class="form-group mb-3"><label>Pushcut API Key</label><input class="form-control pushcut-api-key" type="password" autocomplete="off" placeholder="Pushcut API key"></div><div class="form-group mb-3"><label>Pushcut Notification Name</label><input class="form-control pushcut-notification-name" type="text" placeholder="Notification name in Pushcut"></div><div class="form-group mb-3"><label>Pushcut Device (optional)</label><input class="form-control pushcut-device" type="text" placeholder="Device name (optional)"></div><div class="form-group mb-3"><label>Pushcut Sound</label><input class="form-control pushcut-sound" type="text" placeholder="Sound name"></div><div class="form-group mb-3"><label>Pushcut Title</label><input class="form-control pushcut-title" type="text" placeholder="Snapshot Sensors"></div><div class="form-group mb-3"><label>Pushcut Message</label><input class="form-control pushcut-message" type="text" placeholder="Notification message"></div><div class="form-group mb-3"><button type="button" class="btn btn-outline-secondary test-notification">🔔 Test Notification</button><div style="clear:both"></div></div></div></div></div>`; }
-  function updateDirectoryVisibility(snapshot) { const store = snapshot.querySelector('.store-snapshots'); const controls = snapshot.querySelector('.snapshot-directory-controls'); if (controls) controls.style.display = store.value === 'never' ? 'none' : ''; }
-  function updateNotificationVisibility(snapshot) { const notifications = snapshot.querySelector('.notifications-select'); const pushover = snapshot.querySelector('.pushover-controls'); const pushcut = snapshot.querySelector('.pushcut-controls'); pushover.style.display = notifications.value === 'pushover' ? '' : 'none'; pushcut.style.display = notifications.value === 'pushcut' ? '' : 'none'; }
-  function addSnapshot() { snapshots.insertAdjacentHTML('beforeend', snapshotHtml()); const snapshot = snapshots.lastElementChild; updateDirectoryVisibility(snapshot); updateNotificationVisibility(snapshot); }
-  snapshots.addEventListener('change', event => { const snapshot = event.target.closest('.snapshot-card'); if (!snapshot) return; if (event.target.classList.contains('store-snapshots')) updateDirectoryVisibility(snapshot); if (event.target.classList.contains('notifications-select')) updateNotificationVisibility(snapshot); });
-  snapshots.addEventListener('click', async event => {
-    const snapshot = event.target.closest('.snapshot-card'); if (!snapshot) return;
-    if (event.target.closest('.remove-snapshot')) { snapshot.remove(); return; }
-    if (event.target.closest('.test-notification')) { const button = event.target.closest('.test-notification'); const provider = snapshot.querySelector('.notifications-select').value; let requestBody; if (provider === 'pushcut') { const apiKey = snapshot.querySelector('.pushcut-api-key').value.trim(); const notificationName = snapshot.querySelector('.pushcut-notification-name').value.trim(); const device = snapshot.querySelector('.pushcut-device').value.trim(); const sound = snapshot.querySelector('.pushcut-sound').value.trim(); const title = snapshot.querySelector('.pushcut-title').value.trim(); const message = snapshot.querySelector('.pushcut-message').value.trim(); if (!apiKey) { homebridge.toast.error('Please enter the Pushcut API Key.', 'Invalid Pushcut Settings'); return; } if (!notificationName) { homebridge.toast.error('Please enter the Pushcut Notification Name.', 'Invalid Pushcut Settings'); return; } if (!sound) { homebridge.toast.error('Please enter the Pushcut Sound.', 'Invalid Pushcut Settings'); return; } if (!title) { homebridge.toast.error('Please enter the Pushcut Title.', 'Invalid Pushcut Settings'); return; } if (!message) { homebridge.toast.error('Please enter the Pushcut Message.', 'Invalid Pushcut Settings'); return; } requestBody = { provider, apiKey, notificationName, device, sound, title, text: message }; } else { const token = snapshot.querySelector('.pushover-token').value.trim(); const user = snapshot.querySelector('.pushover-user').value.trim(); const device = snapshot.querySelector('.pushover-device').value.trim(); const sound = snapshot.querySelector('.pushover-sound').value.trim(); const title = snapshot.querySelector('.pushover-title').value.trim(); if (!token) { homebridge.toast.error('Please enter the Pushover Application Token.', 'Invalid Pushover Settings'); return; } if (!user) { homebridge.toast.error('Please enter the Pushover User Key.', 'Invalid Pushover Settings'); return; } if (!sound) { homebridge.toast.error('Please enter the Pushover Sound.', 'Invalid Pushover Settings'); return; } if (!title) { homebridge.toast.error('Please enter the Pushover Title.', 'Invalid Pushover Settings'); return; } requestBody = { provider: 'pushover', token, user, device, sound, title }; } button.disabled = true; const originalText = button.textContent; button.textContent = '🔔 Testing...'; try { await homebridge.request('/test-notification', requestBody); homebridge.toast.success('Test notification sent successfully.', provider === 'pushcut' ? 'Pushcut' : 'Pushover'); } catch (error) { console.error('Test Notification failed:', error); homebridge.toast.error(error?.message || 'Unable to send the notification.', 'Test Notification Failed'); } finally { button.disabled = false; button.textContent = originalText; } return; }
-    if (event.target.closest('.test-snapshot')) { const button = event.target.closest('.test-snapshot'); const url = snapshot.querySelector('.snapshot-url').value.trim(); const directory = snapshot.querySelector('.snapshot-directory')?.value.trim() || ''; const prefix = snapshot.querySelector('.snapshot-prefix').value.trim() || snapshot.querySelector('.snapshot-name').value.trim(); const storeSnapshots = snapshot.querySelector('.store-snapshots').value; if (!url) { homebridge.toast.error('Please enter a valid Snapshot URL.', 'Invalid Snapshot URL'); return; } if (!prefix) { homebridge.toast.error('Please enter a Snapshot prefix.', 'Invalid Snapshot Prefix'); return; } button.disabled = true; const originalText = button.textContent; button.textContent = '📸 Testing...'; try { const result = await homebridge.request('/test-snapshot', { url, directory, prefix, storeSnapshots }); if (!result?.image) throw new Error('The camera did not return an image.'); document.querySelector('#snapshotResult').src = `data:${result.contentType || 'image/jpeg'};base64,${result.image}`; const modal = document.querySelector('#snapshotModal'); const heading = snapshot.querySelector('.camera-snapshot-heading'); const rect = heading.getBoundingClientRect(); const modalWidth = Math.min(800, window.innerWidth - 20); const modalHeight = Math.min(window.innerHeight - 20, 700); const left = Math.max(10, Math.min(rect.left, window.innerWidth - modalWidth - 10)); const top = Math.max(10, Math.min(rect.top, window.innerHeight - modalHeight - 10)); modal.classList.add('snapshot-test-modal'); modal.style.left = `${left}px`; modal.style.top = `${top}px`; modal.classList.add('show'); modal.style.display = 'block'; modal.removeAttribute('aria-hidden'); const backdrop = document.createElement('div'); backdrop.className = 'modal-backdrop fade show'; document.body.appendChild(backdrop); const close = () => { modal.classList.remove('show', 'snapshot-test-modal'); modal.style.display = 'none'; modal.setAttribute('aria-hidden', 'true'); modal.style.left = ''; modal.style.top = ''; backdrop.remove(); }; modal.querySelectorAll('[data-bs-dismiss="modal"], .btn-close').forEach(el => el.onclick = close); } catch (error) { console.error('Test Snapshot failed:', error); homebridge.toast.error(error?.message || 'Unable to retrieve or save the snapshot.', 'Test Snapshot Failed'); } finally { button.disabled = false; button.textContent = originalText; } return; }
-  });
-  document.querySelector('#addSnapshot').addEventListener('click', addSnapshot); addSnapshot();
-})();
-</script>
-
-<script>
-(async () => {
-  const configBlocks = await homebridge.getPluginConfig();
-  const config = configBlocks[0] || { platform: 'SnapshotSensors', name: 'SnapshotSensors', streams: [] };
-  if (!Array.isArray(config.streams)) config.streams = [];
-
-  const cards = () => Array.from(document.querySelectorAll('.snapshot-card'));
-  const setValue = (card, selector, value) => { const el = card.querySelector(selector); if (el && value !== undefined && value !== null) el.value = value; };
-  const fillCard = (card, stream) => {
-    setValue(card, '.snapshot-name', stream.name || '');
-    setValue(card, '.snapshot-url', stream.url || '');
-    setValue(card, '.snapshot-prefix', stream.snapshotPrefix || stream.name || '');
-    setValue(card, '.store-snapshots', stream.storeSnapshots === 'raw' ? 'normal' : (stream.storeSnapshots || 'never'));
-    setValue(card, '.snapshot-directory', stream.snapshotDirectory || '');
-    const notification = stream.notifications || {};
-    setValue(card, '.notifications-select', notification.provider || 'none');
-    setValue(card, '.pushover-token', notification.token || '');
-    setValue(card, '.pushover-user', notification.user || '');
-    setValue(card, '.pushover-device', notification.device || '');
-    setValue(card, '.pushover-sound', notification.sound || 'pushover');
-    setValue(card, '.pushover-title', notification.title || 'Snapshot Sensors');
-    setValue(card, '.pushcut-api-key', notification.apiKey || '');
-    setValue(card, '.pushcut-notification-name', notification.notificationName || '');
-    setValue(card, '.pushcut-device', notification.device || '');
-    setValue(card, '.pushcut-sound', notification.sound || '');
-    setValue(card, '.pushcut-title', notification.title || 'Snapshot Sensors');
-    setValue(card, '.pushcut-message', notification.message || '');
-    const sensor = card.querySelector('.sensor-settings');
-    const savedSensor = Array.isArray(stream.sensors) && stream.sensors.length ? stream.sensors[0] : {};
-    if (sensor) {
-      const cats = Array.isArray(savedSensor.categories) && savedSensor.categories.length ? savedSensor.categories : ['animals','people','vehicles'];
-      sensor.querySelectorAll('.category').forEach(el => { el.checked = cats.includes(el.value); });
-      const threshold = sensor.querySelector('.sensor-threshold'); if (threshold) threshold.value = savedSensor.threshold ?? 0.25;
-      const log = sensor.querySelector('.sensor-log'); if (log) log.checked = !!savedSensor.logStatus;
-    }
-    const store = card.querySelector('.store-snapshots'); if (store) store.dispatchEvent(new Event('change', { bubbles: true }));
-    const notifications = card.querySelector('.notifications-select'); if (notifications) notifications.dispatchEvent(new Event('change', { bubbles: true }));
-  };
-
-  while (cards().length < config.streams.length) document.querySelector('#addSnapshot').click();
-  if (config.streams.length) config.streams.forEach((stream, i) => fillCard(cards()[i], stream));
-
-  let saving = Promise.resolve();
-  const syncConfig = () => {
-    const streams = cards().map(card => {
-      const sensors = Array.from(card.querySelectorAll('.sensor-settings')).map(sensor => {
-        const thresholdElement = sensor.querySelector('.sensor-threshold');
-        const thresholdValue = thresholdElement ? thresholdElement.value.trim() : '0.25';
-        const notificationProvider = card.querySelector('.notifications-select').value;
-        return { categories: Array.from(sensor.querySelectorAll('.category:checked')).map(el => el.value), logStatus: sensor.querySelector('.sensor-log').checked, threshold: thresholdValue === '' ? 0.25 : Number(thresholdValue) };
-      });
-      const provider = card.querySelector('.notifications-select').value;
-      const notifications = { provider };
-      if (provider === 'pushover') Object.assign(notifications, { token: card.querySelector('.pushover-token').value.trim(), user: card.querySelector('.pushover-user').value.trim(), device: card.querySelector('.pushover-device').value.trim(), sound: card.querySelector('.pushover-sound').value.trim(), title: card.querySelector('.pushover-title').value.trim() });
-      if (provider === 'pushcut') Object.assign(notifications, { apiKey: card.querySelector('.pushcut-api-key').value.trim(), notificationName: card.querySelector('.pushcut-notification-name').value.trim(), device: card.querySelector('.pushcut-device').value.trim(), sound: card.querySelector('.pushcut-sound').value.trim(), title: card.querySelector('.pushcut-title').value.trim(), message: card.querySelector('.pushcut-message').value.trim() });
-      return { name: card.querySelector('.snapshot-name').value.trim(), url: card.querySelector('.snapshot-url').value.trim(), snapshotPrefix: card.querySelector('.snapshot-prefix').value.trim(), storeSnapshots: card.querySelector('.store-snapshots').value, snapshotDirectory: card.querySelector('.snapshot-directory')?.value.trim() || '', sensors, notifications };
-    });
-    config.streams = streams;
-    saving = saving.then(() => homebridge.updatePluginConfig([config])).catch(error => console.error('Config update failed:', error));
-    return saving;
-  };
-
-  snapshots.addEventListener('input', syncConfig);
-  snapshots.addEventListener('change', syncConfig);
-  snapshots.addEventListener('blur', syncConfig, true);
-  snapshots.addEventListener('click', event => { if (event.target.closest('#addSnapshot') || event.target.closest('.remove-snapshot')) setTimeout(syncConfig, 0); });
-  if (!config.streams.length) syncConfig();
-})();
-</script>
+  <script src="snapshot-sensors.js"></script>
+</body>
+</html>
