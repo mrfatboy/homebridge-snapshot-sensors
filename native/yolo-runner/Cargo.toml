@@ -1,0 +1,11 @@
+[package]
+name = "snapshot-sensors-yolo"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.89"
+
+[dependencies]
+ultralytics-inference = { version = "0.0.35", default-features = false, features = ["annotate"] }
+image = "0.25"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
