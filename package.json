@@ -9,7 +9,8 @@
   "files": ["dist/", "config.schema.json", "homebridge-ui/", "model/", "native/yolo-runner/target/release/"],
   "scripts": {
     "build:native": "cargo build --release --manifest-path native/yolo-runner/Cargo.toml",
-    "build": "npm run build:native && tsc",
+    "clean": "node -e \"const fs=require('fs');fs.rmSync('dist',{recursive:true,force:true})\"",
+    "build": "npm run clean && npm run build:native && tsc",
     "watch": "tsc --watch",
     "prepublishOnly": "npm run build",
     "lint": "eslint src/ test/",
