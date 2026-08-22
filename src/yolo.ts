@@ -16,7 +16,6 @@ interface NativeResult {
 }
 
 function packageRoot(): string {
-  // Compiled file: <package>/dist/src/yolo.js
   return dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 }
 
@@ -29,7 +28,6 @@ function runNative(modelPath: string, imagePath: string, annotatedPath?: string)
   return new Promise((resolve, reject) => {
     const args = [modelPath, imagePath];
     if (annotatedPath) args.push(annotatedPath);
-
     const child = spawn(runnerPath(), args, { stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = '';
     let stderr = '';
@@ -44,14 +42,10 @@ function runNative(modelPath: string, imagePath: string, annotatedPath?: string)
         return;
       }
       try {
-        // ultralytics-inference writes a human-readable progress line to stdout
-        // before the runner's JSON result. Extract the JSON object from the output.
         const trimmed = stdout.trim();
         const jsonStart = trimmed.indexOf('{');
         const jsonEnd = trimmed.lastIndexOf('}');
-        if (jsonStart < 0 || jsonEnd < jsonStart) {
-          throw new Error('No JSON result found in runner output');
-        }
+        if (jsonStart < 0 || jsonEnd < jsonStart) throw new Error('No JSON result found in runner output');
         resolve(JSON.parse(trimmed.slice(jsonStart, jsonEnd + 1)) as NativeResult);
       } catch (error) {
         reject(new Error(`Embedded YOLO runner returned invalid JSON: ${String(error)}`));
@@ -65,7 +59,6 @@ export async function runYolo(image: Buffer, storeSnapshots: StoreSnapshots): Pr
   const workDir = await mkdtemp(join(tmpdir(), 'snapshot-sensors-yolo-'));
   const imagePath = join(workDir, 'input.jpg');
   const annotatedPath = storeSnapshots === 'annotated' ? join(workDir, 'annotated.jpg') : undefined;
-
   try {
     await writeFile(imagePath, image);
     const result = await runNative(modelPath, imagePath, annotatedPath);
