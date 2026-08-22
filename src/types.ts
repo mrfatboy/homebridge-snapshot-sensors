@@ -1,16 +1,8 @@
 export type Category = 'animals' | 'packages' | 'people' | 'vehicles';
+export type StoreSnapshots = 'never' | 'normal' | 'annotated';
 
-// Liveness of a stream's ffmpeg pump, surfaced to HomeKit via the MotionSensor's
-// StatusActive/StatusFault characteristics so a dead camera/URL is visible.
-//   connecting — started, no frame decoded yet (within the startup grace window)
-//   online     — decoding frames normally
-//   down       — no frames past the watchdog timeout (bad URL/creds, camera offline, …)
 export type StreamHealth = 'connecting' | 'online' | 'down';
 
-// ── Config input shape (exactly what the GUI form emits; the only accepted form) ─
-// A sensor fires when ANY selected category is detected at or above `threshold`.
-// Values are untrusted JSON, so every field is optional/loose here and validated
-// in resolveSensors.
 export interface RawSensor {
   name?: string;
   categories?: string[];
@@ -22,11 +14,11 @@ export interface StreamConfig {
   name: string;
   url: string;
   snapshotDirectory?: string;
+  storeSnapshots?: StoreSnapshots;
+  snapshotPrefix?: string;
   sensors: RawSensor[];
 }
 
-// ── Resolved shape (internal; produced by resolveSensors) ──────────────────────
-// One HomeKit motion sensor: fires when ANY category clears the threshold.
 export interface SensorSpec {
   name: string;
   categories: Category[];
