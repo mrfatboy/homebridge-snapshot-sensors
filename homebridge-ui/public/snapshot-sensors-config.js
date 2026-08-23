@@ -7,17 +7,17 @@
 
   (async () => {
     const configBlocks = await homebridge.getPluginConfig();
-    const config = configBlocks[0] || { platform: 'SnapshotSensors', name: 'SnapshotSensors', streams: [] };
-    if (!Array.isArray(config.streams)) config.streams = [];
+    const config = configBlocks[0] || { platform: 'SnapshotSensors', name: 'SnapshotSensors', snapshots: [] };
+    if (!Array.isArray(config.snapshots)) config.snapshots = [];
 
-    const fillCard = (card, stream) => {
-      setValue(card, '.snapshot-name', stream.name || '');
-      setValue(card, '.snapshot-url', stream.url || '');
-      setValue(card, '.snapshot-prefix', stream.snapshotPrefix || stream.name || '');
-      setValue(card, '.store-snapshots', stream.storeSnapshots === 'raw' ? 'normal' : (stream.storeSnapshots || 'never'));
-      setValue(card, '.snapshot-directory', stream.snapshotDirectory || '');
+    const fillCard = (card, snapshot) => {
+      setValue(card, '.snapshot-name', snapshot.name || '');
+      setValue(card, '.snapshot-url', snapshot.url || '');
+      setValue(card, '.snapshot-prefix', snapshot.snapshotPrefix || snapshot.name || '');
+      setValue(card, '.store-snapshots', snapshot.storeSnapshots === 'raw' ? 'normal' : (snapshot.storeSnapshots || 'never'));
+      setValue(card, '.snapshot-directory', snapshot.snapshotDirectory || '');
 
-      const notification = stream.notifications || {};
+      const notification = snapshot.notifications || {};
       setValue(card, '.notifications-select', notification.provider || 'none');
       setValue(card, '.pushover-token', notification.token || '');
       setValue(card, '.pushover-user', notification.user || '');
@@ -30,7 +30,7 @@
       setValue(card, '.pushcut-sound', notification.sound || 'system');
 
       const sensor = card.querySelector('.sensor-settings');
-      const savedSensor = Array.isArray(stream.sensors) && stream.sensors.length ? stream.sensors[0] : {};
+      const savedSensor = Array.isArray(snapshot.sensors) && snapshot.sensors.length ? snapshot.sensors[0] : {};
       if (sensor) {
         const cats = Array.isArray(savedSensor.categories) && savedSensor.categories.length
           ? savedSensor.categories
@@ -46,12 +46,12 @@
       card.querySelector('.notifications-select')?.dispatchEvent(new Event('change', { bubbles: true }));
     };
 
-    while (cards().length < config.streams.length) document.querySelector('#addSnapshot').click();
-    if (config.streams.length) config.streams.forEach((stream, i) => fillCard(cards()[i], stream));
+    while (cards().length < config.snapshots.length) document.querySelector('#addSnapshot').click();
+    if (config.snapshots.length) config.snapshots.forEach((snapshot, i) => fillCard(cards()[i], snapshot));
 
     let saving = Promise.resolve();
     const syncConfig = () => {
-      const streams = cards().map(card => {
+      const snapshots = cards().map(card => {
         const sensors = Array.from(card.querySelectorAll('.sensor-settings')).map(sensor => {
           const thresholdElement = sensor.querySelector('.sensor-threshold');
           const thresholdValue = thresholdElement ? thresholdElement.value.trim() : '0.25';
@@ -82,22 +82,22 @@
         };
       });
 
-      config.streams = streams;
+      config.snapshots = snapshots;
       saving = saving.then(() => homebridge.updatePluginConfig([config]))
         .catch(error => console.error('Config update failed:', error));
       return saving;
     };
 
-    const snapshots = document.querySelector('#snapshots');
-    snapshots.addEventListener('input', syncConfig);
-    snapshots.addEventListener('change', syncConfig);
-    snapshots.addEventListener('blur', syncConfig, true);
-    snapshots.addEventListener('click', event => {
+    const snapshotsContainer = document.querySelector('#snapshots');
+    snapshotsContainer.addEventListener('input', syncConfig);
+    snapshotsContainer.addEventListener('change', syncConfig);
+    snapshotsContainer.addEventListener('blur', syncConfig, true);
+    snapshotsContainer.addEventListener('click', event => {
       if (event.target.closest('#addSnapshot') || event.target.closest('.remove-snapshot')) {
         setTimeout(syncConfig, 0);
       }
     });
 
-    if (!config.streams.length) syncConfig();
+    if (!config.snapshots.length) syncConfig();
   })();
 })();
