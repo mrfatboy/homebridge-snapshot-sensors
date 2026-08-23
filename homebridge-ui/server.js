@@ -31,27 +31,18 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
     const ownership = typeof payload?.ownership === 'string' ? payload.ownership.trim() : '';
     const prefix = typeof payload?.prefix === 'string' ? payload.prefix.trim() : '';
     const storeSnapshots = typeof payload?.storeSnapshots === 'string' ? payload.storeSnapshots.trim().toLowerCase() : 'never';
-
     if (!url) throw new RequestError('Snapshot URL is required.', { status: 400 });
     if (!prefix) throw new RequestError('Snapshot prefix is required.', { status: 400 });
-    if (!['never', 'normal', 'annotated'].includes(storeSnapshots)) {
-      throw new RequestError('Store snapshots setting is invalid.', { status: 400 });
-    }
-
+    if (!['never', 'normal', 'annotated'].includes(storeSnapshots)) throw new RequestError('Store snapshots setting is invalid.', { status: 400 });
     let parsed;
     try { parsed = new URL(url); } catch { throw new RequestError('The Snapshot URL is not valid.', { status: 400 }); }
-    if (!['http:', 'https:'].includes(parsed.protocol)) {
-      throw new RequestError('The Snapshot URL must use HTTP or HTTPS.', { status: 400 });
-    }
-
+    if (!['http:', 'https:'].includes(parsed.protocol)) throw new RequestError('The Snapshot URL must use HTTP or HTTPS.', { status: 400 });
     const pathModule = await import('node:path');
     const fs = await import('node:fs/promises');
     let directory = null;
-
     if (storeSnapshots !== 'never') {
       if (!requestedDirectory) throw new RequestError('Snapshot Directory is required when Store snapshots is Normal or Annotated.', { status: 400 });
       directory = pathModule.resolve(requestedDirectory);
-
       try {
         const stat = await fs.stat(directory);
         if (!stat.isDirectory()) throw new Error('The Snapshot Directory exists but is not a directory.');
@@ -61,27 +52,19 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
         throw new RequestError(`The Snapshot Directory is invalid or inaccessible: ${error?.message || String(error)}`, { status: 400 });
       }
     }
-
     try {
       const response = await fetch(parsed, { signal: AbortSignal.timeout(15000) });
       if (!response.ok) throw new Error(`Camera returned HTTP ${response.status}`);
       const contentType = response.headers.get('content-type') || 'image/jpeg';
       const data = Buffer.from(await response.arrayBuffer());
       if (!data.length) throw new Error('Camera returned an empty response');
-
       let outputImage = data;
       if (storeSnapshots !== 'never') {
         const { runYolo } = await import('../dist/src/yolo.js');
         const result = await runYolo(data, storeSnapshots);
-        if (storeSnapshots === 'annotated' && result.annotatedImage) {
-          outputImage = result.annotatedImage;
-        }
+        if (storeSnapshots === 'annotated' && result.annotatedImage) outputImage = result.annotatedImage;
       }
-
-      if (storeSnapshots === 'never') {
-        return { contentType, image: data.toString('base64'), saved: false };
-      }
-
+      if (storeSnapshots === 'never') return { contentType, image: data.toString('base64'), saved: false };
       const extension = storeSnapshots === 'annotated' ? '.jpg' : (contentType.toLowerCase().includes('png') ? '.png' : '.jpg');
       const safePrefix = prefix.replace(/[\\/:*?"<>|\x00-\x1F]/g, '_').replace(/\s+/g, '_');
       const now = new Date();
@@ -90,18 +73,15 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
       const filename = `${safePrefix}-${timestamp}${extension}`;
       const filePath = pathModule.join(directory, filename);
       await fs.writeFile(filePath, outputImage);
-
       if (ownership) {
         const [username, group] = ownership.split(':', 2).map((part) => part.trim());
         if (!username) throw new Error('Snapshot Ownership Override must contain a username.');
-
         const { stdout: passwdOutput } = await execFileAsync('getent', ['passwd', username]);
         const passwdFields = passwdOutput.trim().split(':');
         if (passwdFields.length < 4) throw new Error(`Unable to resolve snapshot owner: ${username}`);
         const uid = Number(passwdFields[2]);
         let gid = Number(passwdFields[3]);
         if (!Number.isInteger(uid) || !Number.isInteger(gid)) throw new Error(`Unable to resolve snapshot owner: ${username}`);
-
         if (group) {
           const { stdout: groupOutput } = await execFileAsync('getent', ['group', group]);
           const groupFields = groupOutput.trim().split(':');
@@ -109,22 +89,9 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
           gid = Number(groupFields[2]);
           if (!Number.isInteger(gid)) throw new Error(`Unable to resolve snapshot group: ${group}`);
         }
-
-        try {
-          await fs.chown(filePath, uid, gid);
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          throw new Error(`Unable to apply Snapshot Ownership Override "${ownership}": ${message}`);
-        }
+        await fs.chown(filePath, uid, gid);
       }
-
-      return {
-        contentType: storeSnapshots === 'annotated' ? 'image/jpeg' : contentType,
-        image: outputImage.toString('base64'),
-        filename,
-        path: filePath,
-        saved: true,
-      };
+      return { contentType: storeSnapshots === 'annotated' ? 'image/jpeg' : contentType, image: outputImage.toString('base64'), filename, path: filePath, saved: true };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new RequestError(`Unable to retrieve snapshot: ${message}`, { status: 502 });
@@ -132,79 +99,57 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
   }
 
   async testNotification(payload) {
-    const provider = typeof payload?.provider === 'string' ? payload.provider.trim().toLowerCase() : 'pushover';
-
-    if (provider === 'pushcut') {
-      const apiKey = typeof payload?.apiKey === 'string' ? payload.apiKey.trim() : '';
-      const notificationName = typeof payload?.notificationName === 'string' ? payload.notificationName.trim() : '';
+    const provider = typeof payload?.provider === 'string' ? payload.provider.trim().toLowerCase() : 'none';
+    if (provider === 'pushover') {
+      const token = typeof payload?.token === 'string' ? payload.token.trim() : '';
+      const user = typeof payload?.user === 'string' ? payload.user.trim() : '';
       const device = typeof payload?.device === 'string' ? payload.device.trim() : '';
       const sound = typeof payload?.sound === 'string' ? payload.sound.trim() : '';
       const title = typeof payload?.title === 'string' ? payload.title.trim() : '';
-      const text = typeof payload?.text === 'string' ? payload.text.trim() : '';
-
-      if (!apiKey) throw new RequestError('Pushcut API Key is required.', { status: 400 });
-      if (!notificationName) throw new RequestError('Pushcut Notification Name is required.', { status: 400 });
-      if (!sound) throw new RequestError('Pushcut Sound is required.', { status: 400 });
-      if (!title) throw new RequestError('Pushcut Title is required.', { status: 400 });
-      if (!text) throw new RequestError('Pushcut Message is required.', { status: 400 });
-
-      const body = { title: 'Snapshot Sensor', text: 'This is a test', sound };
-      if (device) body.devices = [device];
-
+      if (!token) throw new RequestError('Pushover Application Token is required.', { status: 400 });
+      if (!user) throw new RequestError('Pushover User Key is required.', { status: 400 });
+      if (!sound) throw new RequestError('Pushover Sound is required.', { status: 400 });
+      if (!title) throw new RequestError('Pushover Title is required.', { status: 400 });
+      const form = new URLSearchParams();
+      form.set('token', token); form.set('user', user); form.set('message', 'This is a test'); form.set('title', title); form.set('sound', sound);
+      if (device) form.set('device', device);
       try {
-        const encodedName = encodeURIComponent(notificationName);
-        const response = await fetch(`https://api.pushcut.io/v1/notifications/${encodedName}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'API-Key': apiKey },
-          body: JSON.stringify(body),
-          signal: AbortSignal.timeout(15000),
-        });
+        const response = await fetch('https://api.pushover.net/1/messages.json', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: form.toString(), signal: AbortSignal.timeout(15000) });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok || body?.status !== 1) throw new Error(Array.isArray(body?.errors) ? body.errors.join(', ') : `HTTP ${response.status}`);
+        return { success: true };
+      } catch (error) {
+        throw new RequestError(`Unable to send Pushover notification: ${error instanceof Error ? error.message : String(error)}`, { status: 502 });
+      }
+    }
 
+    if (provider === 'pushbullet') {
+      const apiKey = typeof payload?.apiKey === 'string' ? payload.apiKey.trim() : '';
+      const deviceIden = typeof payload?.deviceIden === 'string' ? payload.deviceIden.trim() : '';
+      const email = typeof payload?.email === 'string' ? payload.email.trim() : '';
+      const channelTag = typeof payload?.channelTag === 'string' ? payload.channelTag.trim() : '';
+      const title = typeof payload?.title === 'string' ? payload.title.trim() : '';
+      const body = typeof payload?.body === 'string' ? payload.body.trim() : '';
+      if (!apiKey) throw new RequestError('Pushbullet Access Token is required.', { status: 400 });
+      if (!title) throw new RequestError('Pushbullet Title is required.', { status: 400 });
+      if (!body) throw new RequestError('Pushbullet Message is required.', { status: 400 });
+      const targets = [deviceIden, email, channelTag].filter(Boolean);
+      if (targets.length > 1) throw new RequestError('Specify only one Pushbullet target: Device Identifier, Email, or Channel Tag.', { status: 400 });
+      const push = { type: 'note', title, body };
+      if (deviceIden) push.device_iden = deviceIden;
+      else if (email) push.email = email;
+      else if (channelTag) push.channel_tag = channelTag;
+      try {
+        const response = await fetch('https://api.pushbullet.com/v2/pushes', { method: 'POST', headers: { 'Access-Token': apiKey, 'Content-Type': 'application/json' }, body: JSON.stringify(push), signal: AbortSignal.timeout(15000) });
         const responseText = await response.text();
         if (!response.ok) throw new Error(responseText || `HTTP ${response.status}`);
         return { success: true };
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        throw new RequestError(`Unable to send Pushcut notification: ${message}`, { status: 502 });
+        throw new RequestError(`Unable to send Pushbullet notification: ${error instanceof Error ? error.message : String(error)}`, { status: 502 });
       }
     }
 
-    const token = typeof payload?.token === 'string' ? payload.token.trim() : '';
-    const user = typeof payload?.user === 'string' ? payload.user.trim() : '';
-    const device = typeof payload?.device === 'string' ? payload.device.trim() : '';
-    const sound = typeof payload?.sound === 'string' ? payload.sound.trim() : '';
-
-    if (!token) throw new RequestError('Pushover Application Token is required.', { status: 400 });
-    if (!user) throw new RequestError('Pushover User Key is required.', { status: 400 });
-    if (!sound) throw new RequestError('Pushover Sound is required.', { status: 400 });
-
-    const form = new URLSearchParams();
-    form.set('token', token);
-    form.set('user', user);
-    form.set('message', 'This is a test');
-    form.set('title', 'Snapshot Sensor');
-    form.set('sound', sound);
-    if (device) form.set('device', device);
-
-    try {
-      const response = await fetch('https://api.pushover.net/1/messages.json', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: form.toString(),
-        signal: AbortSignal.timeout(15000),
-      });
-
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok || body?.status !== 1) {
-        const detail = Array.isArray(body?.errors) ? body.errors.join(', ') : `HTTP ${response.status}`;
-        throw new Error(detail);
-      }
-
-      return { success: true };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      throw new RequestError(`Unable to send Pushover notification: ${message}`, { status: 502 });
-    }
+    throw new RequestError('A notification provider must be selected.', { status: 400 });
   }
 }
 
