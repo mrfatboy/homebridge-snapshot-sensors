@@ -1,11 +1,11 @@
 import { mkdir, writeFile, chown } from 'fs/promises';
 import { dirname, join } from 'path';
-import { lookup } from 'node:child_process';
+import { execFile as execFileCallback } from 'node:child_process';
 import { promisify } from 'node:util';
 import type { Logger } from 'homebridge';
 
 const SNAPSHOT_TIMEOUT_MS = 15_000;
-const execFile = promisify(lookup as never);
+const execFile = promisify(execFileCallback);
 
 export async function fetchSnapshot(url: string): Promise<Buffer> {
   const controller = new AbortController();
@@ -37,7 +37,7 @@ async function resolveOwnership(owner: string): Promise<{ uid: number; gid: numb
   const [username, group] = value.split(':', 2).map((part) => part.trim());
   if (!username) throw new Error('Snapshot ownership override must contain a username');
 
-  const { stdout } = await execFile('getent', ['passwd', username]) as unknown as { stdout: string };
+  const { stdout } = await execFile('getent', ['passwd', username]);
   const passwd = stdout.trim().split(':');
   if (passwd.length < 4) throw new Error(`Unable to resolve snapshot owner: ${username}`);
   const uid = Number(passwd[2]);
@@ -46,7 +46,7 @@ async function resolveOwnership(owner: string): Promise<{ uid: number; gid: numb
 
   let gid = primaryGid;
   if (group) {
-    const { stdout: groupOutput } = await execFile('getent', ['group', group]) as unknown as { stdout: string };
+    const { stdout: groupOutput } = await execFile('getent', ['group', group]);
     const groupFields = groupOutput.trim().split(':');
     if (groupFields.length < 3) throw new Error(`Unable to resolve snapshot group: ${group}`);
     gid = Number(groupFields[2]);
