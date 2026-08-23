@@ -1,8 +1,6 @@
 export type Category = 'animals' | 'packages' | 'people' | 'vehicles';
 export type StoreSnapshots = 'never' | 'normal' | 'annotated';
 
-export type StreamHealth = 'connecting' | 'online' | 'down';
-
 export interface RawSensor {
   name?: string;
   categories?: string[];
@@ -10,10 +8,11 @@ export interface RawSensor {
   logStatus?: boolean;
 }
 
-export interface StreamConfig {
+export interface SnapshotConfig {
   name: string;
   url: string;
   snapshotDirectory?: string;
+  snapshotOwnership?: string;
   storeSnapshots?: StoreSnapshots;
   snapshotPrefix?: string;
   sensors: RawSensor[];

@@ -3,19 +3,57 @@
   "pluginType": "platform",
   "singular": true,
   "customUi": true,
-  "headerDisplay": "Expose camera snapshots as HomeKit motion sensors using on-device object detection. Add one **Snapshot** per source/camera, then add **Sensors** to it.",
+  "headerDisplay": "Configure camera snapshots and object-detection sensors.",
   "footerDisplay": "",
   "schema": {
     "type": "object",
     "required": ["name"],
     "properties": {
       "name": { "title": "Name", "type": "string", "default": "SnapshotSensors", "description": "Plugin name as displayed in the Homebridge log." },
-      "streams": { "title": "Snapshots", "type": "array", "items": { "title": "Snapshot", "type": "object", "required": ["name", "url", "storeSnapshots"], "properties": {
+      "snapshots": { "title": "Snapshots", "type": "array", "items": { "title": "Snapshot", "type": "object", "required": ["name", "url", "storeSnapshots"], "properties": {
         "name": { "title": "Snapshot Name", "type": "string", "description": "Used as a prefix for auto-named sensors." },
         "url": { "title": "Snapshot URL", "type": "string", "format": "uri", "description": "URL used to retrieve a still snapshot from the camera." },
         "storeSnapshots": { "title": "Store snapshots", "type": "string", "enum": ["never", "normal", "annotated"], "default": "never", "description": "Never stores images. Normal stores the original snapshot. Annotated stores the image returned by YOLO with detections." },
         "snapshotDirectory": { "title": "Snapshot Directory", "type": "string", "description": "Required when Store snapshots is Normal or Annotated." },
+        "snapshotOwnership": { "title": "Snapshot Ownership Override (optional)", "type": "string", "description": "Override default Camera Snapshot file ownership" },
         "snapshotPrefix": { "title": "Snapshot prefix", "type": "string", "description": "Prefix used for saved snapshot filenames." },
+        "notifications": {
+          "title": "Notifications",
+          "type": "object",
+          "properties": {
+            "provider": { "title": "Notification Provider", "type": "string", "enum": ["none", "pushover", "pushbullet"], "default": "none" },
+            "pushover": {
+              "title": "Pushover",
+              "type": "object",
+              "properties": {
+                "token": { "title": "Application Token", "type": "string" },
+                "user": { "title": "User Key", "type": "string" },
+                "device": { "title": "Device", "type": "string" },
+                "sound": { "title": "Sound", "type": "string", "default": "pushover" },
+                "title": { "title": "Title", "type": "string", "default": "Snapshot Sensors" },
+                "animalMessage": { "title": "Animal Detect Message", "type": "string", "default": "Animal Detected 🐕" },
+                "personMessage": { "title": "Person Detected Message", "type": "string", "default": "Person Detected 🚶‍♂️" },
+                "vehicleMessage": { "title": "Vehicle Detected Message", "type": "string", "default": "Vehicle Detected 🚗" },
+                "unidentifiedMessage": { "title": "Unidentified Activity Detected", "type": "string", "default": "Unidentified Activity Detected ⚠️" }
+              }
+            },
+            "pushbullet": {
+              "title": "Pushbullet",
+              "type": "object",
+              "properties": {
+                "apiKey": { "title": "Access Token", "type": "string" },
+                "deviceIden": { "title": "Device Identifier", "type": "string" },
+                "email": { "title": "Email", "type": "string" },
+                "channelTag": { "title": "Channel Tag", "type": "string" },
+                "title": { "title": "Title", "type": "string", "default": "Snapshot Sensors" },
+                "animalMessage": { "title": "Animal Detect Message", "type": "string", "default": "Animal Detected 🐕" },
+                "personMessage": { "title": "Person Detected Message", "type": "string", "default": "Person Detected 🚶‍♂️" },
+                "vehicleMessage": { "title": "Vehicle Detected Message", "type": "string", "default": "Vehicle Detected 🚗" },
+                "unidentifiedMessage": { "title": "Unidentified Activity Detected", "type": "string", "default": "Unidentified Activity Detected ⚠️" }
+              }
+            }
+          }
+        },
         "sensors": { "title": "Sensors", "type": "array", "items": { "title": "Sensor", "type": "object", "properties": {
           "categories": { "title": "Categories", "type": "array", "uniqueItems": true, "items": { "type": "string", "enum": ["animals", "people", "vehicles"] } },
           "name": { "title": "Name (optional)", "type": "string" },

@@ -2,14 +2,13 @@ import type { Category, RawSensor, SensorSpec } from './types.js';
 import { THRESHOLD } from './settings.js';
 import { YOLO26_CLASSES, type Yolo26ClassName } from '../model/yolo26/classes.js';
 
-// Display labels are the category keys with the first letter capitalized.
 const capitalize = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 
 function idOf(name: Yolo26ClassName): number {
   return YOLO26_CLASSES.indexOf(name);
 }
 
-// COCO class IDs mapped to each HomeKit category.
+// COCO class IDs mapped to each detection category.
 // 'packages' is approximate — COCO has no delivery-parcel class.
 export const CATEGORY_CLASS_IDS: Record<Category, ReadonlySet<number>> = {
   animals: new Set([idOf('bird'), idOf('cat'), idOf('dog'), idOf('horse'), idOf('sheep'), idOf('cow'), idOf('elephant'), idOf('bear'), idOf('zebra'), idOf('giraffe')]),
@@ -30,15 +29,8 @@ export function isCategory(s: string): s is Category {
   return s in CATEGORY_CLASS_IDS;
 }
 
-// Normalize one raw sensor — { categories, name?, threshold? } — into a
-// SensorSpec. The sensor fires when ANY listed category is detected at or above
-// `threshold`. Unknown categories are warned about and dropped; a sensor left
-// with no valid category is skipped. An out-of-range threshold falls back to the
-// default. Name is optional: blank → auto-named with the stream prefix; an
-// explicit name is used verbatim. Name collisions are handled by the caller,
-// which has the full cross-stream view.
 export function resolveSensors(
-  streamName: string,
+  snapshotName: string,
   sensors: RawSensor[],
   warn: (msg: string) => void,
 ): SensorSpec[] {
@@ -67,11 +59,8 @@ export function resolveSensors(
       threshold = THRESHOLD;
     }
 
-    // Optional sensor name: blank → auto-named with the stream prefix; an
-    // explicit name is used verbatim. (streamName is guaranteed non-empty: the
-    // platform skips streams without a name before calling this.)
     const name = typeof raw?.name === 'string' ? raw.name.trim() : '';
-    const label = name || `${streamName} ${sensorName(categories)}`;
+    const label = name || `${snapshotName} ${sensorName(categories)}`;
 
     resolved.push({
       name: label,
