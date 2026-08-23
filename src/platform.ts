@@ -1,5 +1,4 @@
 import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge';
-import { PLATFORM_NAME, PLUGIN_NAME } from './settings.js';
 import { resolveSensors } from './categories.js';
 import type { SensorSpec, SnapshotConfig } from './types.js';
 
