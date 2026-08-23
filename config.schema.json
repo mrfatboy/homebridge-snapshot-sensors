@@ -30,7 +30,11 @@
                 "user": { "title": "User Key", "type": "string" },
                 "device": { "title": "Device", "type": "string" },
                 "sound": { "title": "Sound", "type": "string", "default": "pushover" },
-                "title": { "title": "Title", "type": "string", "default": "Snapshot Sensors" }
+                "title": { "title": "Title", "type": "string", "default": "Snapshot Sensors" },
+                "animalMessage": { "title": "Animal Detect Message", "type": "string", "default": "Animal Detected 🐕" },
+                "personMessage": { "title": "Person Detected Message", "type": "string", "default": "Person Detected 🚶‍♂️" },
+                "vehicleMessage": { "title": "Vehicle Detected Message", "type": "string", "default": "Vehicle Detected 🚗" },
+                "unidentifiedMessage": { "title": "Unidentified Activity Detected", "type": "string", "default": "Unidentified Activity Detected ⚠️" }
               }
             },
             "pushbullet": {
@@ -41,7 +45,11 @@
                 "deviceIden": { "title": "Device Identifier", "type": "string" },
                 "email": { "title": "Email", "type": "string" },
                 "channelTag": { "title": "Channel Tag", "type": "string" },
-                "title": { "title": "Title", "type": "string", "default": "Snapshot Sensors" }
+                "title": { "title": "Title", "type": "string", "default": "Snapshot Sensors" },
+                "animalMessage": { "title": "Animal Detect Message", "type": "string", "default": "Animal Detected 🐕" },
+                "personMessage": { "title": "Person Detected Message", "type": "string", "default": "Person Detected 🚶‍♂️" },
+                "vehicleMessage": { "title": "Vehicle Detected Message", "type": "string", "default": "Vehicle Detected 🚗" },
+                "unidentifiedMessage": { "title": "Unidentified Activity Detected", "type": "string", "default": "Unidentified Activity Detected ⚠️" }
               }
             }
           }
