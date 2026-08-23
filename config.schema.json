@@ -17,6 +17,36 @@
         "snapshotDirectory": { "title": "Snapshot Directory", "type": "string", "description": "Required when Store snapshots is Normal or Annotated." },
         "snapshotOwnership": { "title": "Snapshot Ownership Override (optional)", "type": "string", "description": "Override default Camera Snapshot file ownership" },
         "snapshotPrefix": { "title": "Snapshot prefix", "type": "string", "description": "Prefix used for saved snapshot filenames." },
+        "notifications": {
+          "title": "Notifications",
+          "type": "object",
+          "properties": {
+            "provider": { "title": "Notification Provider", "type": "string", "enum": ["none", "pushover", "pushbullet"], "default": "none" },
+            "pushover": {
+              "title": "Pushover",
+              "type": "object",
+              "properties": {
+                "token": { "title": "Application Token", "type": "string" },
+                "user": { "title": "User Key", "type": "string" },
+                "device": { "title": "Device", "type": "string" },
+                "sound": { "title": "Sound", "type": "string", "default": "pushover" },
+                "title": { "title": "Title", "type": "string", "default": "Snapshot Sensors" }
+              }
+            },
+            "pushbullet": {
+              "title": "Pushbullet",
+              "type": "object",
+              "properties": {
+                "apiKey": { "title": "Access Token", "type": "string" },
+                "deviceIden": { "title": "Device Identifier", "type": "string" },
+                "email": { "title": "Email", "type": "string" },
+                "channelTag": { "title": "Channel Tag", "type": "string" },
+                "title": { "title": "Title", "type": "string", "default": "Snapshot Sensors" },
+                "body": { "title": "Message", "type": "string", "default": "Snapshot sensor notification" }
+              }
+            }
+          }
+        },
         "sensors": { "title": "Sensors", "type": "array", "items": { "title": "Sensor", "type": "object", "properties": {
           "categories": { "title": "Categories", "type": "array", "uniqueItems": true, "items": { "type": "string", "enum": ["animals", "people", "vehicles"] } },
           "name": { "title": "Name (optional)", "type": "string" },
