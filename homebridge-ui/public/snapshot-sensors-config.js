@@ -5,10 +5,55 @@
     if (el && value !== undefined && value !== null) el.value = value;
   };
 
+  const migrateNotifications = (snapshot) => {
+    const notification = snapshot?.notifications;
+    if (!notification || typeof notification !== 'object') return { value: {}, migrated: false };
+    const hasNewShape = notification.pushover && typeof notification.pushover === 'object'
+      || notification.pushbullet && typeof notification.pushbullet === 'object';
+    if (hasNewShape) return { value: notification, migrated: false };
+
+    const provider = typeof notification.provider === 'string' ? notification.provider : 'none';
+    const migrated = {
+      provider,
+      pushover: {
+        token: notification.token || '',
+        user: notification.user || '',
+        device: notification.device || '',
+        sound: notification.sound || 'pushover',
+        title: notification.title || 'Snapshot Sensors',
+        animalMessage: notification.animalMessage || 'Animal Detected 🐕',
+        personMessage: notification.personMessage || 'Person Detected 🚶‍♂️',
+        vehicleMessage: notification.vehicleMessage || 'Vehicle Detected 🚗',
+        unidentifiedMessage: notification.unidentifiedMessage || 'Unidentified Activity Detected ⚠️',
+      },
+      pushbullet: {
+        apiKey: notification.apiKey || '',
+        deviceIden: notification.deviceIden || '',
+        email: notification.email || '',
+        channelTag: notification.channelTag || '',
+        title: notification.title || 'Snapshot Sensors',
+        animalMessage: notification.animalMessage || 'Animal Detected 🐕',
+        personMessage: notification.personMessage || 'Person Detected 🚶‍♂️',
+        vehicleMessage: notification.vehicleMessage || 'Vehicle Detected 🚗',
+        unidentifiedMessage: notification.unidentifiedMessage || 'Unidentified Activity Detected ⚠️',
+      },
+    };
+    return { value: migrated, migrated: true };
+  };
+
   (async () => {
     const configBlocks = await homebridge.getPluginConfig();
     const config = configBlocks[0] || { platform: 'SnapshotSensors', name: 'SnapshotSensors', snapshots: [] };
     if (!Array.isArray(config.snapshots)) config.snapshots = [];
+
+    let configMigrated = false;
+    const normalizedSnapshots = config.snapshots.map(snapshot => {
+      const result = migrateNotifications(snapshot);
+      if (!result.migrated) return snapshot;
+      configMigrated = true;
+      return { ...snapshot, notifications: result.value };
+    });
+    config.snapshots = normalizedSnapshots;
 
     const fillCard = (card, snapshot) => {
       setValue(card, '.snapshot-name', snapshot.name || '');
@@ -126,6 +171,7 @@
       }
     });
 
-    if (!config.snapshots.length) syncConfig();
+    if (configMigrated) await syncConfig();
+    else if (!config.snapshots.length) syncConfig();
   })();
 })();
