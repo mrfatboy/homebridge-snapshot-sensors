@@ -1,4 +1,8 @@
 import { HomebridgePluginUiServer, RequestError } from '@homebridge/plugin-ui-utils';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const execFileAsync = promisify(execFile);
 
 class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
   constructor() {
@@ -91,10 +95,7 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
         const [username, group] = ownership.split(':', 2).map((part) => part.trim());
         if (!username) throw new Error('Snapshot Ownership Override must contain a username.');
 
-        const { stdout: passwdOutput } = await new Promise((resolve, reject) => {
-          const { execFile } = require('node:child_process');
-          execFile('getent', ['passwd', username], (error, stdout, stderr) => error ? reject(error) : resolve({ stdout, stderr }));
-        });
+        const { stdout: passwdOutput } = await execFileAsync('getent', ['passwd', username]);
         const passwdFields = passwdOutput.trim().split(':');
         if (passwdFields.length < 4) throw new Error(`Unable to resolve snapshot owner: ${username}`);
         const uid = Number(passwdFields[2]);
@@ -102,17 +103,19 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
         if (!Number.isInteger(uid) || !Number.isInteger(gid)) throw new Error(`Unable to resolve snapshot owner: ${username}`);
 
         if (group) {
-          const { stdout: groupOutput } = await new Promise((resolve, reject) => {
-            const { execFile } = require('node:child_process');
-            execFile('getent', ['group', group], (error, stdout, stderr) => error ? reject(error) : resolve({ stdout, stderr }));
-          });
+          const { stdout: groupOutput } = await execFileAsync('getent', ['group', group]);
           const groupFields = groupOutput.trim().split(':');
           if (groupFields.length < 3) throw new Error(`Unable to resolve snapshot group: ${group}`);
           gid = Number(groupFields[2]);
           if (!Number.isInteger(gid)) throw new Error(`Unable to resolve snapshot group: ${group}`);
         }
 
-        await fs.chown(filePath, uid, gid);
+        try {
+          await fs.chown(filePath, uid, gid);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          throw new Error(`Unable to apply Snapshot Ownership Override "${ownership}": ${message}`);
+        }
       }
 
       return {
