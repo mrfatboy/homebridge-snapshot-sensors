@@ -6,13 +6,11 @@
 [![GitHub stars](https://img.shields.io/github/stars/mrfatboy/homebridge-snapshot-sensors?style=flat)](https://github.com/mrfatboy/homebridge-snapshot-sensors/stargazers)
 [![license](https://img.shields.io/npm/l/homebridge-snapshot-sensors)](./LICENSE)
 
-**Turn camera/video streams into HomeKit motion sensors with local YOLO object detection for `🐶 Animals`, `📦 Packages`, `🧍 People`, `🚗 Vehicles`.**
+**Retrieve camera snapshots and run local YOLO object detection for `🐶 Animals`, `📦 Packages`, `🧍 People`, and `🚗 Vehicles`.**
 
 ## About this project
 
-**homebridge-snapshot-sensors is a fork of the original [homebridge-stream-sensors](https://github.com/nkatchik/homebridge-stream-sensors) project.** This project keeps the original project's core purpose while providing a separately developed and maintained implementation under the new **Snapshot Sensors** name.
-
-This new project was **vibe coded** — developed collaboratively with AI assistance, with the resulting code tested, reviewed, and validated through automated tests and real Homebridge installation testing.
+**homebridge-snapshot-sensors is a separately developed and maintained Snapshot Sensors project.** The implementation uses direct camera snapshot URLs and an on-device YOLO model; the previous video-processing architecture has been removed.
 
 ## Installation
 
@@ -32,25 +30,25 @@ npm install -g homebridge-snapshot-sensors
 
 ### Homebridge UI
 
-Configure everything from the plugin settings form.
-1. Add a **video stream**.
-2. Paste your **camera/stream URL**.
-3. Tick the **categories** you want.
+Configure the plugin from the Homebridge settings form.
+1. Add a **snapshot**.
+2. Enter the camera's still-image URL.
+3. Configure the detection categories.
 4. Click **Save**.
 
-### Manual (config.json)
+### Manual (`config.json`)
 
-Add a `SnapshotSensors` platform to your Homebridge config. Each **stream** is one camera; each **sensor** fires when any of its selected categories is detected.
+Add a `SnapshotSensors` platform to your Homebridge config. Each snapshot source has one or more sensor definitions.
 
 ```json
 {
   "platforms": [
     {
       "platform": "SnapshotSensors",
-      "streams": [
+      "snapshots": [
         {
           "name": "Front Door",
-          "url": "rtsp://user:password@192.168.1.50:8554/stream",
+          "url": "http://192.168.1.50/cgi-bin/snapshot.cgi",
           "sensors": [
             { "categories": ["people", "packages"] },
             { "categories": ["vehicles"], "threshold": 0.6 }
@@ -62,82 +60,38 @@ Add a `SnapshotSensors` platform to your Homebridge config. Each **stream** is o
 }
 ```
 
-- **`name`** — used as a prefix for auto-named sensors (e.g. `Front Door People & Packages Sensor`).
-- **`url`** — any ffmpeg-readable stream URL (RTSP is typical).
-- **`categories`** — one or more of `animals`, `packages`, `people`, `vehicles`. The sensor triggers on any of them.
-- **`threshold`** *(optional)* — detection confidence from 0–1 (default `0.5`). Lower is more sensitive.
+- **`name`** — snapshot source name and prefix for auto-named sensors.
+- **`url`** — direct URL that returns a still image from the camera.
+- **`categories`** — one or more of `animals`, `packages`, `people`, `vehicles`.
+- **`threshold`** *(optional)* — detection confidence from 0–1.
+- **`storeSnapshots`** — `never`, `normal`, or `annotated`.
+- **`snapshotDirectory`** — required when storing snapshots.
+- **`snapshotPrefix`** — optional prefix for stored image filenames.
 
-## Camera setup examples
+## Camera setup
 
-Most cameras expose an RTSP URL — paste it as the stream **URL**. The exact path varies by brand, model, and firmware, so when in doubt look your model up in a community database like the [iSpy camera connection database](https://www.ispyconnect.com/cameras) or your camera's manual.
-
-Common RTSP URL patterns (replace `user`, `pass`, and the IP address):
-
-| Brand | Main stream | Substream (low-res) |
-| --- | --- | --- |
-| **Reolink** | `rtsp://user:pass@IP:554/h264Preview_01_main` | `rtsp://user:pass@IP:554/h264Preview_01_sub` |
-| **Hikvision** | `rtsp://user:pass@IP:554/Streaming/Channels/101` | `rtsp://user:pass@IP:554/Streaming/Channels/102` |
-| **Dahua / Amcrest** | `rtsp://user:pass@IP:554/cam/realmonitor?channel=1&subtype=0` | `rtsp://user:pass@IP:554/cam/realmonitor?channel=1&subtype=1` |
-| **TP-Link Tapo** | `rtsp://user:pass@IP:554/stream1` | `rtsp://user:pass@IP:554/stream2` |
-
-- **UniFi Protect** — enable **RTSP** on the camera in the Protect app (Settings → Advanced), which generates a per-camera `rtsps://…:7441/…` URL to paste here.
-- **ONVIF cameras** — if you can't find the path, an ONVIF discovery tool (e.g. ONVIF Device Manager) will report the exact RTSP URL.
-- **Wyze** — RTSP requires Wyze's separate RTSP firmware, which is unofficial and unmaintained; a standalone bridge that re-exposes the camera as RTSP is more reliable.
-- **Docker** — no special config needed: the plugin forces RTSP over **TCP**, which avoids the dropped-UDP-media problem common on Docker's bridge network.
-
-### Prefer the substream
-
-Point the plugin at your camera's **substream** (the low-resolution secondary stream) when one is available. Every frame is downscaled to a fixed size before inference, so a substream doesn't lower the inference cost — but it does cut the ffmpeg **decode** and **network** load, which is the main per-stream CPU cost on a busy host. Switch to the main stream only if the substream is too low-resolution to detect your subjects reliably.
-
-### Running multiple cameras
-
-Detection is CPU-intensive and each stream runs its own decode + inference loop. As soon as you add a second or third camera, run this plugin as a [child bridge](https://github.com/homebridge/homebridge/wiki/Child-Bridges): it isolates the plugin in its own process, so a busy detection loop can't slow the rest of Homebridge down — and a crash can't take Homebridge with it.
+Use the camera's native still-image/snapshot endpoint. The exact URL depends on the camera manufacturer and model. Consult the camera documentation for its snapshot API.
 
 ## Requirements
 
 - **Homebridge** v1.8 or newer
 - **Node.js** v20 or newer
-- A **supported platform** (see below)
-- A camera or video stream URL that ffmpeg can open (RTSP, etc.)
-- Enough CPU headroom for inference — each camera stream runs one detection pass per sampling interval
+- A camera endpoint that returns a still image
+- Enough CPU headroom for local YOLO inference
 
-A bundled static **ffmpeg** binary and the **ONNX** runtime are installed automatically; there's no separate setup.
+The object detector uses the bundled native YOLO runner and ONNX Runtime. Detection is performed locally in the Homebridge environment; images are not uploaded to a cloud service.
 
 ### Supported platforms
 
-The on-device detector uses [`onnxruntime-node`](https://www.npmjs.com/package/onnxruntime-node), which ships prebuilt native binaries only for:
-
-| OS | Architectures |
-| --- | --- |
-| macOS | x64, arm64 |
-| Linux | x64, arm64 |
-| Windows | x64, arm64 |
-
-There is **no build for 32-bit ARM (armv7/armhf)** — including the legacy 32-bit Raspberry Pi OS. On a Raspberry Pi, install the **64-bit (arm64) Raspberry Pi OS**. On an unsupported platform the plugin logs a clear error and stays idle rather than crashing Homebridge.
-
-## Performance & privacy
-
-- Frames are decoded with ffmpeg and analyzed with a local **YOLO26n ONNX** model, entirely inside your Homebridge environment — they are **never uploaded to any cloud service**.
-- Each frame is resized to a fixed input size before inference, so per-frame cost is the same regardless of your camera's resolution. The plugin samples the stream at a modest interval and only ever processes the latest frame.
-- The main cost driver is the number of camera streams (each runs its own detection loop), not how many sensors a stream has. Start with one stream and grow from there.
+The on-device detector uses native ONNX Runtime binaries for supported 64-bit macOS, Linux, and Windows platforms.
 
 ## Troubleshooting
 
-- **Sensor doesn't appear in HomeKit** — confirm the stream has at least one sensor with valid categories, then restart Homebridge.
-- **Stream won't open / "no frames"** — verify the URL works in another player. For RTSP cameras the plugin uses TCP transport, which is the most compatible.
-- **ffmpeg can't decode the stream** — check the URL, credentials, and that the camera is reachable from the Homebridge host (use an IP address if a hostname won't resolve).
-- **Too many false triggers** — raise the sensor's `threshold`.
-- **Detections are missed** — lower the `threshold`, or make sure the subject is large enough in frame.
-- **Homebridge feels sluggish** — detection is CPU-intensive. Try [running this plugin as a child bridge](https://github.com/homebridge/homebridge/wiki/Child-Bridges) to isolate it in its own process, and/or reduce the number of streams.
+- **Snapshot retrieval fails** — verify the URL, credentials, and that the camera is reachable from the Homebridge host.
+- **Detections are missed** — lower the configured detection threshold or ensure the subject is sufficiently visible in the image.
+- **Too many false detections** — raise the detection threshold.
+- **Homebridge feels sluggish** — local object detection is CPU-intensive. Consider reducing the number of configured snapshot sources or detection frequency in the implementation as the project evolves.
 
 ## License
 
 Licensed under **AGPL-3.0-only** — free to use, study, and build on. Contributions and forks are welcome; please keep them under the same license terms.
-
-## Contributing & support
-
-Issues and camera-compatibility reports are appreciated. When reporting a problem, please include your **Homebridge version**, **plugin version**, **platform**, **stream type**, and relevant **logs**. Focused, maintainable pull requests are welcome.
-
----
-
-If this plugin helps your HomeKit setup, please consider **starring the repo** — it helps others discover the project.
