@@ -24,6 +24,7 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
   async testSnapshot(payload) {
     const url = typeof payload?.url === 'string' ? payload.url.trim() : '';
     const requestedDirectory = typeof payload?.directory === 'string' ? payload.directory.trim() : '';
+    const ownership = typeof payload?.ownership === 'string' ? payload.ownership.trim() : '';
     const prefix = typeof payload?.prefix === 'string' ? payload.prefix.trim() : '';
     const storeSnapshots = typeof payload?.storeSnapshots === 'string' ? payload.storeSnapshots.trim().toLowerCase() : 'never';
 
@@ -64,9 +65,6 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
       const data = Buffer.from(await response.arrayBuffer());
       if (!data.length) throw new Error('Camera returned an empty response');
 
-      // Match the normal snapshot path: the same embedded YOLO runner/model is
-      // exercised for Normal and Annotated modes. Annotated mode receives the
-      // YOLO-rendered image produced by runYolo; Normal mode stores the original.
       let outputImage = data;
       if (storeSnapshots !== 'never') {
         const { runYolo } = await import('../dist/src/yolo.js');
@@ -88,6 +86,34 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
       const filename = `${safePrefix}-${timestamp}${extension}`;
       const filePath = pathModule.join(directory, filename);
       await fs.writeFile(filePath, outputImage);
+
+      if (ownership) {
+        const [username, group] = ownership.split(':', 2).map((part) => part.trim());
+        if (!username) throw new Error('Snapshot Ownership Override must contain a username.');
+
+        const { stdout: passwdOutput } = await new Promise((resolve, reject) => {
+          const { execFile } = require('node:child_process');
+          execFile('getent', ['passwd', username], (error, stdout, stderr) => error ? reject(error) : resolve({ stdout, stderr }));
+        });
+        const passwdFields = passwdOutput.trim().split(':');
+        if (passwdFields.length < 4) throw new Error(`Unable to resolve snapshot owner: ${username}`);
+        const uid = Number(passwdFields[2]);
+        let gid = Number(passwdFields[3]);
+        if (!Number.isInteger(uid) || !Number.isInteger(gid)) throw new Error(`Unable to resolve snapshot owner: ${username}`);
+
+        if (group) {
+          const { stdout: groupOutput } = await new Promise((resolve, reject) => {
+            const { execFile } = require('node:child_process');
+            execFile('getent', ['group', group], (error, stdout, stderr) => error ? reject(error) : resolve({ stdout, stderr }));
+          });
+          const groupFields = groupOutput.trim().split(':');
+          if (groupFields.length < 3) throw new Error(`Unable to resolve snapshot group: ${group}`);
+          gid = Number(groupFields[2]);
+          if (!Number.isInteger(gid)) throw new Error(`Unable to resolve snapshot group: ${group}`);
+        }
+
+        await fs.chown(filePath, uid, gid);
+      }
 
       return {
         contentType: storeSnapshots === 'annotated' ? 'image/jpeg' : contentType,
