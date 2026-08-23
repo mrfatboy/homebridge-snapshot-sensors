@@ -41,8 +41,7 @@
                 "deviceIden": { "title": "Device Identifier", "type": "string" },
                 "email": { "title": "Email", "type": "string" },
                 "channelTag": { "title": "Channel Tag", "type": "string" },
-                "title": { "title": "Title", "type": "string", "default": "Snapshot Sensors" },
-                "body": { "title": "Message", "type": "string", "default": "Snapshot sensor notification" }
+                "title": { "title": "Title", "type": "string", "default": "Snapshot Sensors" }
               }
             }
           }
