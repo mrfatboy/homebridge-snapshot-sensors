@@ -3,6 +3,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
+const TEST_NOTIFICATION_MESSAGE = 'This is a test';
 
 class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
   constructor() {
@@ -111,7 +112,7 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
       if (!sound) throw new RequestError('Pushover Sound is required.', { status: 400 });
       if (!title) throw new RequestError('Pushover Title is required.', { status: 400 });
       const form = new URLSearchParams();
-      form.set('token', token); form.set('user', user); form.set('message', 'This is a test'); form.set('title', title); form.set('sound', sound);
+      form.set('token', token); form.set('user', user); form.set('message', TEST_NOTIFICATION_MESSAGE); form.set('title', title); form.set('sound', sound);
       if (device) form.set('device', device);
       try {
         const response = await fetch('https://api.pushover.net/1/messages.json', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: form.toString(), signal: AbortSignal.timeout(15000) });
@@ -129,13 +130,11 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
       const email = typeof payload?.email === 'string' ? payload.email.trim() : '';
       const channelTag = typeof payload?.channelTag === 'string' ? payload.channelTag.trim() : '';
       const title = typeof payload?.title === 'string' ? payload.title.trim() : '';
-      const body = typeof payload?.body === 'string' ? payload.body.trim() : '';
       if (!apiKey) throw new RequestError('Pushbullet Access Token is required.', { status: 400 });
       if (!title) throw new RequestError('Pushbullet Title is required.', { status: 400 });
-      if (!body) throw new RequestError('Pushbullet Message is required.', { status: 400 });
       const targets = [deviceIden, email, channelTag].filter(Boolean);
       if (targets.length > 1) throw new RequestError('Specify only one Pushbullet target: Device Identifier, Email, or Channel Tag.', { status: 400 });
-      const push = { type: 'note', title, body };
+      const push = { type: 'note', title, body: TEST_NOTIFICATION_MESSAGE };
       if (deviceIden) push.device_iden = deviceIden;
       else if (email) push.email = email;
       else if (channelTag) push.channel_tag = channelTag;
