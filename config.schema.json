@@ -15,6 +15,7 @@
         "url": { "title": "Snapshot URL", "type": "string", "format": "uri", "description": "URL used to retrieve a still snapshot from the camera." },
         "storeSnapshots": { "title": "Store snapshots", "type": "string", "enum": ["never", "normal", "annotated"], "default": "never", "description": "Never stores images. Normal stores the original snapshot. Annotated stores the image returned by YOLO with detections." },
         "snapshotDirectory": { "title": "Snapshot Directory", "type": "string", "description": "Required when Store snapshots is Normal or Annotated." },
+        "snapshotOwnership": { "title": "Snapshot Ownership Override (optional)", "type": "string", "description": "Override default Camera Snapshot file ownership" },
         "snapshotPrefix": { "title": "Snapshot prefix", "type": "string", "description": "Prefix used for saved snapshot filenames." },
         "sensors": { "title": "Sensors", "type": "array", "items": { "title": "Sensor", "type": "object", "properties": {
           "categories": { "title": "Categories", "type": "array", "uniqueItems": true, "items": { "type": "string", "enum": ["animals", "people", "vehicles"] } },
