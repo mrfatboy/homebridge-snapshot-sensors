@@ -16,6 +16,7 @@
       setValue(card, '.snapshot-prefix', snapshot.snapshotPrefix || snapshot.name || '');
       setValue(card, '.store-snapshots', snapshot.storeSnapshots === 'raw' ? 'normal' : (snapshot.storeSnapshots || 'never'));
       setValue(card, '.snapshot-directory', snapshot.snapshotDirectory || '');
+      setValue(card, '.snapshot-ownership', snapshot.snapshotOwnership || '');
 
       const notification = snapshot.notifications || {};
       setValue(card, '.notifications-select', notification.provider || 'none');
@@ -68,6 +69,7 @@
           snapshotPrefix: card.querySelector('.snapshot-prefix').value.trim(),
           storeSnapshots: card.querySelector('.store-snapshots').value,
           snapshotDirectory: card.querySelector('.snapshot-directory')?.value.trim() || '',
+          snapshotOwnership: card.querySelector('.snapshot-ownership')?.value.trim() || '',
           sensors,
           notifications: {
             provider: card.querySelector('.notifications-select').value,
