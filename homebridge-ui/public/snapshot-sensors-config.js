@@ -27,11 +27,19 @@
       setValue(card, '.pushover-device', pushover.device || '');
       setValue(card, '.pushover-sound', pushover.sound || 'pushover');
       setValue(card, '.pushover-title', pushover.title || 'Snapshot Sensors');
+      setValue(card, '.pushover-animal-message', pushover.animalMessage || 'Animal Detected 🐕');
+      setValue(card, '.pushover-person-message', pushover.personMessage || 'Person Detected 🚶‍♂️');
+      setValue(card, '.pushover-vehicle-message', pushover.vehicleMessage || 'Vehicle Detected 🚗');
+      setValue(card, '.pushover-unidentified-message', pushover.unidentifiedMessage || 'Unidentified Activity Detected ⚠️');
       setValue(card, '.pushbullet-api-key', pushbullet.apiKey || '');
       setValue(card, '.pushbullet-device-iden', pushbullet.deviceIden || '');
       setValue(card, '.pushbullet-email', pushbullet.email || '');
       setValue(card, '.pushbullet-channel-tag', pushbullet.channelTag || '');
       setValue(card, '.pushbullet-title', pushbullet.title || 'Snapshot Sensors');
+      setValue(card, '.pushbullet-animal-message', pushbullet.animalMessage || 'Animal Detected 🐕');
+      setValue(card, '.pushbullet-person-message', pushbullet.personMessage || 'Person Detected 🚶‍♂️');
+      setValue(card, '.pushbullet-vehicle-message', pushbullet.vehicleMessage || 'Vehicle Detected 🚗');
+      setValue(card, '.pushbullet-unidentified-message', pushbullet.unidentifiedMessage || 'Unidentified Activity Detected ⚠️');
 
       const sensor = card.querySelector('.sensor-settings');
       const savedSensor = Array.isArray(snapshot.sensors) && snapshot.sensors.length ? snapshot.sensors[0] : {};
@@ -82,6 +90,10 @@
               device: card.querySelector('.pushover-device').value.trim(),
               sound: card.querySelector('.pushover-sound').value.trim(),
               title: card.querySelector('.pushover-title').value.trim(),
+              animalMessage: card.querySelector('.pushover-animal-message').value,
+              personMessage: card.querySelector('.pushover-person-message').value,
+              vehicleMessage: card.querySelector('.pushover-vehicle-message').value,
+              unidentifiedMessage: card.querySelector('.pushover-unidentified-message').value,
             },
             pushbullet: {
               apiKey: card.querySelector('.pushbullet-api-key').value.trim(),
@@ -89,6 +101,10 @@
               email: card.querySelector('.pushbullet-email').value.trim(),
               channelTag: card.querySelector('.pushbullet-channel-tag').value.trim(),
               title: card.querySelector('.pushbullet-title').value.trim(),
+              animalMessage: card.querySelector('.pushbullet-animal-message').value,
+              personMessage: card.querySelector('.pushbullet-person-message').value,
+              vehicleMessage: card.querySelector('.pushbullet-vehicle-message').value,
+              unidentifiedMessage: card.querySelector('.pushbullet-unidentified-message').value,
             },
           },
         };
