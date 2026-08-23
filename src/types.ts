@@ -12,6 +12,7 @@ export interface SnapshotConfig {
   name: string;
   url: string;
   snapshotDirectory?: string;
+  snapshotOwnership?: string;
   storeSnapshots?: StoreSnapshots;
   snapshotPrefix?: string;
   sensors: RawSensor[];
