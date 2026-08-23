@@ -19,16 +19,19 @@
       setValue(card, '.snapshot-ownership', snapshot.snapshotOwnership || '');
 
       const notification = snapshot.notifications || {};
+      const pushover = notification.pushover || {};
+      const pushbullet = notification.pushbullet || {};
       setValue(card, '.notifications-select', notification.provider || 'none');
-      setValue(card, '.pushover-token', notification.token || '');
-      setValue(card, '.pushover-user', notification.user || '');
-      setValue(card, '.pushover-device', notification.device || '');
-      setValue(card, '.pushover-sound', notification.sound || 'pushover');
-      setValue(card, '.pushover-title', notification.title || 'Snapshot Sensors');
-      setValue(card, '.pushcut-api-key', notification.apiKey || '');
-      setValue(card, '.pushcut-notification-name', notification.notificationName || '');
-      setValue(card, '.pushcut-device', notification.device || '');
-      setValue(card, '.pushcut-sound', notification.sound || 'system');
+      setValue(card, '.pushover-token', pushover.token || '');
+      setValue(card, '.pushover-user', pushover.user || '');
+      setValue(card, '.pushover-device', pushover.device || '');
+      setValue(card, '.pushover-sound', pushover.sound || 'pushover');
+      setValue(card, '.pushover-title', pushover.title || 'Snapshot Sensors');
+      setValue(card, '.pushbullet-api-key', pushbullet.apiKey || '');
+      setValue(card, '.pushbullet-device-iden', pushbullet.deviceIden || '');
+      setValue(card, '.pushbullet-email', pushbullet.email || '');
+      setValue(card, '.pushbullet-channel-tag', pushbullet.channelTag || '');
+      setValue(card, '.pushbullet-title', pushbullet.title || 'Snapshot Sensors');
 
       const sensor = card.querySelector('.sensor-settings');
       const savedSensor = Array.isArray(snapshot.sensors) && snapshot.sensors.length ? snapshot.sensors[0] : {};
@@ -73,13 +76,20 @@
           sensors,
           notifications: {
             provider: card.querySelector('.notifications-select').value,
-            token: card.querySelector('.pushover-token').value.trim(),
-            user: card.querySelector('.pushover-user').value.trim(),
-            device: card.querySelector('.pushover-device').value.trim(),
-            sound: card.querySelector('.pushover-sound').value.trim(),
-            title: card.querySelector('.pushover-title').value.trim(),
-            apiKey: card.querySelector('.pushcut-api-key').value.trim(),
-            notificationName: card.querySelector('.pushcut-notification-name').value.trim(),
+            pushover: {
+              token: card.querySelector('.pushover-token').value.trim(),
+              user: card.querySelector('.pushover-user').value.trim(),
+              device: card.querySelector('.pushover-device').value.trim(),
+              sound: card.querySelector('.pushover-sound').value.trim(),
+              title: card.querySelector('.pushover-title').value.trim(),
+            },
+            pushbullet: {
+              apiKey: card.querySelector('.pushbullet-api-key').value.trim(),
+              deviceIden: card.querySelector('.pushbullet-device-iden').value.trim(),
+              email: card.querySelector('.pushbullet-email').value.trim(),
+              channelTag: card.querySelector('.pushbullet-channel-tag').value.trim(),
+              title: card.querySelector('.pushbullet-title').value.trim(),
+            },
           },
         };
       });
