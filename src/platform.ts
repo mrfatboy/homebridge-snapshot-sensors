@@ -96,7 +96,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
         if (matchedTypes.size > 0) detectionType = [...matchedTypes].map(category => detectionMessages[category]).join(', ');
       }
       const elapsedMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
-      this.log.info(`[${snapshotName}] Detection complete — ${detectionType}; notification provider: ${providerUsed}; image saved: ${store}; total elapsed time: ${this.formatElapsed(elapsedMs)}.`);
+      this.log.info(`[${snapshotName}] ${detectionType}; notification provider: ${providerUsed}; image saved: ${store}; total elapsed time: ${this.formatElapsed(elapsedMs)}.`);
     } catch (error) {
       const elapsedMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
       this.log.error(`[${snapshotName}] Snapshot detection failed after ${this.formatElapsed(elapsedMs)} — ${detectionType}; notification provider: ${providerUsed}; image saved: ${store}; error: ${error instanceof Error ? error.message : String(error)}`);
