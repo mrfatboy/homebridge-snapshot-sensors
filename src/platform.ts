@@ -53,7 +53,10 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
       service.setCharacteristic(this.Characteristic.Name, snapshotName);
       service.getCharacteristic(this.Characteristic.On).onSet(async (value) => {
         if (value !== true) return;
-        await this.triggerSnapshot(snapshotName);
+        // Keep the existing HomeKit/Homebridge Switch service, but make it a 1-second momentary trigger.
+        setTimeout(() => service.updateCharacteristic(this.Characteristic.On, false), 1000);
+        // Do not hold the Switch ON while the camera/YOLO/notification pipeline runs.
+        void this.triggerSnapshot(snapshotName);
       });
       this.runtimes.set(snapshotName, { config: snapshot, sensors, service, running: false });
       this.log.info(`Configured snapshot "${snapshotName}" with ${sensors.length} sensor definition(s).`);
