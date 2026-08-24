@@ -2,7 +2,7 @@ import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, 
 import { resolveSensors } from './categories.js';
 import { matchingSensors } from './detector.js';
 import { runYolo } from './yolo.js';
-import type { Detection, SensorSpec, SnapshotConfig, NotificationChannel } from './types.js';
+import type { Detection, SensorSpec, SnapshotConfig, NotificationChannel, Category } from './types.js';
 import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile, chown } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
@@ -10,13 +10,9 @@ import { promisify } from 'node:util';
 import path from 'node:path';
 
 const execFileAsync = promisify(execFile);
+type NotificationCategory = Category | 'unidentified';
 
-type SnapshotRuntime = {
-  config: SnapshotConfig;
-  sensors: SensorSpec[];
-  service: Service;
-  running: boolean;
-};
+type SnapshotRuntime = { config: SnapshotConfig; sensors: SensorSpec[]; service: Service; running: boolean };
 
 export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service;
@@ -30,30 +26,16 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     this.api.on('didFinishLaunching', () => this.discoverDevices());
   }
 
-  configureAccessory(accessory: PlatformAccessory): void {
-    this.accessories.push(accessory);
-  }
+  configureAccessory(accessory: PlatformAccessory): void { this.accessories.push(accessory); }
 
   private discoverDevices(): void {
     const snapshots: SnapshotConfig[] = this.config.snapshots ?? [];
-    if (snapshots.length === 0) {
-      this.log.info('No snapshots configured.');
-      return;
-    }
-
+    if (snapshots.length === 0) { this.log.info('No snapshots configured.'); return; }
     for (const snapshot of snapshots) {
       const snapshotName = typeof snapshot.name === 'string' ? snapshot.name.trim() : '';
-      if (!snapshotName) {
-        this.log.error('Snapshot is missing a required name — skipping it');
-        continue;
-      }
-
+      if (!snapshotName) { this.log.error('Snapshot is missing a required name — skipping it'); continue; }
       const sensors: SensorSpec[] = resolveSensors(snapshotName, snapshot.sensors ?? [], (msg) => this.log.warn(msg));
-      if (sensors.length === 0) {
-        this.log.warn(`Snapshot "${snapshotName}" has no configured sensors — skipping it`);
-        continue;
-      }
-
+      if (sensors.length === 0) { this.log.warn(`Snapshot "${snapshotName}" has no configured sensors — skipping it`); continue; }
       const uuid = this.api.hap.uuid.generate(`${this.config.name || 'SnapshotSensors'}:${snapshotName}`);
       let accessory = this.accessories.find(candidate => candidate.UUID === uuid);
       if (!accessory) {
@@ -61,14 +43,12 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
         this.api.registerPlatformAccessories('SnapshotSensors', 'SnapshotSensors', [accessory]);
         this.accessories.push(accessory);
       }
-
       const service = accessory.getService(this.Service.Switch) || accessory.addService(this.Service.Switch, snapshotName, 'snapshot-trigger');
       service.setCharacteristic(this.Characteristic.Name, snapshotName);
       service.getCharacteristic(this.Characteristic.On).onSet(async (value) => {
         if (value !== true) return;
         await this.triggerSnapshot(snapshotName);
       });
-
       this.runtimes.set(snapshotName, { config: snapshot, sensors, service, running: false });
       this.log.info(`Configured snapshot "${snapshotName}" with ${sensors.length} sensor definition(s).`);
     }
@@ -84,11 +64,9 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
       const contentType = response.headers.get('content-type') || 'image/jpeg';
       const image = Buffer.from(await response.arrayBuffer());
       if (!image.length) throw new Error('Camera returned an empty response');
-
       const store = runtime.config.storeSnapshots ?? 'never';
       const yolo = await runYolo(image, store);
       await this.saveSnapshot(runtime.config, image, yolo.annotatedImage, contentType);
-
       const matched = matchingSensors(yolo.detections, runtime.sensors);
       if (matched.length === 0) {
         this.log.info(`[${snapshotName}] No configured sensor matched the YOLO detections; sending Unidentified Activity.`);
@@ -108,19 +86,18 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     }
   }
 
-  private matchedCategories(detections: Detection[], sensor: SensorSpec): string[] {
-    const categories = new Set<string>();
+  private matchedCategories(detections: Detection[], sensor: SensorSpec): Category[] {
+    const categories = new Set<Category>();
     for (const detection of detections) {
       if (detection.score < sensor.threshold) continue;
       const category = this.categoryForDetection(detection);
-      if (category && sensor.categories.includes(category as SensorSpec['categories'][number])) categories.add(category);
+      if (category && sensor.categories.includes(category)) categories.add(category);
     }
     return [...categories];
   }
 
-  private categoryForDetection(detection: Detection): string | null {
-    const names = new Set(['person']);
-    if (names.has(detection.className)) return 'people';
+  private categoryForDetection(detection: Detection): Category | null {
+    if (detection.className === 'person') return 'people';
     if (['bird', 'cat', 'dog', 'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe'].includes(detection.className)) return 'animals';
     if (['bicycle', 'car', 'motorcycle', 'bus', 'train', 'truck', 'boat'].includes(detection.className)) return 'vehicles';
     if (['backpack', 'handbag', 'suitcase'].includes(detection.className)) return 'packages';
@@ -149,8 +126,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     const { stdout: passwd } = await execFileAsync('getent', ['passwd', username]);
     const fields = passwd.trim().split(':');
     if (fields.length < 4) throw new Error(`Unable to resolve snapshot owner: ${username}`);
-    const uid = Number(fields[2]);
-    let gid = Number(fields[3]);
+    const uid = Number(fields[2]); let gid = Number(fields[3]);
     if (!Number.isInteger(uid) || !Number.isInteger(gid)) throw new Error(`Unable to resolve snapshot owner: ${username}`);
     if (group) {
       const { stdout: groupData } = await execFileAsync('getent', ['group', group]);
@@ -162,7 +138,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     await chown(filePath, uid, gid);
   }
 
-  private async sendNotification(config: SnapshotConfig, category: 'animals' | 'people' | 'vehicles' | 'packages' | 'unidentified'): Promise<void> {
+  private async sendNotification(config: SnapshotConfig, category: NotificationCategory): Promise<void> {
     const notification = config.notifications;
     const provider = notification?.provider ?? 'none';
     if (provider === 'none') return;
@@ -172,7 +148,6 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     const message = channel[key as keyof NotificationChannel] as string | undefined;
     if (!message) return;
     const title = channel.title?.trim() || 'Snapshot Sensors';
-
     if (provider === 'pushover') {
       if (!channel.token || !channel.user) throw new Error('Pushover token and user are required.');
       const form = new URLSearchParams({ token: channel.token, user: channel.user, message, title, sound: channel.sound?.trim() || 'pushover' });
@@ -181,7 +156,6 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
       if (!response.ok) throw new Error(`Pushover returned HTTP ${response.status}`);
       return;
     }
-
     if (!channel.apiKey) throw new Error('Pushbullet Access Token is required.');
     const push: Record<string, string> = { type: 'note', title, body: message };
     if (channel.deviceIden) push.device_iden = channel.deviceIden;
