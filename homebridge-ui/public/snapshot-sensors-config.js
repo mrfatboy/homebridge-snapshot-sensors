@@ -27,19 +27,6 @@
     return Array.from(counts.entries()).filter(([, count]) => count > 1).map(([name]) => name);
   }
 
-  function getInvalidSnapshotUrls() {
-    return cards().filter(card => {
-      const url = card.querySelector('.snapshot-url')?.value.trim() || '';
-      if (!url) return true;
-      try {
-        const parsed = new URL(url);
-        return parsed.protocol !== 'http:' && parsed.protocol !== 'https:';
-      } catch {
-        return true;
-      }
-    });
-  }
-
   const migrateNotifications = (snapshot) => {
     const notification = snapshot?.notifications; if (!notification || typeof notification !== 'object') return { value: {}, migrated: false };
     const hasNewShape = notification.pushover && typeof notification.pushover === 'object' || notification.pushbullet && typeof notification.pushbullet === 'object' || notification.ntfy && typeof notification.ntfy === 'object' || notification.pushsafer && typeof notification.pushsafer === 'object';
@@ -66,10 +53,17 @@
     let saving = Promise.resolve();
     const syncConfig = () => {
       const duplicateNames = getDuplicateSnapshotNames();
+      const invalidSnapshotUrl = cards().some(card => {
+        const value = card.querySelector('.snapshot-url')?.value.trim() || '';
+        if (!value) return true;
+        try { const parsed = new URL(value); return parsed.protocol !== 'http:' && parsed.protocol !== 'https:'; } catch { return true; }
+      });
       if (duplicateNames.length) {
         homebridge.toast.error('There are duplicate Snapshot sensor names. Each Snapshot sensor must have a unique name.', 'Duplicate Snapshot Sensor Names');
+        homebridge.disableSaveButton();
         return saving;
       }
+      if (invalidSnapshotUrl) homebridge.disableSaveButton(); else homebridge.enableSaveButton();
       const snapshots = cards().map(card => { const sensors = Array.from(card.querySelectorAll('.sensor-settings')).map(sensor => { const thresholdElement = sensor.querySelector('.sensor-threshold'); const thresholdValue = thresholdElement ? thresholdElement.value.trim() : '0.25'; return { categories: Array.from(sensor.querySelectorAll('.category:checked')).map(el => el.value), threshold: thresholdValue === '' ? 0.25 : Number(thresholdValue) }; });
         return { name: card.querySelector('.snapshot-name').value.trim(), url: card.querySelector('.snapshot-url').value.trim(), snapshotPrefix: card.querySelector('.snapshot-prefix').value.trim(), storeSnapshots: card.querySelector('.store-snapshots').value, snapshotDirectory: card.querySelector('.snapshot-directory')?.value.trim() || '', snapshotOwnership: card.querySelector('.snapshot-ownership')?.value.trim() || '', sensors,
           notifications: { provider: card.querySelector('.notifications-select').value, pushover: { token: card.querySelector('.pushover-token').value.trim(), user: card.querySelector('.pushover-user').value.trim(), device: card.querySelector('.pushover-device').value.trim(), sound: card.querySelector('.pushover-sound').value.trim(), title: card.querySelector('.pushover-title').value.trim(), animalMessage: card.querySelector('.pushover-animal-message').value, personMessage: card.querySelector('.pushover-person-message').value, vehicleMessage: card.querySelector('.pushover-vehicle-message').value, unidentifiedMessage: card.querySelector('.pushover-unidentified-message').value }, pushbullet: { apiKey: card.querySelector('.pushbullet-api-key').value.trim(), deviceIden: card.querySelector('.pushbullet-device-iden').value.trim(), email: card.querySelector('.pushbullet-email').value.trim(), channelTag: card.querySelector('.pushbullet-channel-tag').value.trim(), title: card.querySelector('.pushbullet-title').value.trim(), animalMessage: card.querySelector('.pushbullet-animal-message').value, personMessage: card.querySelector('.pushbullet-person-message').value, vehicleMessage: card.querySelector('.pushbullet-vehicle-message').value, unidentifiedMessage: card.querySelector('.pushbullet-unidentified-message').value }, ntfy: { server: card.querySelector('.ntfy-server').value.trim(), topic: card.querySelector('.ntfy-topic').value.trim(), accessToken: card.querySelector('.ntfy-access-token').value.trim(), priority: Number(card.querySelector('.ntfy-priority').value || 3), tags: card.querySelector('.ntfy-tags').value.trim(), title: card.querySelector('.ntfy-title').value.trim(), animalMessage: card.querySelector('.ntfy-animal-message').value, personMessage: card.querySelector('.ntfy-person-message').value, vehicleMessage: card.querySelector('.ntfy-vehicle-message').value, unidentifiedMessage: card.querySelector('.ntfy-unidentified-message').value }, pushsafer: { privateKey: card.querySelector('.pushsafer-private-key').value.trim(), pushsaferDevice: card.querySelector('.pushsafer-device').value.trim(), title: card.querySelector('.pushsafer-title').value.trim(), icon: Number(card.querySelector('.pushsafer-icon').value || 1), vibration: Number(card.querySelector('.pushsafer-vibration').value || 1), iconColor: card.querySelector('.pushsafer-icon-color').value.trim(), sound: card.querySelector('.pushsafer-sound').value.trim(), url: card.querySelector('.pushsafer-url').value.trim(), urlTitle: card.querySelector('.pushsafer-url-title').value.trim(), priority: Number(card.querySelector('.pushsafer-priority').value || 0), timeToLive: card.querySelector('.pushsafer-ttl').value === '' ? undefined : Number(card.querySelector('.pushsafer-ttl').value), retry: card.querySelector('.pushsafer-retry').value === '' ? undefined : Number(card.querySelector('.pushsafer-retry').value), expire: card.querySelector('.pushsafer-expire').value === '' ? undefined : Number(card.querySelector('.pushsafer-expire').value), animalMessage: card.querySelector('.pushsafer-animal-message').value, personMessage: card.querySelector('.pushsafer-person-message').value, vehicleMessage: card.querySelector('.pushsafer-vehicle-message').value, unidentifiedMessage: card.querySelector('.pushsafer-unidentified-message').value } },
@@ -78,29 +72,6 @@
       config.snapshots = snapshots; saving = saving.then(() => homebridge.updatePluginConfig([config])).catch(error => console.error('Config update failed:', error)); return saving;
     };
     const snapshotsContainer = document.querySelector('#snapshots'); snapshotsContainer.addEventListener('input', syncConfig); snapshotsContainer.addEventListener('change', syncConfig); snapshotsContainer.addEventListener('blur', syncConfig, true); snapshotsContainer.addEventListener('click', event => { if (event.target.closest('#addSnapshot') || event.target.closest('.remove-snapshot')) setTimeout(syncConfig, 0); });
-    const validateSnapshotUrlsBeforeSave = () => {
-      const invalidUrls = getInvalidSnapshotUrls();
-      if (!invalidUrls.length) return true;
-      const hasEmpty = invalidUrls.some(card => !(card.querySelector('.snapshot-url')?.value.trim()));
-      homebridge.toast.error(hasEmpty ? 'Every Snapshot sensor must have a Snapshot URL.' : 'Every Snapshot sensor must have a valid Snapshot URL using http:// or https://.', hasEmpty ? 'Snapshot URL Required' : 'Invalid Snapshot URL');
-      invalidUrls[0].querySelector('.snapshot-url')?.focus();
-      return false;
-    };
-    try {
-      const parentDocument = window.parent.document;
-      parentDocument.addEventListener('click', event => {
-        const target = event.target instanceof Element ? event.target : null;
-        const saveButton = target?.closest('.modal-footer button.btn-primary');
-        if (!saveButton || window.frameElement?.closest('.modal-content') !== saveButton.closest('.modal-content')) return;
-        if (!validateSnapshotUrlsBeforeSave()) {
-          event.preventDefault();
-          event.stopPropagation();
-          event.stopImmediatePropagation();
-        }
-      }, true);
-    } catch (error) {
-      console.warn('Unable to attach Snapshot URL save validation:', error);
-    }
     if (configMigrated) await syncConfig(); else if (!config.snapshots.length) syncConfig();
   })();
 })();
