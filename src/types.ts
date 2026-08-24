@@ -15,12 +15,18 @@ export interface NotificationChannel {
   deviceIden?: string;
   email?: string;
   channelTag?: string;
+  server?: string;
+  topic?: string;
+  accessToken?: string;
+  priority?: number;
+  tags?: string;
 }
 
 export interface NotificationConfig {
-  provider?: 'none' | 'pushover' | 'pushbullet';
+  provider?: 'none' | 'pushover' | 'pushbullet' | 'ntfy';
   pushover?: NotificationChannel;
   pushbullet?: NotificationChannel;
+  ntfy?: NotificationChannel;
 }
 
 export interface RawSensor {
