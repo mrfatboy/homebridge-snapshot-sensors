@@ -1,5 +1,5 @@
 import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge';
-import { resolveSensors } from './categories.js';
+import { resolveSensors, categoryOfClass } from './categories.js';
 import { matchingSensors } from './detector.js';
 import { runYolo } from './yolo.js';
 import type { Detection, SensorSpec, SnapshotConfig, NotificationChannel } from './types.js';
@@ -8,6 +8,7 @@ import { mkdir, writeFile, chown } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import path from 'node:path';
+import { PLUGIN_NAME, PLATFORM_NAME } from './settings.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -17,6 +18,8 @@ type SnapshotRuntime = {
   service: Service;
   running: boolean;
 };
+
+type NotificationCategory = 'animals' | 'people' | 'vehicles' | 'packages' | 'unidentified';
 
 export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service;
@@ -54,11 +57,12 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
         continue;
       }
 
-      const uuid = this.api.hap.uuid.generate(`${this.config.name || 'SnapshotSensors'}:${snapshotName}`);
+      const uuid = this.api.hap.uuid.generate(`${this.config.name || PLATFORM_NAME}:${snapshotName}`);
       let accessory = this.accessories.find(candidate => candidate.UUID === uuid);
       if (!accessory) {
         accessory = new this.api.platformAccessory(snapshotName, uuid);
-        this.api.publishExternalAccessories('SnapshotSensors', [accessory]);
+        this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+        this.accessories.push(accessory);
       }
 
       const service = accessory.getService(this.Service.Switch) || accessory.addService(this.Service.Switch, snapshotName, 'snapshot-trigger');
@@ -107,23 +111,14 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     }
   }
 
-  private matchedCategories(detections: Detection[], sensor: SensorSpec): string[] {
-    const categories = new Set<string>();
+  private matchedCategories(detections: Detection[], sensor: SensorSpec): NotificationCategory[] {
+    const categories = new Set<NotificationCategory>();
     for (const detection of detections) {
       if (detection.score < sensor.threshold) continue;
-      const category = this.categoryForDetection(detection);
+      const category = categoryOfClass(detection.classId);
       if (category && sensor.categories.includes(category)) categories.add(category);
     }
     return [...categories];
-  }
-
-  private categoryForDetection(detection: Detection): string | null {
-    const names = new Set(['person']);
-    if (names.has(detection.className)) return 'people';
-    if (['bird', 'cat', 'dog', 'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe'].includes(detection.className)) return 'animals';
-    if (['bicycle', 'car', 'motorcycle', 'bus', 'train', 'truck', 'boat'].includes(detection.className)) return 'vehicles';
-    if (['backpack', 'handbag', 'suitcase'].includes(detection.className)) return 'packages';
-    return null;
   }
 
   private async saveSnapshot(config: SnapshotConfig, image: Buffer, annotated: Buffer | undefined, contentType: string): Promise<void> {
@@ -161,14 +156,21 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     await chown(filePath, uid, gid);
   }
 
-  private async sendNotification(config: SnapshotConfig, category: 'animals' | 'people' | 'vehicles' | 'packages' | 'unidentified'): Promise<void> {
+  private async sendNotification(config: SnapshotConfig, category: NotificationCategory): Promise<void> {
     const notification = config.notifications;
     const provider = notification?.provider ?? 'none';
     if (provider === 'none') return;
     const channel: NotificationChannel | undefined = provider === 'pushover' ? notification?.pushover : notification?.pushbullet;
     if (!channel) return;
-    const key = category === 'unidentified' ? 'unidentifiedMessage' : `${category.slice(0, -1)}Message`;
-    const message = channel[key as keyof NotificationChannel] as string | undefined;
+
+    const messageKey: Record<NotificationCategory, keyof NotificationChannel> = {
+      animals: 'animalMessage',
+      people: 'personMessage',
+      vehicles: 'vehicleMessage',
+      packages: 'unidentifiedMessage',
+      unidentified: 'unidentifiedMessage',
+    };
+    const message = channel[messageKey[category]]?.trim();
     if (!message) return;
     const title = channel.title?.trim() || 'Snapshot Sensors';
 
