@@ -1,6 +1,28 @@
 export type Category = 'animals' | 'packages' | 'people' | 'vehicles';
 export type StoreSnapshots = 'never' | 'normal' | 'annotated';
 
+export interface NotificationChannel {
+  token?: string;
+  user?: string;
+  device?: string;
+  sound?: string;
+  title?: string;
+  animalMessage?: string;
+  personMessage?: string;
+  vehicleMessage?: string;
+  unidentifiedMessage?: string;
+  apiKey?: string;
+  deviceIden?: string;
+  email?: string;
+  channelTag?: string;
+}
+
+export interface NotificationConfig {
+  provider?: 'none' | 'pushover' | 'pushbullet';
+  pushover?: NotificationChannel;
+  pushbullet?: NotificationChannel;
+}
+
 export interface RawSensor {
   name?: string;
   categories?: string[];
@@ -16,6 +38,7 @@ export interface SnapshotConfig {
   storeSnapshots?: StoreSnapshots;
   snapshotPrefix?: string;
   sensors: RawSensor[];
+  notifications?: NotificationConfig;
 }
 
 export interface SensorSpec {
