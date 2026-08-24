@@ -1,4 +1,5 @@
 import { mkdtemp, readFile, rm, writeFile } from 'fs/promises';
+import { tmpdir } from 'os';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
@@ -94,7 +95,7 @@ class YoloWorker {
     }
   }
 
-  async run(modelPath: string, imagePath: string, annotatedPath?: string): Promise<NativeResult> {
+  async run(imagePath: string, annotatedPath?: string): Promise<NativeResult> {
     await this.ready;
     if (this.startupError || !this.child?.stdin.writable) {
       throw this.startupError ?? new Error('Embedded YOLO runner is not available');
@@ -118,13 +119,12 @@ class YoloWorker {
 const yoloWorker = new YoloWorker();
 
 export async function runYolo(image: Buffer, storeSnapshots: StoreSnapshots): Promise<YoloResult> {
-  const modelPath = join(packageRoot(), 'model', 'yolo26', 'model.onnx');
-  const workDir = await mkdtemp(join(process.cwd(), 'snapshot-sensors-yolo-'));
+  const workDir = await mkdtemp(join(tmpdir(), 'snapshot-sensors-yolo-'));
   const imagePath = join(workDir, 'input.jpg');
   const annotatedPath = storeSnapshots === 'annotated' ? join(workDir, 'annotated.jpg') : undefined;
   try {
     await writeFile(imagePath, image);
-    const result = await yoloWorker.run(modelPath, imagePath, annotatedPath);
+    const result = await yoloWorker.run(imagePath, annotatedPath);
     const annotatedImage = result.annotated_path ? await readFile(result.annotated_path) : undefined;
     return { detections: result.detections, annotatedImage };
   } finally {
