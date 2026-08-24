@@ -85,7 +85,6 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
         const matchedTypes = new Set<Category>();
         for (const sensor of matched) {
           const categories = this.matchedCategories(yolo.detections, sensor);
-          if (sensor.logStatus) this.log.info(`[${snapshotName}] ${sensor.name}: matched ${categories.join(', ') || 'configured category'}`);
           for (const category of categories) {
             matchedTypes.add(category);
             const used = await this.sendNotification(runtime.config, category);
