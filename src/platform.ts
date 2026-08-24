@@ -79,7 +79,6 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
       const matched = matchingSensors(yolo.detections, runtime.sensors);
       providerUsed = this.notificationProvider(runtime.config);
       if (matched.length === 0) {
-        this.log.info(`[${snapshotName}] No configured sensor matched the YOLO detections; sending Unidentified Activity.`);
         providerUsed = await this.sendNotification(runtime.config, 'unidentified') || providerUsed;
       } else {
         const notifiedProviders = new Set<string>();
