@@ -17,7 +17,7 @@ const detectionMessages: Record<NotificationCategory, string> = {
   animals: 'Animal detected',
   vehicles: 'Vehicle detected',
   packages: 'Package detected',
-  unidentified: 'Unidentified Activity',
+  unidentified: 'Unidentified Activity detected',
 };
 
 export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
