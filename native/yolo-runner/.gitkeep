@@ -1,0 +1,2 @@
+# Prebuilt YOLO runner binaries are stored in native/yolo-runner/bin/.
+# Prebuilt ONNX Runtime libraries are stored in native/yolo-runner/onnxruntime/.
