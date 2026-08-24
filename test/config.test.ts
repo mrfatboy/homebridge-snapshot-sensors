@@ -24,9 +24,7 @@ describe('isCategory()', () => {
 describe('sensor name with stream prefix', () => {
   it('prepends the stream name to the sensor label', () => {
     expect(`Garden ${sensorName(['animals'])}`).toBe('Garden Animals Sensor');
-    expect(`Front Door ${sensorName(['people', 'vehicles'])}`).toBe(
-      'Front Door People & Vehicles Sensor',
-    );
+    expect(`Front Door ${sensorName(['people', 'vehicles'])}`).toBe('Front Door People & Vehicles Sensor');
   });
 
   it('sensor label order does not affect the prefixed result', () => {
@@ -57,9 +55,7 @@ describe('sensorName()', () => {
   });
 
   it('joins all four categories', () => {
-    expect(sensorName(['animals', 'packages', 'people', 'vehicles'])).toBe(
-      'Animals, Packages, People & Vehicles Sensor',
-    );
+    expect(sensorName(['animals', 'packages', 'people', 'vehicles'])).toBe('Animals, Packages, People & Vehicles Sensor');
   });
 });
 
@@ -69,65 +65,28 @@ describe('resolveSensors()', () => {
   it('one category, no name → auto-named with the stream prefix, default threshold', () => {
     const [s, ...rest] = resolveSensors('Garden', [{ categories: ['animals'] }], () => {});
     expect(rest).toHaveLength(0);
-    expect(s).toEqual({
-      name: 'Garden Animals Sensor',
-      categories: ['animals'],
-      threshold: THRESHOLD,
-      logStatus: false,
-    });
+    expect(s).toEqual({ name: 'Garden Animals Sensor', categories: ['animals'], threshold: THRESHOLD });
   });
 
   it('multiple categories → one OR-sensor, auto-named', () => {
     const [s] = resolveSensors('Garden', [{ categories: ['animals', 'people'] }], () => {});
-    expect(s).toEqual({
-      name: 'Garden Animals & People Sensor',
-      categories: ['animals', 'people'],
-      threshold: THRESHOLD,
-      logStatus: false,
-    });
+    expect(s).toEqual({ name: 'Garden Animals & People Sensor', categories: ['animals', 'people'], threshold: THRESHOLD });
   });
 
   it('one threshold applies to the whole sensor', () => {
-    const [s] = resolveSensors(
-      'Garden',
-      [
-        {
-          categories: ['animals', 'vehicles'],
-          threshold: 0.3,
-        },
-      ],
-      () => {},
-    );
+    const [s] = resolveSensors('Garden', [{ categories: ['animals', 'vehicles'], threshold: 0.3 }], () => {});
     expect(s.threshold).toBe(0.3);
     expect(s.categories).toEqual(['animals', 'vehicles']);
   });
 
   it('explicit name is used verbatim (no stream prefix)', () => {
-    const [s] = resolveSensors(
-      'Garden',
-      [
-        {
-          name: 'Front Door',
-          categories: ['people'],
-        },
-      ],
-      () => {},
-    );
-    expect(s).toEqual({
-      name: 'Front Door',
-      categories: ['people'],
-      threshold: THRESHOLD,
-      logStatus: false,
-    });
+    const [s] = resolveSensors('Garden', [{ name: 'Front Door', categories: ['people'] }], () => {});
+    expect(s).toEqual({ name: 'Front Door', categories: ['people'], threshold: THRESHOLD });
   });
 
   it('warns and drops unknown categories; skips a sensor left with none', () => {
     const warn = vi.fn();
-    const out = resolveSensors(
-      'Garden',
-      [{ categories: ['animals', 'banana'] }, { categories: ['banana'] }],
-      warn,
-    );
+    const out = resolveSensors('Garden', [{ categories: ['animals', 'banana'] }, { categories: ['banana'] }], warn);
     expect(out).toHaveLength(1);
     expect(out[0].categories).toEqual(['animals']);
     expect(warn).toHaveBeenCalled();
@@ -147,33 +106,8 @@ describe('resolveSensors()', () => {
 
   it('clamps an out-of-range threshold back to the default', () => {
     const warn = vi.fn();
-    const [s] = resolveSensors(
-      'Garden',
-      [
-        {
-          categories: ['animals'],
-          threshold: 5,
-        },
-      ],
-      warn,
-    );
+    const [s] = resolveSensors('Garden', [{ categories: ['animals'], threshold: 5 }], warn);
     expect(s.threshold).toBe(THRESHOLD);
     expect(warn).toHaveBeenCalled();
-  });
-
-  it('logStatus defaults to false and is honored per sensor', () => {
-    const [off] = resolveSensors('Garden', [{ categories: ['animals'] }], () => {});
-    expect(off.logStatus).toBe(false);
-    const [on] = resolveSensors(
-      'Garden',
-      [
-        {
-          categories: ['animals'],
-          logStatus: true,
-        },
-      ],
-      () => {},
-    );
-    expect(on.logStatus).toBe(true);
   });
 });
