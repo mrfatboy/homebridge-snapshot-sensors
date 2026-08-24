@@ -66,7 +66,6 @@ export function resolveSensors(
       name: label,
       categories,
       threshold,
-      logStatus: raw?.logStatus === true,
     });
   }
 
