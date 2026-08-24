@@ -57,8 +57,7 @@
         "sensors": { "title": "Sensors", "type": "array", "items": { "title": "Sensor", "type": "object", "properties": {
           "categories": { "title": "Categories", "type": "array", "uniqueItems": true, "items": { "type": "string", "enum": ["animals", "people", "vehicles"] } },
           "name": { "title": "Name (optional)", "type": "string" },
-          "threshold": { "title": "Threshold", "type": "number", "minimum": 0, "maximum": 1, "default": 0.25 },
-          "logStatus": { "title": "Log sensor status changes", "type": "boolean", "default": false }
+          "threshold": { "title": "Threshold", "type": "number", "minimum": 0, "maximum": 1, "default": 0.25 }
         } } }
       }, "allOf": [{ "if": { "properties": { "storeSnapshots": { "enum": ["normal", "annotated"] } } }, "then": { "required": ["snapshotDirectory"] } }] } }
     }
