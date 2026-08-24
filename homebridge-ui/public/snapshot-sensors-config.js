@@ -2,6 +2,22 @@
   const cards = () => Array.from(document.querySelectorAll('.snapshot-card'));
   const setValue = (card, selector, value) => { const el = card.querySelector(selector); if (el && value !== undefined && value !== null) el.value = value; };
   const defaults = { animalMessage: 'Animal Detected 🐕', personMessage: 'Person Detected 🚶‍♂️', vehicleMessage: 'Vehicle Detected 🚗', unidentifiedMessage: 'Unidentified Activity Detected ⚠️' };
+
+  function ensurePushSaferControls(card) {
+    const select = card.querySelector('.notifications-select');
+    if (select && !select.querySelector('option[value="pushsafer"]')) {
+      select.insertAdjacentHTML('beforeend', '<option value="pushsafer">Push Safer</option>');
+    }
+    if (card.querySelector('.pushsafer-controls')) return;
+    const controls = document.createElement('div');
+    controls.className = 'pushsafer-controls form-group mb-3';
+    controls.style.display = 'none';
+    controls.innerHTML = `<div class="form-group mb-3"><label>Push Safer Private Key</label><input class="form-control pushsafer-private-key" type="password" autocomplete="off" placeholder="Private Key"></div><div class="form-group mb-3"><label>Push Safer Device (optional)</label><input class="form-control pushsafer-device" type="text" placeholder="Device ID or group"></div><div class="form-group mb-3"><label>Push Safer Title</label><input class="form-control pushsafer-title" type="text" value="Snapshot Sensors" placeholder="Snapshot Sensors"></div><div class="form-group mb-3"><label>Push Safer Icon</label><input class="form-control pushsafer-icon" type="number" min="1" max="98" value="1"></div><div class="form-group mb-3"><label>Push Safer Vibration</label><input class="form-control pushsafer-vibration" type="number" min="0" max="30" value="1"></div><div class="form-group mb-3"><label>Push Safer Icon Color (optional)</label><input class="form-control pushsafer-icon-color" type="text" placeholder="Color"></div><div class="form-group mb-3"><label>Push Safer Sound (optional)</label><input class="form-control pushsafer-sound" type="text" placeholder="Sound name or ID"></div><div class="form-group mb-3"><label>Push Safer URL (optional)</label><input class="form-control pushsafer-url" type="url" placeholder="https://example.com"></div><div class="form-group mb-3"><label>Push Safer URL Title (optional)</label><input class="form-control pushsafer-url-title" type="text" placeholder="Open"></div><div class="form-group mb-3"><label>Push Safer Priority</label><select class="form-control pushsafer-priority"><option value="0" selected>Normal</option><option value="1">High</option><option value="2">Confirmation</option></select></div><div class="form-group mb-3"><label>Push Safer Time To Live (optional)</label><input class="form-control pushsafer-ttl" type="number" min="0" max="43200" placeholder="Seconds"></div><div class="form-group mb-3"><label>Push Safer Retry (optional)</label><input class="form-control pushsafer-retry" type="number" min="0" placeholder="Seconds"></div><div class="form-group mb-3"><label>Push Safer Expire (optional)</label><input class="form-control pushsafer-expire" type="number" min="0" placeholder="Seconds"></div><div class="form-group mb-3"><label>🐕 Animal Detect Message</label><input class="form-control pushsafer-animal-message" type="text" value="Animal Detected 🐕" placeholder="Animal Detected 🐕"></div><div class="form-group mb-3"><label>🚶‍♂️ Person Detected Message</label><input class="form-control pushsafer-person-message" type="text" value="Person Detected 🚶‍♂️" placeholder="Person Detected 🚶‍♂️"></div><div class="form-group mb-3"><label>🚗 Vehicle Detected Message</label><input class="form-control pushsafer-vehicle-message" type="text" value="Vehicle Detected 🚗" placeholder="Vehicle Detected 🚗"></div><div class="form-group mb-3"><label>⚠️ Unidentified Activity Detected</label><input class="form-control pushsafer-unidentified-message" type="text" value="Unidentified Activity Detected ⚠️" placeholder="Unidentified Activity Detected ⚠️"></div><div class="form-group mb-3"><button type="button" class="btn btn-outline-secondary test-notification">🔔 Test Notification</button><div style="clear:both"></div></div>`;
+    const ntfy = card.querySelector('.ntfy-controls');
+    if (ntfy) ntfy.insertAdjacentElement('afterend', controls);
+    else select?.parentElement?.insertAdjacentElement('afterend', controls);
+  }
+
   const migrateNotifications = (snapshot) => {
     const notification = snapshot?.notifications; if (!notification || typeof notification !== 'object') return { value: {}, migrated: false };
     const hasNewShape = notification.pushover && typeof notification.pushover === 'object' || notification.pushbullet && typeof notification.pushbullet === 'object' || notification.ntfy && typeof notification.ntfy === 'object' || notification.pushsafer && typeof notification.pushsafer === 'object';
@@ -14,6 +30,7 @@
     const configBlocks = await homebridge.getPluginConfig(); const config = configBlocks[0] || { platform: 'SnapshotSensors', name: 'SnapshotSensors', snapshots: [] }; if (!Array.isArray(config.snapshots)) config.snapshots = [];
     let configMigrated = false; config.snapshots = config.snapshots.map(snapshot => { const result = migrateNotifications(snapshot); if (!result.migrated) return snapshot; configMigrated = true; return { ...snapshot, notifications: result.value }; });
     const fillCard = (card, snapshot) => {
+      ensurePushSaferControls(card);
       setValue(card, '.snapshot-name', snapshot.name || ''); setValue(card, '.snapshot-url', snapshot.url || ''); setValue(card, '.snapshot-prefix', snapshot.snapshotPrefix || snapshot.name || ''); setValue(card, '.store-snapshots', snapshot.storeSnapshots === 'raw' ? 'normal' : (snapshot.storeSnapshots || 'never')); setValue(card, '.snapshot-directory', snapshot.snapshotDirectory || ''); setValue(card, '.snapshot-ownership', snapshot.snapshotOwnership || '');
       const notification = snapshot.notifications || {}, pushover = notification.pushover || {}, pushbullet = notification.pushbullet || {}, ntfy = notification.ntfy || {}, pushsafer = notification.pushsafer || {};
       setValue(card, '.notifications-select', notification.provider || 'none');
@@ -26,6 +43,7 @@
       card.querySelector('.store-snapshots')?.dispatchEvent(new Event('change', { bubbles: true })); card.querySelector('.notifications-select')?.dispatchEvent(new Event('change', { bubbles: true }));
     };
     while (cards().length < config.snapshots.length) document.querySelector('#addSnapshot').click(); if (config.snapshots.length) config.snapshots.forEach((snapshot, i) => fillCard(cards()[i], snapshot));
+    cards().forEach(ensurePushSaferControls);
     let saving = Promise.resolve();
     const syncConfig = () => {
       const snapshots = cards().map(card => { const sensors = Array.from(card.querySelectorAll('.sensor-settings')).map(sensor => { const thresholdElement = sensor.querySelector('.sensor-threshold'); const thresholdValue = thresholdElement ? thresholdElement.value.trim() : '0.25'; return { categories: Array.from(sensor.querySelectorAll('.category:checked')).map(el => el.value), threshold: thresholdValue === '' ? 0.25 : Number(thresholdValue) }; });
