@@ -57,7 +57,6 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     const runtime = this.runtimes.get(snapshotName);
     if (!runtime || runtime.running) return;
     const startedAt = process.hrtime.bigint();
-    const detectionTime = new Date();
     runtime.running = true;
     let providerUsed: string = 'none';
     let detectionType = 'unidentified';
