@@ -57,6 +57,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     const runtime = this.runtimes.get(snapshotName);
     if (!runtime || runtime.running) return;
     const startedAt = process.hrtime.bigint();
+    const detectionTime = new Date();
     runtime.running = true;
     let providerUsed: string = 'none';
     const store = (runtime.config.storeSnapshots ?? 'never') as StoreSnapshots;
@@ -86,10 +87,10 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
         if (notifiedProviders.size > 0) providerUsed = [...notifiedProviders].join(', ');
       }
       const elapsedMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
-      this.log.info(`[${snapshotName}] Detection complete — notification provider: ${providerUsed}; image saved: ${store}; total elapsed time: ${this.formatElapsed(elapsedMs)}.`);
+      this.log.info(`[${snapshotName}] Detection complete — detection time: ${detectionTime.toLocaleString()}; notification provider: ${providerUsed}; image saved: ${store}; total elapsed time: ${this.formatElapsed(elapsedMs)}.`);
     } catch (error) {
       const elapsedMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
-      this.log.error(`[${snapshotName}] Snapshot detection failed after ${this.formatElapsed(elapsedMs)} — notification provider: ${providerUsed}; image saved: ${store}; error: ${error instanceof Error ? error.message : String(error)}`);
+      this.log.error(`[${snapshotName}] Snapshot detection failed after ${this.formatElapsed(elapsedMs)} — detection time: ${detectionTime.toLocaleString()}; notification provider: ${providerUsed}; image saved: ${store}; error: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       runtime.running = false;
       runtime.service.updateCharacteristic(this.Characteristic.On, false);
