@@ -2,7 +2,7 @@ import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, 
 import { resolveSensors } from './categories.js';
 import { matchingSensors } from './detector.js';
 import { runYolo } from './yolo.js';
-import type { Detection, SensorSpec, SnapshotConfig, NotificationChannel, Category } from './types.js';
+import type { Detection, SensorSpec, SnapshotConfig, NotificationChannel, Category, StoreSnapshots } from './types.js';
 import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile, chown } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
@@ -59,13 +59,13 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     const startedAt = process.hrtime.bigint();
     runtime.running = true;
     let providerUsed: string = 'none';
+    const store = (runtime.config.storeSnapshots ?? 'never') as StoreSnapshots;
     try {
       const response = await fetch(runtime.config.url, { signal: AbortSignal.timeout(15000) });
       if (!response.ok) throw new Error(`Camera returned HTTP ${response.status}`);
       const contentType = response.headers.get('content-type') || 'image/jpeg';
       const image = Buffer.from(await response.arrayBuffer());
       if (!image.length) throw new Error('Camera returned an empty response');
-      const store = runtime.config.storeSnapshots ?? 'never';
       const yolo = await runYolo(image, store);
       await this.saveSnapshot(runtime.config, image, yolo.annotatedImage, contentType);
       const matched = matchingSensors(yolo.detections, runtime.sensors);
@@ -86,10 +86,10 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
         if (notifiedProviders.size > 0) providerUsed = [...notifiedProviders].join(', ');
       }
       const elapsedMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
-      this.log.info(`[${snapshotName}] Detection complete — notification provider: ${providerUsed}; total elapsed time: ${this.formatElapsed(elapsedMs)}.`);
+      this.log.info(`[${snapshotName}] Detection complete — notification provider: ${providerUsed}; image saved: ${store}; total elapsed time: ${this.formatElapsed(elapsedMs)}.`);
     } catch (error) {
       const elapsedMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
-      this.log.error(`[${snapshotName}] Snapshot detection failed after ${this.formatElapsed(elapsedMs)} — notification provider: ${providerUsed}; error: ${error instanceof Error ? error.message : String(error)}`);
+      this.log.error(`[${snapshotName}] Snapshot detection failed after ${this.formatElapsed(elapsedMs)} — notification provider: ${providerUsed}; image saved: ${store}; error: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       runtime.running = false;
       runtime.service.updateCharacteristic(this.Characteristic.On, false);
