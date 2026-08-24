@@ -3,7 +3,6 @@
   "pluginType": "platform",
   "singular": true,
   "customUi": true,
-  "strictValidation": true,
   "headerDisplay": "Configure camera snapshots and object-detection sensors.",
   "footerDisplay": "",
   "schema": {
