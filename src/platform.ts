@@ -53,9 +53,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
       service.setCharacteristic(this.Characteristic.Name, snapshotName);
       service.getCharacteristic(this.Characteristic.On).onSet(async (value) => {
         if (value !== true) return;
-        // Keep the existing HomeKit/Homebridge Switch service, but make it a 1-second momentary trigger.
         setTimeout(() => service.updateCharacteristic(this.Characteristic.On, false), 1000);
-        // Do not hold the Switch ON while the camera/YOLO/notification pipeline runs.
         void this.triggerSnapshot(snapshotName);
       });
       this.runtimes.set(snapshotName, { config: snapshot, sensors, service, running: false });
@@ -174,7 +172,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     const notification = config.notifications;
     const provider = notification?.provider ?? 'none';
     if (provider === 'none') return null;
-    const channel: NotificationChannel | undefined = provider === 'pushover' ? notification?.pushover : notification?.pushbullet;
+    const channel: NotificationChannel | undefined = provider === 'pushover' ? notification?.pushover : provider === 'pushbullet' ? notification?.pushbullet : notification?.ntfy;
     if (!channel) return null;
     const key = category === 'unidentified' ? 'unidentifiedMessage' : `${category.slice(0, -1)}Message`;
     const message = channel[key as keyof NotificationChannel] as string | undefined;
@@ -188,13 +186,25 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
       if (!response.ok) throw new Error(`Pushover returned HTTP ${response.status}`);
       return 'Pushover';
     }
-    if (!channel.apiKey) throw new Error('Pushbullet Access Token is required.');
-    const push: Record<string, string> = { type: 'note', title, body: message };
-    if (channel.deviceIden) push.device_iden = channel.deviceIden;
-    else if (channel.email) push.email = channel.email;
-    else if (channel.channelTag) push.channel_tag = channel.channelTag;
-    const response = await fetch('https://api.pushbullet.com/v2/pushes', { method: 'POST', headers: { 'Access-Token': channel.apiKey, 'Content-Type': 'application/json' }, body: JSON.stringify(push), signal: AbortSignal.timeout(15000) });
-    if (!response.ok) throw new Error(`Pushbullet returned HTTP ${response.status}`);
-    return 'Pushbullet';
+    if (provider === 'pushbullet') {
+      if (!channel.apiKey) throw new Error('Pushbullet Access Token is required.');
+      const push: Record<string, string> = { type: 'note', title, body: message };
+      if (channel.deviceIden) push.device_iden = channel.deviceIden;
+      else if (channel.email) push.email = channel.email;
+      else if (channel.channelTag) push.channel_tag = channel.channelTag;
+      const response = await fetch('https://api.pushbullet.com/v2/pushes', { method: 'POST', headers: { 'Access-Token': channel.apiKey, 'Content-Type': 'application/json' }, body: JSON.stringify(push), signal: AbortSignal.timeout(15000) });
+      if (!response.ok) throw new Error(`Pushbullet returned HTTP ${response.status}`);
+      return 'Pushbullet';
+    }
+    const server = (channel.server?.trim() || 'https://ntfy.sh').replace(/\/+$/, '');
+    const topic = channel.topic?.trim();
+    if (!topic) throw new Error('ntfy Topic is required.');
+    const url = `${server}/${encodeURIComponent(topic)}`;
+    const headers: Record<string, string> = { 'Content-Type': 'text/plain; charset=utf-8', 'Title': title, 'Priority': String(channel.priority ?? 3) };
+    if (channel.tags?.trim()) headers.Tags = channel.tags.trim();
+    if (channel.accessToken?.trim()) headers.Authorization = `Bearer ${channel.accessToken.trim()}`;
+    const response = await fetch(url, { method: 'POST', headers, body: message, signal: AbortSignal.timeout(15000) });
+    if (!response.ok) throw new Error(`ntfy returned HTTP ${response.status}`);
+    return 'ntfy';
   }
 }
