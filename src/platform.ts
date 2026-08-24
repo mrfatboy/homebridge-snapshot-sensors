@@ -2,7 +2,7 @@ import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, 
 import { resolveSensors } from './categories.js';
 import { matchingSensors } from './detector.js';
 import { runYolo } from './yolo.js';
-import type { Detection, SensorSpec, SnapshotConfig, NotificationChannel, Category } from './types.js';
+import type { Detection, SensorSpec, SnapshotConfig, NotificationChannel, Category, StoreSnapshots } from './types.js';
 import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile, chown } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
@@ -11,8 +11,14 @@ import path from 'node:path';
 
 const execFileAsync = promisify(execFile);
 type NotificationCategory = Category | 'unidentified';
-
 type SnapshotRuntime = { config: SnapshotConfig; sensors: SensorSpec[]; service: Service; running: boolean };
+const detectionMessages: Record<NotificationCategory, string> = {
+  people: 'Person detected',
+  animals: 'Animal detected',
+  vehicles: 'Vehicle detected',
+  packages: 'Package detected',
+  unidentified: 'Unidentified Activity detected',
+};
 
 export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service;
@@ -57,33 +63,57 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
   private async triggerSnapshot(snapshotName: string): Promise<void> {
     const runtime = this.runtimes.get(snapshotName);
     if (!runtime || runtime.running) return;
+    const startedAt = process.hrtime.bigint();
     runtime.running = true;
+    let providerUsed: string = 'none';
+    let detectionType: string = detectionMessages.unidentified;
+    const store = (runtime.config.storeSnapshots ?? 'never') as StoreSnapshots;
     try {
       const response = await fetch(runtime.config.url, { signal: AbortSignal.timeout(15000) });
       if (!response.ok) throw new Error(`Camera returned HTTP ${response.status}`);
       const contentType = response.headers.get('content-type') || 'image/jpeg';
       const image = Buffer.from(await response.arrayBuffer());
       if (!image.length) throw new Error('Camera returned an empty response');
-      const store = runtime.config.storeSnapshots ?? 'never';
       const yolo = await runYolo(image, store);
       await this.saveSnapshot(runtime.config, image, yolo.annotatedImage, contentType);
       const matched = matchingSensors(yolo.detections, runtime.sensors);
+      providerUsed = this.notificationProvider(runtime.config);
       if (matched.length === 0) {
-        this.log.info(`[${snapshotName}] No configured sensor matched the YOLO detections; sending Unidentified Activity.`);
-        await this.sendNotification(runtime.config, 'unidentified');
+        providerUsed = await this.sendNotification(runtime.config, 'unidentified') || providerUsed;
       } else {
+        const notifiedProviders = new Set<string>();
+        const matchedTypes = new Set<Category>();
         for (const sensor of matched) {
           const categories = this.matchedCategories(yolo.detections, sensor);
           if (sensor.logStatus) this.log.info(`[${snapshotName}] ${sensor.name}: matched ${categories.join(', ') || 'configured category'}`);
-          for (const category of categories) await this.sendNotification(runtime.config, category);
+          for (const category of categories) {
+            matchedTypes.add(category);
+            const used = await this.sendNotification(runtime.config, category);
+            if (used) notifiedProviders.add(used);
+          }
         }
+        if (notifiedProviders.size > 0) providerUsed = [...notifiedProviders].join(', ');
+        if (matchedTypes.size > 0) detectionType = [...matchedTypes].map(category => detectionMessages[category]).join(', ');
       }
+      const elapsedMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
+      this.log.info(`[${snapshotName}] ${detectionType}; notification provider: ${providerUsed}; image saved: ${store}; total elapsed time: ${this.formatElapsed(elapsedMs)}.`);
     } catch (error) {
-      this.log.error(`[${snapshotName}] Snapshot detection failed: ${error instanceof Error ? error.message : String(error)}`);
+      const elapsedMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
+      this.log.error(`[${snapshotName}] Snapshot detection failed after ${this.formatElapsed(elapsedMs)} — ${detectionType}; notification provider: ${providerUsed}; image saved: ${store}; error: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       runtime.running = false;
       runtime.service.updateCharacteristic(this.Characteristic.On, false);
     }
+  }
+
+  private notificationProvider(config: SnapshotConfig): string {
+    const provider = config.notifications?.provider ?? 'none';
+    return provider === 'none' ? 'none' : provider;
+  }
+
+  private formatElapsed(ms: number): string {
+    if (ms < 1000) return `${Math.round(ms)} ms`;
+    return `${(ms / 1000).toFixed(2)} s`;
   }
 
   private matchedCategories(detections: Detection[], sensor: SensorSpec): Category[] {
@@ -138,15 +168,15 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     await chown(filePath, uid, gid);
   }
 
-  private async sendNotification(config: SnapshotConfig, category: NotificationCategory): Promise<void> {
+  private async sendNotification(config: SnapshotConfig, category: NotificationCategory): Promise<string | null> {
     const notification = config.notifications;
     const provider = notification?.provider ?? 'none';
-    if (provider === 'none') return;
+    if (provider === 'none') return null;
     const channel: NotificationChannel | undefined = provider === 'pushover' ? notification?.pushover : notification?.pushbullet;
-    if (!channel) return;
+    if (!channel) return null;
     const key = category === 'unidentified' ? 'unidentifiedMessage' : `${category.slice(0, -1)}Message`;
     const message = channel[key as keyof NotificationChannel] as string | undefined;
-    if (!message) return;
+    if (!message) return null;
     const title = channel.title?.trim() || 'Snapshot Sensors';
     if (provider === 'pushover') {
       if (!channel.token || !channel.user) throw new Error('Pushover token and user are required.');
@@ -154,7 +184,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
       if (channel.device?.trim()) form.set('device', channel.device.trim());
       const response = await fetch('https://api.pushover.net/1/messages.json', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: form.toString(), signal: AbortSignal.timeout(15000) });
       if (!response.ok) throw new Error(`Pushover returned HTTP ${response.status}`);
-      return;
+      return 'Pushover';
     }
     if (!channel.apiKey) throw new Error('Pushbullet Access Token is required.');
     const push: Record<string, string> = { type: 'note', title, body: message };
@@ -163,5 +193,6 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     else if (channel.channelTag) push.channel_tag = channel.channelTag;
     const response = await fetch('https://api.pushbullet.com/v2/pushes', { method: 'POST', headers: { 'Access-Token': channel.apiKey, 'Content-Type': 'application/json' }, body: JSON.stringify(push), signal: AbortSignal.timeout(15000) });
     if (!response.ok) throw new Error(`Pushbullet returned HTTP ${response.status}`);
+    return 'Pushbullet';
   }
 }
