@@ -46,8 +46,8 @@ fn predict(yolo: &mut YOLOModel, request: Request) -> Result<Output, Box<dyn std
             detections.push(Detection {
                 x1: xyxy[[i, 0]],
                 y1: xyxy[[i, 1]],
-                x2: xyxy[[i, 0 + 1]],
-                y2: xyxy[[i, 1 + 1]],
+                x2: xyxy[[i, 2]],
+                y2: xyxy[[i, 3]],
                 score: conf[i],
                 class_id,
                 class_name: name,
