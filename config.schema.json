@@ -21,7 +21,7 @@
           "title": "Notifications",
           "type": "object",
           "properties": {
-            "provider": { "title": "Notification Provider", "type": "string", "enum": ["none", "pushover", "pushbullet"], "default": "none" },
+            "provider": { "title": "Notification Provider", "type": "string", "enum": ["none", "pushover", "pushbullet", "ntfy"], "default": "none" },
             "pushover": {
               "title": "Pushover",
               "type": "object",
@@ -45,6 +45,22 @@
                 "deviceIden": { "title": "Device Identifier", "type": "string" },
                 "email": { "title": "Email", "type": "string" },
                 "channelTag": { "title": "Channel Tag", "type": "string" },
+                "title": { "title": "Title", "type": "string", "default": "Snapshot Sensors" },
+                "animalMessage": { "title": "Animal Detect Message", "type": "string", "default": "Animal Detected 🐕" },
+                "personMessage": { "title": "Person Detected Message", "type": "string", "default": "Person Detected 🚶‍♂️" },
+                "vehicleMessage": { "title": "Vehicle Detected Message", "type": "string", "default": "Vehicle Detected 🚗" },
+                "unidentifiedMessage": { "title": "Unidentified Activity Detected", "type": "string", "default": "Unidentified Activity Detected ⚠️" }
+              }
+            },
+            "ntfy": {
+              "title": "ntfy",
+              "type": "object",
+              "properties": {
+                "server": { "title": "Server URL", "type": "string", "default": "https://ntfy.sh", "description": "ntfy server URL, including https://" },
+                "topic": { "title": "Topic", "type": "string", "description": "The ntfy topic to publish notifications to." },
+                "accessToken": { "title": "Access Token (optional)", "type": "string", "description": "Bearer token for private/authenticated topics." },
+                "priority": { "title": "Priority", "type": "integer", "minimum": 1, "maximum": 5, "default": 3 },
+                "tags": { "title": "Tags (optional)", "type": "string", "description": "Comma-separated ntfy tags/emojis, for example camera,warning." },
                 "title": { "title": "Title", "type": "string", "default": "Snapshot Sensors" },
                 "animalMessage": { "title": "Animal Detect Message", "type": "string", "default": "Animal Detected 🐕" },
                 "personMessage": { "title": "Person Detected Message", "type": "string", "default": "Person Detected 🚶‍♂️" },
