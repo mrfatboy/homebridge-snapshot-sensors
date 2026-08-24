@@ -27,6 +27,19 @@
     return Array.from(counts.entries()).filter(([, count]) => count > 1).map(([name]) => name);
   }
 
+  function getInvalidSnapshotUrls() {
+    return cards().filter(card => {
+      const url = card.querySelector('.snapshot-url')?.value.trim() || '';
+      if (!url) return true;
+      try {
+        const parsed = new URL(url);
+        return parsed.protocol !== 'http:' && parsed.protocol !== 'https:';
+      } catch {
+        return true;
+      }
+    });
+  }
+
   const migrateNotifications = (snapshot) => {
     const notification = snapshot?.notifications; if (!notification || typeof notification !== 'object') return { value: {}, migrated: false };
     const hasNewShape = notification.pushover && typeof notification.pushover === 'object' || notification.pushbullet && typeof notification.pushbullet === 'object' || notification.ntfy && typeof notification.ntfy === 'object' || notification.pushsafer && typeof notification.pushsafer === 'object';
@@ -55,6 +68,13 @@
       const duplicateNames = getDuplicateSnapshotNames();
       if (duplicateNames.length) {
         homebridge.toast.error('There are duplicate Snapshot sensor names. Each Snapshot sensor must have a unique name.', 'Duplicate Snapshot Sensor Names');
+        return saving;
+      }
+      const invalidUrls = getInvalidSnapshotUrls();
+      if (invalidUrls.length) {
+        const hasEmpty = invalidUrls.some(card => !(card.querySelector('.snapshot-url')?.value.trim()));
+        homebridge.toast.error(hasEmpty ? 'Every Snapshot sensor must have a Snapshot URL.' : 'Every Snapshot sensor must have a valid Snapshot URL using http:// or https://.', hasEmpty ? 'Snapshot URL Required' : 'Invalid Snapshot URL');
+        invalidUrls[0].querySelector('.snapshot-url')?.focus();
         return saving;
       }
       const snapshots = cards().map(card => { const sensors = Array.from(card.querySelectorAll('.sensor-settings')).map(sensor => { const thresholdElement = sensor.querySelector('.sensor-threshold'); const thresholdValue = thresholdElement ? thresholdElement.value.trim() : '0.25'; return { categories: Array.from(sensor.querySelectorAll('.category:checked')).map(el => el.value), threshold: thresholdValue === '' ? 0.25 : Number(thresholdValue) }; });
