@@ -6,11 +6,10 @@
   "type": "module",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
-  "files": ["dist/", "config.schema.json", "homebridge-ui/", "model/", "native/yolo-runner/bin/", "native/yolo-runner/onnxruntime/"] ,
+  "files": ["dist/", "config.schema.json", "homebridge-ui/", "model/", "native/yolo-runner/bin/", "native/yolo-runner/onnxruntime/"],
   "scripts": {
-    "build:native": "cargo build --release --manifest-path native/yolo-runner/Cargo.toml && node -e \"const fs=require('fs');const path=require('path');const src=path.join('native','yolo-runner','target','release','snapshot-sensors-yolo');const bin=path.join('native','yolo-runner','bin','snapshot-sensors-yolo');const ort=process.env.ORT_LIB_LOCATION||path.join(process.cwd(),'native','yolo-runner','.ort','onnxruntime-linux-x64-1.28.0','lib');const dst=path.join('native','yolo-runner','onnxruntime');if(!fs.existsSync(src))throw new Error('Native YOLO runner was not built: '+src);if(!fs.existsSync(ort))throw new Error('ONNX Runtime library directory not found: '+ort);fs.mkdirSync(path.dirname(bin),{recursive:true});fs.mkdirSync(dst,{recursive:true});fs.copyFileSync(src,bin);for(const f of fs.readdirSync(ort)){if(f.startsWith('libonnxruntime.so'))fs.copyFileSync(path.join(ort,f),path.join(dst,f));}\"",
     "clean": "node -e \"const fs=require('fs');fs.rmSync('dist',{recursive:true,force:true})\"",
-    "build": "npm run clean && (test -x native/yolo-runner/bin/snapshot-sensors-yolo && test -f native/yolo-runner/onnxruntime/libonnxruntime.so || npm run build:native) && tsc",
+    "build": "npm run clean && node -e \"const fs=require('fs');const path=require('path');const bin=path.join('native','yolo-runner','bin','snapshot-sensors-yolo');const ort=path.join('native','yolo-runner','onnxruntime','libonnxruntime.so');if(!fs.existsSync(bin))throw new Error('Prebuilt YOLO runner is missing: '+bin);if(!fs.existsSync(ort))throw new Error('Prebuilt ONNX Runtime library is missing: '+ort);if(!fs.statSync(bin).isFile())throw new Error('Prebuilt YOLO runner is not a file: '+bin);if(!fs.statSync(ort).isFile())throw new Error('Prebuilt ONNX Runtime library is not a file: '+ort);\" && tsc",
     "watch": "tsc --watch",
     "prepublishOnly": "npm run build",
     "lint": "eslint src/ test/",
@@ -24,6 +23,10 @@
   "repository": {"type": "git", "url": "git+https://github.com/mrfatboy/homebridge-snapshot-sensors.git"},
   "bugs": {"url": "https://github.com/mrfatboy/homebridge-snapshot-sensors/issues"},
   "homepage": "https://github.com/mrfatboy/homebridge-snapshot-sensors#readme",
+  "author": {
+    "name": "mrfatboy",
+    "url": "https://github.com/mrfatboy"
+  },
   "license": "AGPL-3.0-only",
   "engines": {"node": ">=20.0.0", "homebridge": "^1.8.0 || ^2.0.0"},
   "devDependencies": {
