@@ -1,13 +1,12 @@
-import type { Detection, Category } from './types.js';
+import type { Detection, Category, SensorSpec } from './types.js';
 import { categoryOfClass } from './categories.js';
-import { THRESHOLD, AREA_MIN_FRAC, FRAME_WIDTH, FRAME_HEIGHT } from './settings.js';
+import { AREA_MIN_FRAC, FRAME_WIDTH, FRAME_HEIGHT } from './settings.js';
 
 export type CategoryScores = Map<Category, number>;
 
-// Best (highest) confidence seen per category, among detections that clear the
-// global area filter. Per-sensor score thresholds are applied later, so this
-// keeps everything above THRESHOLD_KEEP (the model's retention floor) and lets
-// the caller decide the cutoff. Categories with no qualifying detection are absent.
+// Best confidence seen per category after the internal area filter. No global
+// confidence cutoff is applied here: each sensor applies its own configured
+// threshold when deciding whether a detection qualifies.
 export function scoreCategories(detections: Detection[]): CategoryScores {
   const scores: CategoryScores = new Map();
   for (const d of detections) {
@@ -20,12 +19,26 @@ export function scoreCategories(detections: Detection[]): CategoryScores {
   return scores;
 }
 
-// Categories that clear the default global threshold. Retained for tests and
-// any caller that just wants "what's present" with the standard cutoff.
-export function detectCategories(detections: Detection[]): Set<Category> {
+// Return the sensors for which at least one detection matches a configured
+// category and meets that sensor's own confidence threshold.
+export function matchingSensors(detections: Detection[], sensors: SensorSpec[]): SensorSpec[] {
+  return sensors.filter(sensor => detections.some(detection => {
+    const area = ((detection.x2 - detection.x1) * (detection.y2 - detection.y1)) /
+      (FRAME_WIDTH * FRAME_HEIGHT);
+    if (area < AREA_MIN_FRAC) return false;
+    const category = categoryOfClass(detection.classId);
+    return category !== null &&
+      sensor.categories.includes(category) &&
+      detection.score >= sensor.threshold;
+  }));
+}
+
+// Categories that meet a supplied threshold. Retained for callers that need a
+// simple category-level view without imposing a global threshold.
+export function detectCategories(detections: Detection[], threshold = 0): Set<Category> {
   const found = new Set<Category>();
   for (const [cat, score] of scoreCategories(detections)) {
-    if (score >= THRESHOLD) found.add(cat);
+    if (score >= threshold) found.add(cat);
   }
   return found;
 }
