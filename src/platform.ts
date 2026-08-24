@@ -12,6 +12,13 @@ import path from 'node:path';
 const execFileAsync = promisify(execFile);
 type NotificationCategory = Category | 'unidentified';
 type SnapshotRuntime = { config: SnapshotConfig; sensors: SensorSpec[]; service: Service; running: boolean };
+const detectionMessages: Record<NotificationCategory, string> = {
+  people: 'Person detected',
+  animals: 'Animal detected',
+  vehicles: 'Vehicle detected',
+  packages: 'Package detected',
+  unidentified: 'Unidentified Activity',
+};
 
 export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service;
@@ -59,7 +66,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     const startedAt = process.hrtime.bigint();
     runtime.running = true;
     let providerUsed: string = 'none';
-    let detectionType = 'unidentified';
+    let detectionType: string = detectionMessages.unidentified;
     const store = (runtime.config.storeSnapshots ?? 'never') as StoreSnapshots;
     try {
       const response = await fetch(runtime.config.url, { signal: AbortSignal.timeout(15000) });
@@ -87,13 +94,13 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
           }
         }
         if (notifiedProviders.size > 0) providerUsed = [...notifiedProviders].join(', ');
-        if (matchedTypes.size > 0) detectionType = [...matchedTypes].join(', ');
+        if (matchedTypes.size > 0) detectionType = [...matchedTypes].map(category => detectionMessages[category]).join(', ');
       }
       const elapsedMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
-      this.log.info(`[${snapshotName}] Detection complete — detection type: ${detectionType}; notification provider: ${providerUsed}; image saved: ${store}; total elapsed time: ${this.formatElapsed(elapsedMs)}.`);
+      this.log.info(`[${snapshotName}] Detection complete — ${detectionType}; notification provider: ${providerUsed}; image saved: ${store}; total elapsed time: ${this.formatElapsed(elapsedMs)}.`);
     } catch (error) {
       const elapsedMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
-      this.log.error(`[${snapshotName}] Snapshot detection failed after ${this.formatElapsed(elapsedMs)} — detection type: ${detectionType}; notification provider: ${providerUsed}; image saved: ${store}; error: ${error instanceof Error ? error.message : String(error)}`);
+      this.log.error(`[${snapshotName}] Snapshot detection failed after ${this.formatElapsed(elapsedMs)} — ${detectionType}; notification provider: ${providerUsed}; image saved: ${store}; error: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       runtime.running = false;
       runtime.service.updateCharacteristic(this.Characteristic.On, false);
