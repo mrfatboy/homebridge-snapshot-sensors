@@ -15,12 +15,29 @@ export interface NotificationChannel {
   deviceIden?: string;
   email?: string;
   channelTag?: string;
+  server?: string;
+  topic?: string;
+  accessToken?: string;
+  priority?: number;
+  tags?: string;
+  privateKey?: string;
+  pushsaferDevice?: string;
+  icon?: number;
+  vibration?: number;
+  iconColor?: string;
+  url?: string;
+  urlTitle?: string;
+  timeToLive?: number;
+  retry?: number;
+  expire?: number;
 }
 
 export interface NotificationConfig {
-  provider?: 'none' | 'pushover' | 'pushbullet';
+  provider?: 'none' | 'pushover' | 'pushbullet' | 'ntfy' | 'pushsafer';
   pushover?: NotificationChannel;
   pushbullet?: NotificationChannel;
+  ntfy?: NotificationChannel;
+  pushsafer?: NotificationChannel;
 }
 
 export interface RawSensor {

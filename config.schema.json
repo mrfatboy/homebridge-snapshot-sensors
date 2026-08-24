@@ -21,44 +21,38 @@
           "title": "Notifications",
           "type": "object",
           "properties": {
-            "provider": { "title": "Notification Provider", "type": "string", "enum": ["none", "pushover", "pushbullet"], "default": "none" },
-            "pushover": {
-              "title": "Pushover",
-              "type": "object",
-              "properties": {
-                "token": { "title": "Application Token", "type": "string" },
-                "user": { "title": "User Key", "type": "string" },
-                "device": { "title": "Device", "type": "string" },
-                "sound": { "title": "Sound", "type": "string", "default": "pushover" },
-                "title": { "title": "Title", "type": "string", "default": "Snapshot Sensors" },
-                "animalMessage": { "title": "Animal Detect Message", "type": "string", "default": "Animal Detected 🐕" },
-                "personMessage": { "title": "Person Detected Message", "type": "string", "default": "Person Detected 🚶‍♂️" },
-                "vehicleMessage": { "title": "Vehicle Detected Message", "type": "string", "default": "Vehicle Detected 🚗" },
-                "unidentifiedMessage": { "title": "Unidentified Activity Detected", "type": "string", "default": "Unidentified Activity Detected ⚠️" }
-              }
-            },
-            "pushbullet": {
-              "title": "Pushbullet",
-              "type": "object",
-              "properties": {
-                "apiKey": { "title": "Access Token", "type": "string" },
-                "deviceIden": { "title": "Device Identifier", "type": "string" },
-                "email": { "title": "Email", "type": "string" },
-                "channelTag": { "title": "Channel Tag", "type": "string" },
-                "title": { "title": "Title", "type": "string", "default": "Snapshot Sensors" },
-                "animalMessage": { "title": "Animal Detect Message", "type": "string", "default": "Animal Detected 🐕" },
-                "personMessage": { "title": "Person Detected Message", "type": "string", "default": "Person Detected 🚶‍♂️" },
-                "vehicleMessage": { "title": "Vehicle Detected Message", "type": "string", "default": "Vehicle Detected 🚗" },
-                "unidentifiedMessage": { "title": "Unidentified Activity Detected", "type": "string", "default": "Unidentified Activity Detected ⚠️" }
-              }
-            }
+            "provider": { "title": "Notification Provider", "type": "string", "enum": ["none", "pushover", "pushbullet", "ntfy", "pushsafer"], "default": "none" },
+            "pushover": { "title": "Pushover", "type": "object", "properties": {
+              "token": { "title": "Application Token", "type": "string" }, "user": { "title": "User Key", "type": "string" }, "device": { "title": "Device", "type": "string" }, "sound": { "title": "Sound", "type": "string", "default": "pushover" }, "title": { "title": "Title", "type": "string", "default": "Snapshot Sensors" },
+              "animalMessage": { "title": "Animal Detect Message", "type": "string", "default": "Animal Detected 🐕" }, "personMessage": { "title": "Person Detected Message", "type": "string", "default": "Person Detected 🚶‍♂️" }, "vehicleMessage": { "title": "Vehicle Detected Message", "type": "string", "default": "Vehicle Detected 🚗" }, "unidentifiedMessage": { "title": "Unidentified Activity Detected", "type": "string", "default": "Unidentified Activity Detected ⚠️" }
+            } },
+            "pushbullet": { "title": "Pushbullet", "type": "object", "properties": {
+              "apiKey": { "title": "Access Token", "type": "string" }, "deviceIden": { "title": "Device Identifier", "type": "string" }, "email": { "title": "Email", "type": "string" }, "channelTag": { "title": "Channel Tag", "type": "string" }, "title": { "title": "Title", "type": "string", "default": "Snapshot Sensors" },
+              "animalMessage": { "title": "Animal Detect Message", "type": "string", "default": "Animal Detected 🐕" }, "personMessage": { "title": "Person Detected Message", "type": "string", "default": "Person Detected 🚶‍♂️" }, "vehicleMessage": { "title": "Vehicle Detected Message", "type": "string", "default": "Vehicle Detected 🚗" }, "unidentifiedMessage": { "title": "Unidentified Activity Detected", "type": "string", "default": "Unidentified Activity Detected ⚠️" }
+            } },
+            "ntfy": { "title": "ntfy", "type": "object", "properties": {
+              "server": { "title": "Server URL", "type": "string", "default": "https://ntfy.sh", "description": "ntfy server URL, including https://" }, "topic": { "title": "Topic", "type": "string", "description": "The ntfy topic to publish notifications to." }, "accessToken": { "title": "Access Token (optional)", "type": "string", "description": "Bearer token for private/authenticated topics." }, "priority": { "title": "Priority", "type": "integer", "minimum": 1, "maximum": 5, "default": 3 }, "tags": { "title": "Tags (optional)", "type": "string" }, "title": { "title": "Title", "type": "string", "default": "Snapshot Sensors" },
+              "animalMessage": { "title": "Animal Detect Message", "type": "string", "default": "Animal Detected 🐕" }, "personMessage": { "title": "Person Detected Message", "type": "string", "default": "Person Detected 🚶‍♂️" }, "vehicleMessage": { "title": "Vehicle Detected Message", "type": "string", "default": "Vehicle Detected 🚗" }, "unidentifiedMessage": { "title": "Unidentified Activity Detected", "type": "string", "default": "Unidentified Activity Detected ⚠️" }
+            } },
+            "pushsafer": { "title": "Push Safer", "type": "object", "properties": {
+              "privateKey": { "title": "Private Key", "type": "string", "description": "Push Safer private key used to authenticate API requests." },
+              "pushsaferDevice": { "title": "Device (optional)", "type": "string", "description": "Push Safer device ID or device group. Leave blank to use the account default." },
+              "title": { "title": "Title", "type": "string", "default": "Snapshot Sensors" },
+              "icon": { "title": "Icon", "type": "integer", "minimum": 1, "maximum": 98, "default": 1 },
+              "vibration": { "title": "Vibration", "type": "integer", "minimum": 0, "maximum": 30, "default": 1 },
+              "iconColor": { "title": "Icon Color (optional)", "type": "string", "description": "Hex color or Push Safer supported color value." },
+              "sound": { "title": "Sound (optional)", "type": "string", "description": "Push Safer sound name or ID." },
+              "url": { "title": "URL (optional)", "type": "string", "format": "uri", "description": "URL opened when the notification is tapped." },
+              "urlTitle": { "title": "URL Title (optional)", "type": "string" },
+              "priority": { "title": "Priority", "type": "integer", "minimum": 0, "maximum": 2, "default": 0, "description": "Push Safer priority level." },
+              "timeToLive": { "title": "Time To Live (optional)", "type": "integer", "minimum": 0, "maximum": 43200 },
+              "retry": { "title": "Retry (optional)", "type": "integer", "minimum": 0 },
+              "expire": { "title": "Expire (optional)", "type": "integer", "minimum": 0 },
+              "animalMessage": { "title": "Animal Detect Message", "type": "string", "default": "Animal Detected 🐕" }, "personMessage": { "title": "Person Detected Message", "type": "string", "default": "Person Detected 🚶‍♂️" }, "vehicleMessage": { "title": "Vehicle Detected Message", "type": "string", "default": "Vehicle Detected 🚗" }, "unidentifiedMessage": { "title": "Unidentified Activity Detected", "type": "string", "default": "Unidentified Activity Detected ⚠️" }
+            } }
           }
         },
-        "sensors": { "title": "Sensors", "type": "array", "items": { "title": "Sensor", "type": "object", "properties": {
-          "categories": { "title": "Categories", "type": "array", "uniqueItems": true, "items": { "type": "string", "enum": ["animals", "people", "vehicles"] } },
-          "name": { "title": "Name (optional)", "type": "string" },
-          "threshold": { "title": "Threshold", "type": "number", "minimum": 0, "maximum": 1, "default": 0.25 }
-        } } }
+        "sensors": { "title": "Sensors", "type": "array", "items": { "title": "Sensor", "type": "object", "properties": { "categories": { "title": "Categories", "type": "array", "uniqueItems": true, "items": { "type": "string", "enum": ["animals", "people", "vehicles"] } }, "name": { "title": "Name (optional)", "type": "string" }, "threshold": { "title": "Threshold", "type": "number", "minimum": 0, "maximum": 1, "default": 0.25 } } } }
       }, "allOf": [{ "if": { "properties": { "storeSnapshots": { "enum": ["normal", "annotated"] } } }, "then": { "required": ["snapshotDirectory"] } }] } }
     }
   }
