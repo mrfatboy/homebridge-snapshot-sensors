@@ -9,7 +9,8 @@
     const notification = snapshot?.notifications;
     if (!notification || typeof notification !== 'object') return { value: {}, migrated: false };
     const hasNewShape = notification.pushover && typeof notification.pushover === 'object'
-      || notification.pushbullet && typeof notification.pushbullet === 'object';
+      || notification.pushbullet && typeof notification.pushbullet === 'object'
+      || notification.ntfy && typeof notification.ntfy === 'object';
     if (hasNewShape) return { value: notification, migrated: false };
 
     const provider = typeof notification.provider === 'string' ? notification.provider : 'none';
@@ -21,6 +22,10 @@
       },
       pushbullet: {
         apiKey: notification.apiKey || '', deviceIden: notification.deviceIden || '', email: notification.email || '', channelTag: notification.channelTag || '', title: notification.title || 'Snapshot Sensors',
+        animalMessage: notification.animalMessage || 'Animal Detected 🐕', personMessage: notification.personMessage || 'Person Detected 🚶‍♂️', vehicleMessage: notification.vehicleMessage || 'Vehicle Detected 🚗', unidentifiedMessage: notification.unidentifiedMessage || 'Unidentified Activity Detected ⚠️',
+      },
+      ntfy: {
+        server: notification.server || 'https://ntfy.sh', topic: notification.topic || '', accessToken: notification.accessToken || '', priority: notification.priority ?? 3, tags: notification.tags || '', title: notification.title || 'Snapshot Sensors',
         animalMessage: notification.animalMessage || 'Animal Detected 🐕', personMessage: notification.personMessage || 'Person Detected 🚶‍♂️', vehicleMessage: notification.vehicleMessage || 'Vehicle Detected 🚗', unidentifiedMessage: notification.unidentifiedMessage || 'Unidentified Activity Detected ⚠️',
       },
     };
@@ -44,11 +49,13 @@
     const fillCard = (card, snapshot) => {
       setValue(card, '.snapshot-name', snapshot.name || ''); setValue(card, '.snapshot-url', snapshot.url || ''); setValue(card, '.snapshot-prefix', snapshot.snapshotPrefix || snapshot.name || '');
       setValue(card, '.store-snapshots', snapshot.storeSnapshots === 'raw' ? 'normal' : (snapshot.storeSnapshots || 'never')); setValue(card, '.snapshot-directory', snapshot.snapshotDirectory || ''); setValue(card, '.snapshot-ownership', snapshot.snapshotOwnership || '');
-      const notification = snapshot.notifications || {}; const pushover = notification.pushover || {}; const pushbullet = notification.pushbullet || {};
+      const notification = snapshot.notifications || {}; const pushover = notification.pushover || {}; const pushbullet = notification.pushbullet || {}; const ntfy = notification.ntfy || {};
       setValue(card, '.notifications-select', notification.provider || 'none'); setValue(card, '.pushover-token', pushover.token || ''); setValue(card, '.pushover-user', pushover.user || ''); setValue(card, '.pushover-device', pushover.device || ''); setValue(card, '.pushover-sound', pushover.sound || 'pushover'); setValue(card, '.pushover-title', pushover.title || 'Snapshot Sensors');
       setValue(card, '.pushover-animal-message', pushover.animalMessage || 'Animal Detected 🐕'); setValue(card, '.pushover-person-message', pushover.personMessage || 'Person Detected 🚶‍♂️'); setValue(card, '.pushover-vehicle-message', pushover.vehicleMessage || 'Vehicle Detected 🚗'); setValue(card, '.pushover-unidentified-message', pushover.unidentifiedMessage || 'Unidentified Activity Detected ⚠️');
       setValue(card, '.pushbullet-api-key', pushbullet.apiKey || ''); setValue(card, '.pushbullet-device-iden', pushbullet.deviceIden || ''); setValue(card, '.pushbullet-email', pushbullet.email || ''); setValue(card, '.pushbullet-channel-tag', pushbullet.channelTag || ''); setValue(card, '.pushbullet-title', pushbullet.title || 'Snapshot Sensors');
       setValue(card, '.pushbullet-animal-message', pushbullet.animalMessage || 'Animal Detected 🐕'); setValue(card, '.pushbullet-person-message', pushbullet.personMessage || 'Person Detected 🚶‍♂️'); setValue(card, '.pushbullet-vehicle-message', pushbullet.vehicleMessage || 'Vehicle Detected 🚗'); setValue(card, '.pushbullet-unidentified-message', pushbullet.unidentifiedMessage || 'Unidentified Activity Detected ⚠️');
+      setValue(card, '.ntfy-server', ntfy.server || 'https://ntfy.sh'); setValue(card, '.ntfy-topic', ntfy.topic || ''); setValue(card, '.ntfy-access-token', ntfy.accessToken || ''); setValue(card, '.ntfy-priority', ntfy.priority ?? 3); setValue(card, '.ntfy-tags', ntfy.tags || ''); setValue(card, '.ntfy-title', ntfy.title || 'Snapshot Sensors');
+      setValue(card, '.ntfy-animal-message', ntfy.animalMessage || 'Animal Detected 🐕'); setValue(card, '.ntfy-person-message', ntfy.personMessage || 'Person Detected 🚶‍♂️'); setValue(card, '.ntfy-vehicle-message', ntfy.vehicleMessage || 'Vehicle Detected 🚗'); setValue(card, '.ntfy-unidentified-message', ntfy.unidentifiedMessage || 'Unidentified Activity Detected ⚠️');
       const sensor = card.querySelector('.sensor-settings'); const savedSensor = Array.isArray(snapshot.sensors) && snapshot.sensors.length ? snapshot.sensors[0] : {};
       if (sensor) {
         const cats = Array.isArray(savedSensor.categories) && savedSensor.categories.length ? savedSensor.categories : ['animals', 'people', 'vehicles'];
@@ -75,6 +82,7 @@
             provider: card.querySelector('.notifications-select').value,
             pushover: { token: card.querySelector('.pushover-token').value.trim(), user: card.querySelector('.pushover-user').value.trim(), device: card.querySelector('.pushover-device').value.trim(), sound: card.querySelector('.pushover-sound').value.trim(), title: card.querySelector('.pushover-title').value.trim(), animalMessage: card.querySelector('.pushover-animal-message').value, personMessage: card.querySelector('.pushover-person-message').value, vehicleMessage: card.querySelector('.pushover-vehicle-message').value, unidentifiedMessage: card.querySelector('.pushover-unidentified-message').value },
             pushbullet: { apiKey: card.querySelector('.pushbullet-api-key').value.trim(), deviceIden: card.querySelector('.pushbullet-device-iden').value.trim(), email: card.querySelector('.pushbullet-email').value.trim(), channelTag: card.querySelector('.pushbullet-channel-tag').value.trim(), title: card.querySelector('.pushbullet-title').value.trim(), animalMessage: card.querySelector('.pushbullet-animal-message').value, personMessage: card.querySelector('.pushbullet-person-message').value, vehicleMessage: card.querySelector('.pushbullet-vehicle-message').value, unidentifiedMessage: card.querySelector('.pushbullet-unidentified-message').value },
+            ntfy: { server: card.querySelector('.ntfy-server').value.trim(), topic: card.querySelector('.ntfy-topic').value.trim(), accessToken: card.querySelector('.ntfy-access-token').value.trim(), priority: Number(card.querySelector('.ntfy-priority').value || 3), tags: card.querySelector('.ntfy-tags').value.trim(), title: card.querySelector('.ntfy-title').value.trim(), animalMessage: card.querySelector('.ntfy-animal-message').value, personMessage: card.querySelector('.ntfy-person-message').value, vehicleMessage: card.querySelector('.ntfy-vehicle-message').value, unidentifiedMessage: card.querySelector('.ntfy-unidentified-message').value },
           },
         };
       });
