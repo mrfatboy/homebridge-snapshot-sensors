@@ -54,6 +54,7 @@ class YoloWorker {
     this.child = spawn(runnerPath(), [modelPath], { stdio: ['pipe', 'pipe', 'pipe'] });
     this.child.stdout.setEncoding('utf8');
     this.child.stderr.setEncoding('utf8');
+    this.child.stderr.resume();
     this.output = createInterface({ input: this.child.stdout });
 
     this.output.on('line', line => {
