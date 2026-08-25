@@ -369,40 +369,6 @@ Check:
 - Snapshot Directory is configured.
 - The Homebridge process has permission to write to that directory.
 
-## Development
-
-Clone the repository and install dependencies:
-
-```bash
-git clone https://github.com/mrfatboy/homebridge-snapshot-sensors.git
-cd homebridge-snapshot-sensors
-npm install
-```
-
-Build:
-
-```bash
-npm run build
-```
-
-Run tests:
-
-```bash
-npm test
-```
-
-Lint:
-
-```bash
-npm run lint
-```
-
-Format:
-
-```bash
-npm run format
-```
-
 ## License
 
 Licensed under **AGPL-3.0-only**.
