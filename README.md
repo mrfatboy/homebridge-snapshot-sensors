@@ -231,14 +231,12 @@ Example:
           "snapshotPrefix": "driveway",
           "sensors": [
             {
-              "name": "Driveway People",
-              "categories": ["people"],
-              "threshold": 0.25
-            },
-            {
-              "name": "Driveway Vehicles",
-              "categories": ["vehicles"],
-              "threshold": 0.50
+              "categories": ["animals", "people", "vehicles"],
+              "thresholds": {
+                "animals": 0.40,
+                "people": 0.25,
+                "vehicles": 0.50
+              }
             }
           ],
           "notifications": {
@@ -246,7 +244,51 @@ Example:
             "pushover": {
               "token": "YOUR_APP_TOKEN",
               "user": "YOUR_USER_KEY",
+              "device": "",
+              "sound": "pushover",
               "title": "Driveway",
+              "animalMessage": "Animal detected 🐕",
+              "personMessage": "Person detected 🚶‍♂️",
+              "vehicleMessage": "Vehicle detected 🚗",
+              "unidentifiedMessage": "Unidentified Activity detected ⚠️"
+            },
+            "pushbullet": {
+              "apiKey": "",
+              "deviceIden": "",
+              "email": "",
+              "channelTag": "",
+              "title": "Driveway",
+              "animalMessage": "Animal detected 🐕",
+              "personMessage": "Person detected 🚶‍♂️",
+              "vehicleMessage": "Vehicle detected 🚗",
+              "unidentifiedMessage": "Unidentified Activity detected ⚠️"
+            },
+            "ntfy": {
+              "server": "https://ntfy.sh",
+              "topic": "",
+              "accessToken": "",
+              "priority": 3,
+              "tags": "",
+              "title": "Driveway",
+              "animalMessage": "Animal detected 🐕",
+              "personMessage": "Person detected 🚶‍♂️",
+              "vehicleMessage": "Vehicle detected 🚗",
+              "unidentifiedMessage": "Unidentified Activity detected ⚠️"
+            },
+            "pushsafer": {
+              "privateKey": "",
+              "pushsaferDevice": "",
+              "title": "Driveway",
+              "icon": 1,
+              "vibration": 1,
+              "iconColor": "",
+              "sound": "",
+              "url": "",
+              "urlTitle": "",
+              "priority": 0,
+              "timeToLive": null,
+              "retry": null,
+              "expire": null,
               "animalMessage": "Animal detected 🐕",
               "personMessage": "Person detected 🚶‍♂️",
               "vehicleMessage": "Vehicle detected 🚗",
