@@ -104,12 +104,16 @@ class YoloWorker {
     }
   }
 
-  async run(imagePath: string, annotatedPath?: string): Promise<NativeResult> {
+  isBusy(): boolean {
+    return this.pending !== undefined;
+  }
+
+  async run(imagePath: string, annotatedPath?: string): Promise<NativeResult | null> {
     await this.ready;
     if (this.startupError || !this.child?.stdin.writable) {
       throw this.startupError ?? new Error('Embedded YOLO runner is not available');
     }
-    if (this.pending) throw new Error('Embedded YOLO runner received a concurrent request');
+    if (this.pending) return null;
     return new Promise((resolve, reject) => {
       this.pending = { resolve, reject };
       const request = JSON.stringify({ image: imagePath, annotated: annotatedPath });
@@ -129,13 +133,18 @@ const yoloWorker = new YoloWorker(() => {
   console.log('[SnapshotSensors] Plugin loaded successfully — YOLO26 model loaded and ready for detection.');
 });
 
-export async function runYolo(image: Buffer, storeSnapshots: StoreSnapshots): Promise<YoloResult> {
+export async function runYolo(image: Buffer, storeSnapshots: StoreSnapshots): Promise<YoloResult | null> {
+  // Avoid creating temporary files or doing any additional work when another
+  // snapshot is already being processed by the single embedded YOLO worker.
+  if (yoloWorker.isBusy()) return null;
+
   const workDir = await mkdtemp(join(tmpdir(), 'snapshot-sensors-yolo-'));
   const imagePath = join(workDir, 'input.jpg');
   const annotatedPath = storeSnapshots === 'annotated' ? join(workDir, 'annotated.jpg') : undefined;
   try {
     await writeFile(imagePath, image);
     const result = await yoloWorker.run(imagePath, annotatedPath);
+    if (!result) return null;
     const annotatedImage = result.annotated_path ? await readFile(result.annotated_path) : undefined;
     return { detections: result.detections, annotatedImage };
   } finally {
