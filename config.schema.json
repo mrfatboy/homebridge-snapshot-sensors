@@ -52,7 +52,15 @@
             } }
           }
         },
-        "sensors": { "title": "Sensors", "type": "array", "items": { "title": "Sensor", "type": "object", "properties": { "categories": { "title": "Categories", "type": "array", "uniqueItems": true, "items": { "type": "string", "enum": ["animals", "people", "vehicles"] } }, "name": { "title": "Name (optional)", "type": "string" }, "threshold": { "title": "Threshold", "type": "number", "minimum": 0, "maximum": 1, "default": 0.25 } } } }
+        "sensors": { "title": "Sensors", "type": "array", "items": { "title": "Sensor", "type": "object", "properties": {
+          "categories": { "title": "Categories", "type": "array", "uniqueItems": true, "items": { "type": "string", "enum": ["animals", "people", "vehicles"] } },
+          "name": { "title": "Name (optional)", "type": "string" },
+          "thresholds": { "title": "Detection Thresholds", "type": "object", "properties": {
+            "animals": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.25 },
+            "people": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.25 },
+            "vehicles": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.25 }
+          }, "additionalProperties": false }
+        } } }
       }, "allOf": [{ "if": { "properties": { "storeSnapshots": { "enum": ["normal", "annotated"] } } }, "then": { "required": ["snapshotDirectory"] } }] } }
     }
   }
