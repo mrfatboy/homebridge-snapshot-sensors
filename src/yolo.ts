@@ -38,8 +38,10 @@ class YoloWorker {
   private readyResolve!: () => void;
   private readyReject!: (error: Error) => void;
   private startupError?: Error;
+  private onReady?: () => void;
 
-  constructor() {
+  constructor(onReady?: () => void) {
+    this.onReady = onReady;
     this.ready = new Promise<void>((resolve, reject) => {
       this.readyResolve = resolve;
       this.readyReject = reject;
@@ -59,23 +61,17 @@ class YoloWorker {
       if (!trimmed) return;
       if (trimmed === 'READY') {
         this.readyResolve();
+        this.onReady?.();
         return;
       }
       if (!this.pending) return;
-
-      // ultralytics-inference may emit human-readable inference progress to
-      // stdout. The runner's final response is JSON, so ignore non-JSON
-      // progress lines instead of treating them as protocol errors.
-      let result: NativeResult;
-      try {
-        result = JSON.parse(trimmed) as NativeResult;
-      } catch {
-        return;
-      }
-
       const pending = this.pending;
       this.pending = undefined;
-      pending.resolve(result);
+      try {
+        pending.resolve(JSON.parse(trimmed) as NativeResult);
+      } catch (error) {
+        pending.reject(new Error(`Embedded YOLO runner returned invalid JSON: ${String(error)}`));
+      }
     });
 
     this.child.once('error', error => {
@@ -123,7 +119,9 @@ class YoloWorker {
 
 // Start the native worker as soon as the plugin module is loaded so the model is
 // loaded during Homebridge startup rather than on the first detection.
-const yoloWorker = new YoloWorker();
+const yoloWorker = new YoloWorker(() => {
+  console.log('[SnapshotSensors] YOLO26 model loaded and ready.');
+});
 
 export async function runYolo(image: Buffer, storeSnapshots: StoreSnapshots): Promise<YoloResult> {
   const workDir = await mkdtemp(join(tmpdir(), 'snapshot-sensors-yolo-'));
