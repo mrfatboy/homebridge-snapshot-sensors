@@ -74,7 +74,12 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
   private formatElapsed(ms: number): string { return ms < 1000 ? `${Math.round(ms)} ms` : `${(ms / 1000).toFixed(2)} s`; }
   private matchedCategories(detections: Detection[], sensor: SensorSpec): Category[] {
     const categories = new Set<Category>();
-    for (const detection of detections) { if (detection.score < sensor.threshold) continue; const category = this.categoryForDetection(detection); if (category && sensor.categories.includes(category)) categories.add(category); }
+    for (const detection of detections) {
+      const category = this.categoryForDetection(detection);
+      if (!category || !sensor.categories.includes(category)) continue;
+      if (detection.score < (sensor.thresholds[category] ?? 0.25)) continue;
+      categories.add(category);
+    }
     return [...categories];
   }
   private categoryForDetection(detection: Detection): Category | null {

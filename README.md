@@ -8,7 +8,7 @@
 
 **Homebridge snapshot-triggered object detection using a local YOLO26 model.**
 
-`homebridge-snapshot-sensors` retrieves a still image from one or more configured cameras, runs local object detection using the bundled YOLO26/ONNX Runtime engine, compares the detections against your individually configured sensors, optionally saves the image, and optionally sends a push notification when configured.
+`homebridge-snapshot-sensors` retrieves a still image from one or more configured cameras, runs local object detection using the bundled YOLO26/ONNX Runtime engine, compares the detections against your individually configured sensors, optionally saves the image, and sends a push notification when configured.
 
 No cloud-based object-detection service is required.
 
@@ -27,12 +27,12 @@ No cloud-based object-detection service is required.
 - 💾 Save the original camera image
 - 🖼️ Save an annotated image containing YOLO detections
 - 🔔 Push notifications
-- 🔔 Pushover support
-- 🔔 Pushbullet support
-- 🔔 ntfy support
-- 🔔 Push Safer support
-- 👤 Optional filesystem ownership control for saved snapshots
+  -  Pushover support
+  -  Pushbullet support
+  -  ntfy support
+  -  Push Safer support
 - 🔄 Multiple independent Snapshot Sensors
+- Use Third Party sensors to trigger this plugin.
 
 ## How it works
 
@@ -62,7 +62,7 @@ The switch is intended to behave as a **stateless trigger**:
 - Turning it Off does not start another detection
 - A second trigger is ignored while that Snapshot Sensor is already processing
 
-This allows the switch to be used as a trigger from HomeKit automations, scenes, shortcuts, or other HomeKit-compatible systems.
+This allows the switch to be used as a trigger from HomeKit automations, scenes, shortcuts, or other HomeKit-compatible systems. You can use any sensor or trigger you want to trigger the this plugin. There is no need to rely on the camera's poor detection system. For example, a Hue outdoor sensor is great to pair with this plugin.
 
 ## Detection categories
 
@@ -70,9 +70,9 @@ The detector uses the YOLO26 model and maps its object classes into Snapshot Sen
 
 | Category | Examples |
 |---|---|
-| 🐕 **Animals** | Bird, Cat, Dog, Horse, Sheep, Cow, Elephant, Bear, Zebra, Giraffe |
-| 🚶 **People** | Person |
-| 🚗 **Vehicles** | Bicycle, Car, Motorcycle, Bus, Train, Truck, Boat |
+| 🐕 **Animal** | Bird, Cat, Dog, Horse, Sheep, Cow, Elephant, Bear, Zebra, Giraffe |
+| 🚶 **Person** | Person |
+| 🚗 **Vehicle** | Bicycle, Car, Motorcycle, Bus, Train, Truck, Boat |
 
 ## Sensor configuration
 
@@ -118,8 +118,9 @@ Notifications are configured independently for each Snapshot.
 | None | ✅ |
 | Pushover | ✅ |
 | Pushbullet | ✅ |
-| ntfy | ✅ |
 | Push Safer | ✅ |
+| ntfy | ✅ |
+
 
 Only the provider selected for that Snapshot is used.
 
@@ -138,7 +139,7 @@ Messages can be customized in the Homebridge configuration UI.
 
 A notification is sent only when a detection matches one of the categories configured for a sensor.
 
-For example, if a sensor is configured for **People** and YOLO detects a vehicle but no person, that sensor does not match.
+For example, if a sensor is configured for **Person** and YOLO detects a vehicle but no person, that sensor does not match.
 
 If no configured sensor matches the detections, the plugin sends:
 
@@ -176,6 +177,7 @@ Common examples:
 | **Foscam** | `http://CAMERA_IP/cgi-bin/CGIProxy.fcgi?cmd=snapPicture2&usr=USERNAME&pwd=PASSWORD` |
 | **Reolink** | `http://CAMERA_IP/cgi-bin/api.cgi?cmd=Snap&channel=0&rs=VALUE&user=USERNAME&password=PASSWORD` |
 | **Hikvision** | `http://CAMERA_IP/ISAPI/Streaming/channels/1/picture` |
+
 
 For example:
 
@@ -231,14 +233,12 @@ Example:
           "snapshotPrefix": "driveway",
           "sensors": [
             {
-              "name": "Driveway People",
-              "categories": ["people"],
-              "threshold": 0.25
-            },
-            {
-              "name": "Driveway Vehicles",
-              "categories": ["vehicles"],
-              "threshold": 0.50
+              "categories": ["animals", "people", "vehicles"],
+              "thresholds": {
+                "animals": 0.40,
+                "people": 0.25,
+                "vehicles": 0.50
+              }
             }
           ],
           "notifications": {
@@ -246,7 +246,51 @@ Example:
             "pushover": {
               "token": "YOUR_APP_TOKEN",
               "user": "YOUR_USER_KEY",
+              "device": "",
+              "sound": "pushover",
               "title": "Driveway",
+              "animalMessage": "Animal detected 🐕",
+              "personMessage": "Person detected 🚶‍♂️",
+              "vehicleMessage": "Vehicle detected 🚗",
+              "unidentifiedMessage": "Unidentified Activity detected ⚠️"
+            },
+            "pushbullet": {
+              "apiKey": "",
+              "deviceIden": "",
+              "email": "",
+              "channelTag": "",
+              "title": "Driveway",
+              "animalMessage": "Animal detected 🐕",
+              "personMessage": "Person detected 🚶‍♂️",
+              "vehicleMessage": "Vehicle detected 🚗",
+              "unidentifiedMessage": "Unidentified Activity detected ⚠️"
+            },
+            "ntfy": {
+              "server": "https://ntfy.sh",
+              "topic": "",
+              "accessToken": "",
+              "priority": 3,
+              "tags": "",
+              "title": "Driveway",
+              "animalMessage": "Animal detected 🐕",
+              "personMessage": "Person detected 🚶‍♂️",
+              "vehicleMessage": "Vehicle detected 🚗",
+              "unidentifiedMessage": "Unidentified Activity detected ⚠️"
+            },
+            "pushsafer": {
+              "privateKey": "",
+              "pushsaferDevice": "",
+              "title": "Driveway",
+              "icon": 1,
+              "vibration": 1,
+              "iconColor": "",
+              "sound": "",
+              "url": "",
+              "urlTitle": "",
+              "priority": 0,
+              "timeToLive": null,
+              "retry": null,
+              "expire": null,
               "animalMessage": "Animal detected 🐕",
               "personMessage": "Person detected 🚶‍♂️",
               "vehicleMessage": "Vehicle detected 🚗",
@@ -326,40 +370,6 @@ Check:
 - Store snapshots is set to **Annotated**.
 - Snapshot Directory is configured.
 - The Homebridge process has permission to write to that directory.
-
-## Development
-
-Clone the repository and install dependencies:
-
-```bash
-git clone https://github.com/mrfatboy/homebridge-snapshot-sensors.git
-cd homebridge-snapshot-sensors
-npm install
-```
-
-Build:
-
-```bash
-npm run build
-```
-
-Run tests:
-
-```bash
-npm test
-```
-
-Lint:
-
-```bash
-npm run lint
-```
-
-Format:
-
-```bash
-npm run format
-```
 
 ## License
 

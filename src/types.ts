@@ -43,7 +43,7 @@ export interface NotificationConfig {
 export interface RawSensor {
   name?: string;
   categories?: string[];
-  threshold?: number;
+  thresholds?: Partial<Record<Category, number>>;
 }
 
 export interface SnapshotConfig {
@@ -60,7 +60,7 @@ export interface SnapshotConfig {
 export interface SensorSpec {
   name: string;
   categories: Category[];
-  threshold: number;
+  thresholds: Partial<Record<Category, number>>;
 }
 
 export interface Detection {
