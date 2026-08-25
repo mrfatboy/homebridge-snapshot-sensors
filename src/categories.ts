@@ -8,8 +8,6 @@ function idOf(name: Yolo26ClassName): number {
   return YOLO26_CLASSES.indexOf(name);
 }
 
-// COCO class IDs mapped to each detection category.
-// 'packages' is approximate — COCO has no delivery-parcel class.
 export const CATEGORY_CLASS_IDS: Record<Category, ReadonlySet<number>> = {
   animals: new Set([idOf('bird'), idOf('cat'), idOf('dog'), idOf('horse'), idOf('sheep'), idOf('cow'), idOf('elephant'), idOf('bear'), idOf('zebra'), idOf('giraffe')]),
   people: new Set([idOf('person')]),
@@ -47,36 +45,34 @@ export function resolveSensors(
     }
 
     if (categories.length === 0) {
-      warn(
-        `Sensor ${raw?.name ? `"${raw.name}"` : JSON.stringify(raw)} has no valid categories, skipping`,
-      );
+      warn(`Sensor ${raw?.name ? `"${raw.name}"` : JSON.stringify(raw)} has no valid categories, skipping`);
       continue;
     }
 
-    let threshold = raw?.threshold ?? THRESHOLD;
-    if (typeof threshold !== 'number' || threshold < 0 || threshold > 1) {
-      warn(`Threshold "${threshold}" is out of range [0, 1]; using ${THRESHOLD}`);
-      threshold = THRESHOLD;
+    const thresholds: Partial<Record<Category, number>> = {};
+    for (const category of categories) {
+      const value = raw?.thresholds?.[category];
+      if (value === undefined) {
+        thresholds[category] = THRESHOLD;
+      } else if (typeof value !== 'number' || value < 0 || value > 1) {
+        warn(`Threshold for category "${category}" is out of range [0, 1]; using ${THRESHOLD}`);
+        thresholds[category] = THRESHOLD;
+      } else {
+        thresholds[category] = value;
+      }
     }
 
     const name = typeof raw?.name === 'string' ? raw.name.trim() : '';
     const label = name || `${snapshotName} ${sensorName(categories)}`;
 
-    resolved.push({
-      name: label,
-      categories,
-      threshold,
-    });
+    resolved.push({ name: label, categories, thresholds });
   }
 
   return resolved;
 }
 
 export function categoryOfClass(classId: number): Category | null {
-  for (const [cat, ids] of Object.entries(CATEGORY_CLASS_IDS) as [
-    Category,
-    ReadonlySet<number>,
-  ][]) {
+  for (const [cat, ids] of Object.entries(CATEGORY_CLASS_IDS) as [Category, ReadonlySet<number>][]) {
     if (ids.has(classId)) return cat;
   }
   return null;
