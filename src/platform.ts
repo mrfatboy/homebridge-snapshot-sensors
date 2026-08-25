@@ -45,7 +45,12 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     }
   }
   private async triggerSnapshot(snapshotName: string): Promise<void> {
-    const runtime = this.runtimes.get(snapshotName); if (!runtime || runtime.running) return;
+    const runtime = this.runtimes.get(snapshotName);
+    if (!runtime) return;
+    if (runtime.running) {
+      this.log.info(`[${snapshotName}] Snapshot already running; skipping duplicate trigger.`);
+      return;
+    }
     const startedAt = process.hrtime.bigint(); runtime.running = true;
     let providerUsed = 'none'; let detectionType = detectionMessages.unidentified;
     const store = (runtime.config.storeSnapshots ?? 'never') as StoreSnapshots;
@@ -54,7 +59,12 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
       if (!response.ok) throw new Error(`Camera returned HTTP ${response.status}`);
       const contentType = response.headers.get('content-type') || 'image/jpeg'; const image = Buffer.from(await response.arrayBuffer());
       if (!image.length) throw new Error('Camera returned an empty response');
-      const yolo = await runYolo(image, store); await this.saveSnapshot(runtime.config, image, yolo.annotatedImage, contentType);
+      const yolo = await runYolo(image, store);
+      if (!yolo) {
+        this.log.info(`[${snapshotName}] YOLO is busy; skipping snapshot detection.`);
+        return;
+      }
+      await this.saveSnapshot(runtime.config, image, yolo.annotatedImage, contentType);
       const matched = matchingSensors(yolo.detections, runtime.sensors); providerUsed = this.notificationProvider(runtime.config);
       if (matched.length === 0) { providerUsed = await this.sendNotification(runtime.config, 'unidentified') || providerUsed; }
       else {
