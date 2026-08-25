@@ -13,7 +13,7 @@ const execFileAsync = promisify(execFile);
 type NotificationCategory = Category | 'unidentified';
 type SnapshotRuntime = { config: SnapshotConfig; sensors: SensorSpec[]; service: Service; running: boolean };
 const detectionMessages: Record<NotificationCategory, string> = {
-  people: 'Person detected', animals: 'Animal detected', vehicles: 'Vehicle detected', packages: 'Package detected', unidentified: 'Unidentified Activity detected',
+  people: 'Person detected', animals: 'Animal detected', vehicles: 'Vehicle detected', unidentified: 'Unidentified Activity detected',
 };
 
 export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
@@ -96,7 +96,6 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     if (detection.className === 'person') return 'people';
     if (['bird', 'cat', 'dog', 'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe'].includes(detection.className)) return 'animals';
     if (['bicycle', 'car', 'motorcycle', 'bus', 'train', 'truck', 'boat'].includes(detection.className)) return 'vehicles';
-    if (['backpack', 'handbag', 'suitcase'].includes(detection.className)) return 'packages';
     return null;
   }
   private async saveSnapshot(config: SnapshotConfig, image: Buffer, annotated: Buffer | undefined, contentType: string): Promise<void> {

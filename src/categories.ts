@@ -12,7 +12,6 @@ export const CATEGORY_CLASS_IDS: Record<Category, ReadonlySet<number>> = {
   animals: new Set([idOf('bird'), idOf('cat'), idOf('dog'), idOf('horse'), idOf('sheep'), idOf('cow'), idOf('elephant'), idOf('bear'), idOf('zebra'), idOf('giraffe')]),
   people: new Set([idOf('person')]),
   vehicles: new Set([idOf('bicycle'), idOf('car'), idOf('motorcycle'), idOf('bus'), idOf('train'), idOf('truck'), idOf('boat')]),
-  packages: new Set([idOf('backpack'), idOf('handbag'), idOf('suitcase')]),
 };
 
 export const VALID_CATEGORIES = Object.keys(CATEGORY_CLASS_IDS).join(', ');

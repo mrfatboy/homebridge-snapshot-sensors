@@ -1,4 +1,4 @@
-export type Category = 'animals' | 'packages' | 'people' | 'vehicles';
+export type Category = 'animals' | 'people' | 'vehicles';
 export type StoreSnapshots = 'never' | 'normal' | 'annotated';
 
 export interface NotificationChannel {

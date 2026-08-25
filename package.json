@@ -19,7 +19,7 @@
     "test": "vitest run",
     "test:watch": "vitest"
   },
-  "keywords": ["homebridge-plugin", "homebridge", "homekit", "camera", "snapshot", "object-detection", "yolo", "person-detection", "package-detection", "vehicle-detection", "animal-detection", "smart-home"],
+  "keywords": ["homebridge-plugin", "homebridge", "homekit", "camera", "snapshot", "object-detection", "yolo", "person-detection", "vehicle-detection", "animal-detection", "smart-home"],
   "repository": {"type": "git", "url": "git+https://github.com/mrfatboy/homebridge-snapshot-sensors.git"},
   "bugs": {"url": "https://github.com/mrfatboy/homebridge-snapshot-sensors/issues"},
   "homepage": "https://github.com/mrfatboy/homebridge-snapshot-sensors#readme",
