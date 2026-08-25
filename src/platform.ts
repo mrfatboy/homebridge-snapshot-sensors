@@ -73,13 +73,25 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
         return;
       }
       await this.saveSnapshot(runtime.config, image, yolo.annotatedImage, contentType);
-      const matched = matchingSensors(yolo.detections, runtime.sensors); providerUsed = this.notificationProvider(runtime.config);
-      if (matched.length === 0) { providerUsed = await this.sendNotification(runtime.config, 'unidentified') || providerUsed; }
-      else {
-        const notifiedProviders = new Set<string>(); const matchedTypes = new Set<Category>();
-        for (const sensor of matched) for (const category of this.matchedCategories(yolo.detections, sensor)) { matchedTypes.add(category); const used = await this.sendNotification(runtime.config, category); if (used) notifiedProviders.add(used); }
-        if (notifiedProviders.size > 0) providerUsed = [...notifiedProviders].join(', ');
-        if (matchedTypes.size > 0) detectionType = [...matchedTypes].map(category => detectionMessages[category]).join(', ');
+      const matched = matchingSensors(yolo.detections, runtime.sensors);
+      if (matched.length === 0) {
+        const used = await this.sendNotification(runtime.config, 'unidentified');
+        if (used) providerUsed = used;
+      } else {
+        let bestMatch: { category: Category; score: number } | null = null;
+        for (const sensor of matched) {
+          for (const detection of yolo.detections) {
+            const category = this.categoryForDetection(detection);
+            if (!category || !sensor.categories.includes(category)) continue;
+            if (detection.score < (sensor.thresholds[category] ?? 0.25)) continue;
+            if (!bestMatch || detection.score > bestMatch.score) bestMatch = { category, score: detection.score };
+          }
+        }
+        if (bestMatch) {
+          detectionType = detectionMessages[bestMatch.category];
+          const used = await this.sendNotification(runtime.config, bestMatch.category);
+          if (used) providerUsed = used;
+        }
       }
       const elapsedMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
       this.log.info(`[${snapshotName}] ${detectionType}; notification provider: ${providerUsed}; image saved: ${store}; total elapsed time: ${this.formatElapsed(elapsedMs)}.`);
@@ -88,18 +100,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
       this.log.error(`[${snapshotName}] Snapshot detection failed after ${this.formatElapsed(elapsedMs)} — ${detectionType}; notification provider: ${providerUsed}; image saved: ${store}; error: ${error instanceof Error ? error.message : String(error)}`);
     } finally { runtime.running = false; runtime.service.updateCharacteristic(this.Characteristic.On, false); }
   }
-  private notificationProvider(config: SnapshotConfig): string { const provider = config.notifications?.provider ?? 'none'; return provider === 'none' ? 'none' : provider; }
   private formatElapsed(ms: number): string { return ms < 1000 ? `${Math.round(ms)} ms` : `${(ms / 1000).toFixed(2)} s`; }
-  private matchedCategories(detections: Detection[], sensor: SensorSpec): Category[] {
-    const categories = new Set<Category>();
-    for (const detection of detections) {
-      const category = this.categoryForDetection(detection);
-      if (!category || !sensor.categories.includes(category)) continue;
-      if (detection.score < (sensor.thresholds[category] ?? 0.25)) continue;
-      categories.add(category);
-    }
-    return [...categories];
-  }
   private categoryForDetection(detection: Detection): Category | null {
     if (detection.className === 'person') return 'people';
     if (['bird', 'cat', 'dog', 'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe'].includes(detection.className)) return 'animals';
