@@ -1,6 +1,6 @@
-use std::{env, fs, path::PathBuf};
+use std::{env, fs, io::{self, BufRead, Write}, path::PathBuf};
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use ultralytics_inference::YOLOModel;
 
 #[derive(Serialize)]
@@ -20,14 +20,14 @@ struct Output {
     annotated_path: Option<String>,
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut args = env::args().skip(1);
-    let model = PathBuf::from(args.next().ok_or("missing model path")?);
-    let image = PathBuf::from(args.next().ok_or("missing image path")?);
-    let annotated = args.next().map(PathBuf::from);
+#[derive(Deserialize)]
+struct Request {
+    image: PathBuf,
+    annotated: Option<PathBuf>,
+}
 
-    let mut yolo = YOLOModel::load(model)?;
-    let results = yolo.predict(&image)?;
+fn predict(yolo: &mut YOLOModel, request: Request) -> Result<Output, Box<dyn std::error::Error>> {
+    let results = yolo.predict(&request.image)?;
     let result = results.first().ok_or("YOLO returned no result")?;
 
     let mut detections = Vec::new();
@@ -55,7 +55,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    let annotated_path = if let Some(path) = annotated {
+    let annotated_path = if let Some(path) = request.annotated {
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
         }
@@ -65,6 +65,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         None
     };
 
-    println!("{}", serde_json::to_string(&Output { detections, annotated_path })?);
+    Ok(Output { detections, annotated_path })
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut args = env::args().skip(1);
+    let model = PathBuf::from(args.next().ok_or("missing model path")?);
+
+    // Load the model exactly once and keep the worker alive for all subsequent requests.
+    let mut yolo = YOLOModel::load(model)?;
+    println!("READY");
+    io::stdout().flush()?;
+
+    let stdin = io::stdin();
+    let mut stdout = io::stdout();
+    for line in stdin.lock().lines() {
+        let line = line?;
+        if line.trim().is_empty() {
+            continue;
+        }
+        let request: Request = serde_json::from_str(&line)?;
+        let output = predict(&mut yolo, request)?;
+        serde_json::to_writer(&mut stdout, &output)?;
+        stdout.write_all(b"\n")?;
+        stdout.flush()?;
+    }
+
     Ok(())
 }
