@@ -64,7 +64,13 @@ class YoloWorker {
         this.onReady?.();
         return;
       }
+
+      // ultralytics-inference currently writes human-readable inference/status
+      // lines to stdout. The native runner's protocol uses JSON lines, so ignore
+      // non-JSON stdout chatter rather than treating it as a failed response.
+      if (!trimmed.startsWith('{')) return;
       if (!this.pending) return;
+
       const pending = this.pending;
       this.pending = undefined;
       try {
