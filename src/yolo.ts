@@ -126,7 +126,7 @@ class YoloWorker {
 // Start the native worker as soon as the plugin module is loaded so the model is
 // loaded during Homebridge startup rather than on the first detection.
 const yoloWorker = new YoloWorker(() => {
-  console.log('[SnapshotSensors] YOLO26 model loaded and ready.');
+  console.log('[SnapshotSensors] Plugin loaded successfully — YOLO26 model loaded and ready for detection.');
 });
 
 export async function runYolo(image: Buffer, storeSnapshots: StoreSnapshots): Promise<YoloResult> {
