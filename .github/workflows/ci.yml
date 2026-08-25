@@ -20,6 +20,11 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
+      # npm has known issues with platform-specific optional dependencies
+      # in package-lock.json on newer Node/npm combinations. Regenerate the
+      # lock metadata before the clean install so CI can validate/install the
+      # same dependency graph consistently across supported Node versions.
+      - run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
       - run: npm ci
       - run: npm run lint
       - run: npm run build
