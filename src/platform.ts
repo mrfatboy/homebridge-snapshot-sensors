@@ -54,7 +54,12 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
       if (!response.ok) throw new Error(`Camera returned HTTP ${response.status}`);
       const contentType = response.headers.get('content-type') || 'image/jpeg'; const image = Buffer.from(await response.arrayBuffer());
       if (!image.length) throw new Error('Camera returned an empty response');
-      const yolo = await runYolo(image, store); await this.saveSnapshot(runtime.config, image, yolo.annotatedImage, contentType);
+      const yolo = await runYolo(image, store);
+      if (!yolo) {
+        this.log.info(`[${snapshotName}] YOLO is busy; skipping snapshot detection.`);
+        return;
+      }
+      await this.saveSnapshot(runtime.config, image, yolo.annotatedImage, contentType);
       const matched = matchingSensors(yolo.detections, runtime.sensors); providerUsed = this.notificationProvider(runtime.config);
       if (matched.length === 0) { providerUsed = await this.sendNotification(runtime.config, 'unidentified') || providerUsed; }
       else {
