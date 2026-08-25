@@ -45,7 +45,12 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     }
   }
   private async triggerSnapshot(snapshotName: string): Promise<void> {
-    const runtime = this.runtimes.get(snapshotName); if (!runtime || runtime.running) return;
+    const runtime = this.runtimes.get(snapshotName);
+    if (!runtime) return;
+    if (runtime.running) {
+      this.log.info(`[${snapshotName}] Snapshot already running; skipping duplicate trigger.`);
+      return;
+    }
     const startedAt = process.hrtime.bigint(); runtime.running = true;
     let providerUsed = 'none'; let detectionType = detectionMessages.unidentified;
     const store = (runtime.config.storeSnapshots ?? 'never') as StoreSnapshots;
