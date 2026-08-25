@@ -62,13 +62,20 @@ class YoloWorker {
         return;
       }
       if (!this.pending) return;
+
+      // ultralytics-inference may emit human-readable inference progress to
+      // stdout. The runner's final response is JSON, so ignore non-JSON
+      // progress lines instead of treating them as protocol errors.
+      let result: NativeResult;
+      try {
+        result = JSON.parse(trimmed) as NativeResult;
+      } catch {
+        return;
+      }
+
       const pending = this.pending;
       this.pending = undefined;
-      try {
-        pending.resolve(JSON.parse(trimmed) as NativeResult);
-      } catch (error) {
-        pending.reject(new Error(`Embedded YOLO runner returned invalid JSON: ${String(error)}`));
-      }
+      pending.resolve(result);
     });
 
     this.child.once('error', error => {
