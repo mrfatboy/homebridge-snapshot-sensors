@@ -32,7 +32,7 @@ No cloud-based object-detection service is required.
   -  ntfy support
   -  Push Safer support
 - 🔄 Multiple independent Snapshot Sensors
-- Use Third Party sensors to trigger this plugin.
+- Use Third Party sensors to triggers this plugin.
 
 ## How it works
 
