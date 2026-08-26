@@ -11,8 +11,18 @@ export interface YoloResult {
   annotatedImage?: Buffer;
 }
 
+interface NativeDetection {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  score: number;
+  class_id: number;
+  class_name: string;
+}
+
 interface NativeResult {
-  detections: Detection[];
+  detections: NativeDetection[];
   annotated_path?: string;
 }
 
@@ -75,7 +85,19 @@ class YoloWorker {
       const pending = this.pending;
       this.pending = undefined;
       try {
-        pending.resolve(JSON.parse(trimmed) as NativeResult);
+        const nativeResult = JSON.parse(trimmed) as NativeResult;
+        pending.resolve({
+          ...nativeResult,
+          detections: nativeResult.detections.map(detection => ({
+            x1: detection.x1,
+            y1: detection.y1,
+            x2: detection.x2,
+            y2: detection.y2,
+            score: detection.score,
+            classId: detection.class_id,
+            className: detection.class_name,
+          })),
+        } as NativeResult);
       } catch (error) {
         pending.reject(new Error(`Embedded YOLO runner returned invalid JSON: ${String(error)}`));
       }
