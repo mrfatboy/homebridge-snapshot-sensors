@@ -85,19 +85,7 @@ class YoloWorker {
       const pending = this.pending;
       this.pending = undefined;
       try {
-        const nativeResult = JSON.parse(trimmed) as NativeResult;
-        pending.resolve({
-          ...nativeResult,
-          detections: nativeResult.detections.map(detection => ({
-            x1: detection.x1,
-            y1: detection.y1,
-            x2: detection.x2,
-            y2: detection.y2,
-            score: detection.score,
-            classId: detection.class_id,
-            className: detection.class_name,
-          })),
-        } as NativeResult);
+        pending.resolve(JSON.parse(trimmed) as NativeResult);
       } catch (error) {
         pending.reject(new Error(`Embedded YOLO runner returned invalid JSON: ${String(error)}`));
       }
@@ -169,7 +157,16 @@ export async function runYolo(image: Buffer, storeSnapshots: StoreSnapshots): Pr
     const result = await yoloWorker.run(imagePath, annotatedPath);
     if (!result) return null;
     const annotatedImage = result.annotated_path ? await readFile(result.annotated_path) : undefined;
-    return { detections: result.detections, annotatedImage };
+    const detections: Detection[] = result.detections.map(detection => ({
+      x1: detection.x1,
+      y1: detection.y1,
+      x2: detection.x2,
+      y2: detection.y2,
+      score: detection.score,
+      classId: detection.class_id,
+      className: detection.class_name,
+    }));
+    return { detections, annotatedImage };
   } finally {
     await rm(workDir, { recursive: true, force: true });
   }
