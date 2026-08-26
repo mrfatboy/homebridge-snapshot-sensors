@@ -82,6 +82,12 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
         this.log.info(`[${snapshotName}] YOLO is busy; skipping snapshot detection.`);
         return;
       }
+      if (TEST_IMAGE_PATH) {
+        const details = yolo.detections.length === 0
+          ? 'none'
+          : yolo.detections.map(d => `${d.className} (${d.score.toFixed(3)})`).join(', ');
+        this.log.info(`[${snapshotName}] [Test Image] YOLO detections: ${details}`);
+      }
       await this.saveSnapshot(runtime.config, image, yolo.annotatedImage, contentType);
       const matched = matchingSensors(yolo.detections, runtime.sensors);
       if (matched.length === 0) {
