@@ -10,9 +10,7 @@ struct Detection {
     x2: f32,
     y2: f32,
     score: f32,
-    #[serde(rename = "classId")]
     class_id: usize,
-    #[serde(rename = "className")]
     class_name: String,
 }
 
