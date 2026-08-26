@@ -142,7 +142,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     const notification = config.notifications; const provider = notification?.provider ?? 'none'; if (provider === 'none') return null;
     const channel: NotificationChannel | undefined = provider === 'pushover' ? notification?.pushover : provider === 'pushbullet' ? notification?.pushbullet : provider === 'ntfy' ? notification?.ntfy : notification?.pushsafer;
     if (!channel) return null;
-    const key = category === 'unidentified' ? 'unidentifiedMessage' : `${category.slice(0, -1)}Message`; const message = channel[key as keyof NotificationChannel] as string | undefined; if (!message) return null;
+    const key = category === 'unidentified' ? 'unidentifiedMessage' : category === 'people' ? 'personMessage' : category === 'animals' ? 'animalMessage' : 'vehicleMessage'; const message = channel[key as keyof NotificationChannel] as string | undefined; if (!message) return null;
     const title = channel.title?.trim() || 'Snapshot Sensors';
     if (provider === 'pushover') {
       if (!channel.token || !channel.user) throw new Error('Pushover token and user are required.');
