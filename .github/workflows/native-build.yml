@@ -1,0 +1,132 @@
+name: Build Native YOLO Runners
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-native:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux-x64
+            os: ubuntu-latest
+            executable: snapshot-sensors-yolo
+            runtime: libonnxruntime.so
+          - platform: darwin-x64
+            os: macos-13
+            executable: snapshot-sensors-yolo
+            runtime: libonnxruntime.dylib
+          - platform: darwin-arm64
+            os: macos-14
+            executable: snapshot-sensors-yolo
+            runtime: libonnxruntime.dylib
+          - platform: win32-x64
+            os: windows-latest
+            executable: snapshot-sensors-yolo.exe
+            runtime: onnxruntime.dll
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build native YOLO runner
+        working-directory: native/yolo-runner
+        run: cargo build --release
+
+      - name: Stage native bundle (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$GITHUB_WORKSPACE/native-bundle/${{ matrix.platform }}"
+          mkdir -p "$out"
+          cp "target/release/${{ matrix.executable }}" "$out/${{ matrix.executable }}"
+          runtime="$(find target/release -maxdepth 1 -type f -name '${{ matrix.runtime }}*' | head -n 1)"
+          test -n "$runtime"
+          cp "$runtime" "$out/${{ matrix.runtime }}"
+          chmod +x "$out/${{ matrix.executable }}"
+          ls -l "$out"
+
+      - name: Stage native bundle (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $out = Join-Path $env:GITHUB_WORKSPACE 'native-bundle/${{ matrix.platform }}'
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          Copy-Item "native/yolo-runner/target/release/${{ matrix.executable }}" (Join-Path $out '${{ matrix.executable }}')
+          $runtime = Get-ChildItem 'native/yolo-runner/target/release' -Filter '${{ matrix.runtime }}*' | Select-Object -First 1
+          if (-not $runtime) { throw 'ONNX Runtime DLL was not produced by the build.' }
+          Copy-Item $runtime.FullName (Join-Path $out '${{ matrix.runtime }}')
+          Get-ChildItem $out
+
+      - name: Upload native bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.platform }}
+          path: native-bundle/${{ matrix.platform }}/
+          if-no-files-found: error
+          compression-level: 0
+
+  commit-native:
+    needs: build-native
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: NewFeature
+          fetch-depth: 0
+
+      - name: Download native bundles
+        uses: actions/download-artifact@v4
+        with:
+          pattern: native-*
+          path: native-bundle
+          merge-multiple: false
+
+      - name: Replace bundled native components
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf native/yolo-runner/bin native/yolo-runner/onnxruntime
+          mkdir -p native/yolo-runner/bin
+          for platform in linux-x64 darwin-x64 darwin-arm64 win32-x64; do
+            mkdir -p "native/yolo-runner/bin/$platform"
+            cp -a "native-bundle/native-$platform/." "native/yolo-runner/bin/$platform/"
+          done
+          chmod +x native/yolo-runner/bin/linux-x64/snapshot-sensors-yolo
+          chmod +x native/yolo-runner/bin/darwin-x64/snapshot-sensors-yolo
+          chmod +x native/yolo-runner/bin/darwin-arm64/snapshot-sensors-yolo
+
+      - name: Verify bundled components
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f native/yolo-runner/bin/linux-x64/snapshot-sensors-yolo
+          test -f native/yolo-runner/bin/linux-x64/libonnxruntime.so
+          test -f native/yolo-runner/bin/darwin-x64/snapshot-sensors-yolo
+          test -f native/yolo-runner/bin/darwin-x64/libonnxruntime.dylib
+          test -f native/yolo-runner/bin/darwin-arm64/snapshot-sensors-yolo
+          test -f native/yolo-runner/bin/darwin-arm64/libonnxruntime.dylib
+          test -f native/yolo-runner/bin/win32-x64/snapshot-sensors-yolo.exe
+          test -f native/yolo-runner/bin/win32-x64/onnxruntime.dll
+
+      - name: Commit native bundles
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add native/yolo-runner/bin
+          if git diff --cached --quiet; then
+            echo 'No native bundle changes to commit.'
+            exit 0
+          fi
+          git commit -m 'Build cross-platform native YOLO runners [native-build]'
+          git push origin HEAD:NewFeature

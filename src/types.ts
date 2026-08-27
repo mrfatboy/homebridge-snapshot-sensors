@@ -5,12 +5,15 @@ export interface NotificationChannel {
   token?: string;
   user?: string;
   device?: string;
-  sound?: string;
   title?: string;
   animalMessage?: string;
+  animalSound?: string;
   personMessage?: string;
+  personSound?: string;
   vehicleMessage?: string;
+  vehicleSound?: string;
   unidentifiedMessage?: string;
+  unidentifiedSound?: string;
   apiKey?: string;
   deviceIden?: string;
   email?: string;

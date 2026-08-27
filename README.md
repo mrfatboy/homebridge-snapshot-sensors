@@ -109,6 +109,27 @@ Optional settings include:
 
 Saved images include the configured prefix, date, time, and a unique identifier to prevent files from being overwritten.
 
+### Docker installations
+
+If Homebridge is running in Docker, the **Snapshot Directory must be accessible inside the Homebridge container**. If the directory exists on the Docker host but is not mounted into the container, Homebridge cannot browse to it or save snapshots there.
+
+You may need to add a bind mount to your Docker Compose configuration. For example, if the snapshot directory on the Docker host is `/home/user/snapshots`, it could be mounted into the container as `/homebridge/snapshots`:
+
+```yaml
+volumes:
+  - /home/user/snapshots:/homebridge/snapshots
+```
+
+Then configure the Snapshot Directory in the plugin as:
+
+```text
+/homebridge/snapshots
+```
+
+The **Browse** button displays directories available to the Homebridge container, not the underlying Docker host filesystem. The container path is the path that should be selected in the plugin configuration.
+
+The exact host and container paths depend on your Docker Compose configuration.
+
 ## Notifications
 
 Notifications are configured independently for each Snapshot.
@@ -124,7 +145,7 @@ Notifications are configured independently for each Snapshot.
 
 Only the provider selected for that Snapshot is used.
 
-### Detection messages
+### Detection messages and sounds
 
 Each provider supports separate messages for:
 
@@ -133,7 +154,14 @@ Each provider supports separate messages for:
 - Vehicle detected
 - Unidentified Activity detected
 
-Messages can be customized in the Homebridge configuration UI.
+Pushover and Push Safer also support separate sounds for each detection type:
+
+- Animal detect sound
+- Person detect sound
+- Vehicle detect sound
+- Unidentified Activity sound
+
+Messages and supported sound values can be customized in the Homebridge configuration UI.
 
 ### Notification behavior
 
@@ -163,7 +191,7 @@ For each Snapshot:
 6. Select the desired detection categories.
 7. Set the threshold for each sensor.
 8. Select a notification provider if desired.
-9. Configure the provider's credentials and notification messages.
+9. Configure the provider's credentials, notification messages, and sounds where supported.
 10. Save the configuration.
 
 ### Camera Snapshot URL examples
@@ -247,12 +275,15 @@ Example:
               "token": "YOUR_APP_TOKEN",
               "user": "YOUR_USER_KEY",
               "device": "",
-              "sound": "pushover",
               "title": "Driveway",
               "animalMessage": "Animal detected 🐕",
+              "animalSound": "pushover",
               "personMessage": "Person detected 🚶‍♂️",
+              "personSound": "pushover",
               "vehicleMessage": "Vehicle detected 🚗",
-              "unidentifiedMessage": "Unidentified Activity detected ⚠️"
+              "vehicleSound": "pushover",
+              "unidentifiedMessage": "Unidentified Activity detected ⚠️",
+              "unidentifiedSound": "pushover"
             },
             "pushbullet": {
               "apiKey": "",
@@ -284,7 +315,6 @@ Example:
               "icon": 1,
               "vibration": 1,
               "iconColor": "",
-              "sound": "",
               "url": "",
               "urlTitle": "",
               "priority": 0,
@@ -292,9 +322,13 @@ Example:
               "retry": null,
               "expire": null,
               "animalMessage": "Animal detected 🐕",
+              "animalSound": "",
               "personMessage": "Person detected 🚶‍♂️",
+              "personSound": "",
               "vehicleMessage": "Vehicle detected 🚗",
-              "unidentifiedMessage": "Unidentified Activity detected ⚠️"
+              "vehicleSound": "",
+              "unidentifiedMessage": "Unidentified Activity detected ⚠️",
+              "unidentifiedSound": ""
             }
           }
         }

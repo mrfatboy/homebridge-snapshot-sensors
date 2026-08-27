@@ -143,10 +143,12 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     const channel: NotificationChannel | undefined = provider === 'pushover' ? notification?.pushover : provider === 'pushbullet' ? notification?.pushbullet : provider === 'ntfy' ? notification?.ntfy : notification?.pushsafer;
     if (!channel) return null;
     const key = category === 'unidentified' ? 'unidentifiedMessage' : category === 'people' ? 'personMessage' : category === 'animals' ? 'animalMessage' : 'vehicleMessage'; const message = channel[key as keyof NotificationChannel] as string | undefined; if (!message) return null;
+    const soundKey = category === 'unidentified' ? 'unidentifiedSound' : category === 'people' ? 'personSound' : category === 'animals' ? 'animalSound' : 'vehicleSound';
+    const sound = channel[soundKey as keyof NotificationChannel] as string | undefined;
     const title = channel.title?.trim() || 'Snapshot Sensors';
     if (provider === 'pushover') {
       if (!channel.token || !channel.user) throw new Error('Pushover token and user are required.');
-      const form = new URLSearchParams({ token: channel.token, user: channel.user, message, title, sound: channel.sound?.trim() || 'pushover' }); if (channel.device?.trim()) form.set('device', channel.device.trim());
+      const form = new URLSearchParams({ token: channel.token, user: channel.user, message, title, sound: sound?.trim() || 'pushover' }); if (channel.device?.trim()) form.set('device', channel.device.trim());
       const response = await fetch('https://api.pushover.net/1/messages.json', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: form.toString(), signal: AbortSignal.timeout(15000) }); if (!response.ok) throw new Error(`Pushover returned HTTP ${response.status}`); return 'Pushover';
     }
     if (provider === 'pushbullet') {
@@ -162,7 +164,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     }
     if (!channel.privateKey?.trim()) throw new Error('Push Safer Private Key is required.');
     const form = new URLSearchParams({ k: channel.privateKey.trim(), t: title, m: message, d: channel.pushsaferDevice?.trim() || '', i: String(channel.icon ?? 1), v: String(channel.vibration ?? 1), p: String(channel.priority ?? 0) });
-    if (channel.sound?.trim()) form.set('s', channel.sound.trim());
+    if (sound?.trim()) form.set('s', sound.trim());
     if (channel.iconColor?.trim()) form.set('c', channel.iconColor.trim());
     if (channel.url?.trim()) form.set('u', channel.url.trim());
     if (channel.urlTitle?.trim()) form.set('ut', channel.urlTitle.trim());
