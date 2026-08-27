@@ -7,13 +7,18 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-08-27
+
 ### Added
 
-- Per-message notification sounds for supported notification providers.
+- Added individual notification sound settings for supported push notification messages.
+- Added test notification support for ntfy and Push Safer.
+- Improved YOLO26 detection reliability and native runtime handling.
 
-### Changed
+### Fixed
 
-- Notification sound configuration is now associated with each notification message type instead of using one global sound setting.
+- Fixed the Pushover test notification to use the standard Pushover sound.
+- Fixed Linux ONNX Runtime loading for the bundled YOLO detection runner.
 
 ## [1.0.1] - 2026-08-26
 
@@ -45,5 +50,6 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - Homebridge custom configuration UI.
 
 [Unreleased]: https://github.com/mrfatboy/homebridge-snapshot-sensors/compare/main...NewFeature
+[1.0.2]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.2
 [1.0.1]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.1
 [1.0.0]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.0
