@@ -109,6 +109,27 @@ Optional settings include:
 
 Saved images include the configured prefix, date, time, and a unique identifier to prevent files from being overwritten.
 
+### Docker installations
+
+If Homebridge is running in Docker, the **Snapshot Directory must be accessible inside the Homebridge container**. If the directory exists on the Docker host but is not mounted into the container, Homebridge cannot browse to it or save snapshots there.
+
+You may need to add a bind mount to your Docker Compose configuration. For example, if the snapshot directory on the Docker host is `/home/user/snapshots`, it could be mounted into the container as `/homebridge/snapshots`:
+
+```yaml
+volumes:
+  - /home/user/snapshots:/homebridge/snapshots
+```
+
+Then configure the Snapshot Directory in the plugin as:
+
+```text
+/homebridge/snapshots
+```
+
+The **Browse** button displays directories available to the Homebridge container, not the underlying Docker host filesystem. The container path is the path that should be selected in the plugin configuration.
+
+The exact host and container paths depend on your Docker Compose configuration.
+
 ## Notifications
 
 Notifications are configured independently for each Snapshot.
