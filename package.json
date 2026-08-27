@@ -6,10 +6,10 @@
   "type": "module",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
-  "files": ["dist/", "config.schema.json", "homebridge-ui/", "model/", "native/yolo-runner/bin/", "native/yolo-runner/onnxruntime/", "CHANGELOG.md"],
+  "files": ["dist/", "config.schema.json", "homebridge-ui/", "model/", "native/yolo-runner/bin/", "CHANGELOG.md"],
   "scripts": {
     "clean": "node -e \"const fs=require('fs');fs.rmSync('dist',{recursive:true,force:true})\"",
-    "build": "npm run clean && node -e \"const fs=require('fs');const path=require('path');const bin=path.join('native','yolo-runner','bin','snapshot-sensors-yolo');const ort=path.join('native','yolo-runner','onnxruntime','libonnxruntime.so');if(!fs.existsSync(bin))throw new Error('Prebuilt YOLO runner is missing: '+bin);if(!fs.existsSync(ort))throw new Error('Prebuilt ONNX Runtime library is missing: '+ort);if(!fs.statSync(bin).isFile())throw new Error('Prebuilt YOLO runner is not a file: '+bin);if(!fs.statSync(ort).isFile())throw new Error('Prebuilt ONNX Runtime library is not a file: '+ort);\" && tsc",
+    "build": "npm run clean && node -e \"const fs=require('fs');const path=require('path');const platforms=[['linux-x64','snapshot-sensors-yolo','libonnxruntime.so'],['darwin-x64','snapshot-sensors-yolo','libonnxruntime.dylib'],['darwin-arm64','snapshot-sensors-yolo','libonnxruntime.dylib'],['win32-x64','snapshot-sensors-yolo.exe','onnxruntime.dll']];for(const [platform,bin,ort] of platforms){const dir=path.join('native','yolo-runner','bin',platform);for(const file of [bin,ort]){const p=path.join(dir,file);if(!fs.existsSync(p))throw new Error('Prebuilt YOLO component is missing: '+p);if(!fs.statSync(p).isFile())throw new Error('Prebuilt YOLO component is not a file: '+p);}}\" && tsc",
     "watch": "tsc --watch",
     "prepublishOnly": "npm run build",
     "lint": "eslint src/ test/",
