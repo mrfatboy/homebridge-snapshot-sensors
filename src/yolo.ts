@@ -11,11 +11,6 @@ interface NativeDetection { x1:number; y1:number; x2:number; y2:number; score:nu
 interface NativeResult { detections: NativeDetection[]; annotated_path?: string; }
 interface PendingRequest { resolve:(result:NativeResult)=>void; reject:(error:Error)=>void; }
 
-type YoloLogger = { info(message: string): void };
-let yoloLogger: YoloLogger | undefined;
-
-export function setYoloLogger(logger: YoloLogger): void { yoloLogger = logger; }
-
 function packageRoot(): string { return dirname(dirname(dirname(fileURLToPath(import.meta.url)))); }
 function nativePlatform(): string {
   if (process.platform === 'linux' && process.arch === 'x64') return 'linux-x64';
@@ -57,7 +52,7 @@ class YoloWorker {
   async run(imagePath:string,annotatedPath?:string):Promise<NativeResult|null>{ await this.ready;if(this.startupError||!this.child?.stdin.writable)throw this.startupError??new Error('Embedded YOLO runner is not available');if(this.pending)return null;return new Promise((resolve,reject)=>{this.pending={resolve,reject};const request=JSON.stringify({image:imagePath,annotated:annotatedPath});this.child!.stdin.write(`${request}\n`,error=>{if(error){this.pending=undefined;reject(new Error(`Unable to send request to embedded YOLO runner: ${error.message}`));}});}); }
 }
 
-const yoloWorker=new YoloWorker(()=>{yoloLogger?.info('Plugin loaded successfully — YOLO26 model loaded and ready for detection.');});
+const yoloWorker=new YoloWorker(()=>{console.log(`[${new Date().toLocaleString('en-US')}] [SnapshotSensors] Plugin loaded successfully — YOLO26 model loaded and ready for detection.`);});
 
 export async function runYolo(image:Buffer,storeSnapshots:StoreSnapshots):Promise<YoloResult|null>{
   if(yoloWorker.isBusy())return null;
