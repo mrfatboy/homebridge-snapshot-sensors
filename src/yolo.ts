@@ -35,9 +35,17 @@ function packageRoot(): string {
   return dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 }
 
+function nativePlatform(): string {
+  if (process.platform === 'linux' && process.arch === 'x64') return 'linux-x64';
+  if (process.platform === 'darwin' && process.arch === 'x64') return 'darwin-x64';
+  if (process.platform === 'darwin' && process.arch === 'arm64') return 'darwin-arm64';
+  if (process.platform === 'win32' && process.arch === 'x64') return 'win32-x64';
+  throw new Error(`Unsupported Homebridge platform for the bundled YOLO runner: ${process.platform}/${process.arch}`);
+}
+
 function runnerPath(): string {
   const executable = process.platform === 'win32' ? 'snapshot-sensors-yolo.exe' : 'snapshot-sensors-yolo';
-  return join(packageRoot(), 'native', 'yolo-runner', 'bin', executable);
+  return join(packageRoot(), 'native', 'yolo-runner', 'bin', nativePlatform(), executable);
 }
 
 class YoloWorker {
@@ -61,7 +69,16 @@ class YoloWorker {
 
   private start(): void {
     const modelPath = join(packageRoot(), 'model', 'yolo26', 'model.onnx');
-    this.child = spawn(runnerPath(), [modelPath], { stdio: ['pipe', 'pipe', 'pipe'] });
+    let executable: string;
+    try {
+      executable = runnerPath();
+    } catch (error) {
+      this.startupError = error instanceof Error ? error : new Error(String(error));
+      this.readyReject(this.startupError);
+      return;
+    }
+
+    this.child = spawn(executable, [modelPath], { stdio: ['pipe', 'pipe', 'pipe'] });
     this.child.stdout.setEncoding('utf8');
     this.child.stderr.setEncoding('utf8');
     this.child.stderr.resume();
@@ -159,7 +176,7 @@ export async function runYolo(image: Buffer, storeSnapshots: StoreSnapshots): Pr
     const annotatedImage = result.annotated_path ? await readFile(result.annotated_path) : undefined;
     const detections: Detection[] = result.detections.map(detection => ({
       x1: detection.x1,
-      y1: detection.y1,
+      y1: detection.y2,
       x2: detection.x2,
       y2: detection.y2,
       score: detection.score,
