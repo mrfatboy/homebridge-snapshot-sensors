@@ -21,6 +21,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 - Native YOLO26 object detection with prebuilt ONNX Runtime support.
 - Pushover and Push Safer notification providers.
+- PushCut notification provider.
 - ntfy notification provider.
 - Configurable notification messages by detection category.
 
