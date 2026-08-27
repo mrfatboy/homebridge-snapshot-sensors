@@ -23,12 +23,10 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - Pushover and Push Safer notification providers.
 - ntfy notification provider.
 - Configurable notification messages by detection category.
-- Optional development test-image support through `SNAPSHOT_SENSORS_TEST_IMAGE`.
 
 ### Changed
 
 - Improved native YOLO detection field handling and category matching.
-- YOLO detection diagnostics can be enabled through the development test-image environment variable.
 
 ## [1.0.0] - 2026-08-25
 
