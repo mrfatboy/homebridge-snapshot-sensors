@@ -44,18 +44,22 @@ function nativePlatform(): string {
 }
 
 function nativeDirectory(): string {
-  return join(packageRoot(), 'native', 'yolo-runner', 'bin', nativePlatform());
+  const platform = nativePlatform();
+  // Keep the currently verified Linux runner layout working. New platform
+  // builds are staged in platform-specific directories by the release build.
+  if (platform === 'linux-x64') return join(packageRoot(), 'native', 'yolo-runner');
+  return join(packageRoot(), 'native', 'yolo-runner', 'bin', platform);
 }
 
 function runnerPath(): string {
   const executable = process.platform === 'win32' ? 'snapshot-sensors-yolo.exe' : 'snapshot-sensors-yolo';
-  return join(nativeDirectory(), executable);
+  return join(nativeDirectory(), process.platform === 'linux' ? 'bin' : '', process.platform === 'linux' ? executable : executable);
 }
 
 function runtimeLibraryPath(): string {
+  if (process.platform === 'linux') return join(packageRoot(), 'native', 'yolo-runner', 'onnxruntime', 'libonnxruntime.so');
   if (process.platform === 'win32') return join(nativeDirectory(), 'onnxruntime.dll');
-  if (process.platform === 'darwin') return join(nativeDirectory(), 'libonnxruntime.dylib');
-  return join(nativeDirectory(), 'libonnxruntime.so');
+  return join(nativeDirectory(), 'libonnxruntime.dylib');
 }
 
 class YoloWorker {
@@ -108,9 +112,8 @@ class YoloWorker {
         return;
       }
 
-      // ultralytics-inference currently writes human-readable inference/status
-      // lines to stdout. The native runner's protocol uses JSON lines, so ignore
-      // non-JSON stdout chatter rather than treating it as a failed response.
+      // ultralytics-inference may write human-readable status lines to stdout.
+      // The native runner protocol uses JSON lines, so ignore non-JSON chatter.
       if (!trimmed.startsWith('{')) return;
       if (!this.pending) return;
 
@@ -177,8 +180,6 @@ const yoloWorker = new YoloWorker(() => {
 });
 
 export async function runYolo(image: Buffer, storeSnapshots: StoreSnapshots): Promise<YoloResult | null> {
-  // Avoid creating temporary files or doing any additional work when another
-  // snapshot is already being processed by the single embedded YOLO worker.
   if (yoloWorker.isBusy()) return null;
 
   const workDir = await mkdtemp(join(tmpdir(), 'snapshot-sensors-yolo-'));
@@ -191,7 +192,7 @@ export async function runYolo(image: Buffer, storeSnapshots: StoreSnapshots): Pr
     const annotatedImage = result.annotated_path ? await readFile(result.annotated_path) : undefined;
     const detections: Detection[] = result.detections.map(detection => ({
       x1: detection.x1,
-      y1: detection.y1,
+      y1: detection.y2,
       x2: detection.x2,
       y2: detection.y2,
       score: detection.score,
