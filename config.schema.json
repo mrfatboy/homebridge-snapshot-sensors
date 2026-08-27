@@ -51,14 +51,20 @@
               "icon": { "title": "Icon", "type": "integer", "minimum": 1, "maximum": 98, "default": 1 },
               "vibration": { "title": "Vibration", "type": "integer", "minimum": 0, "maximum": 30, "default": 1 },
               "iconColor": { "title": "Icon Color (optional)", "type": "string", "description": "Hex color or Push Safer supported color value." },
-              "sound": { "title": "Sound (optional)", "type": "string", "description": "Push Safer sound name or ID." },
               "url": { "title": "URL (optional)", "type": "string", "format": "uri", "description": "URL opened when the notification is tapped." },
               "urlTitle": { "title": "URL Title (optional)", "type": "string" },
               "priority": { "title": "Priority", "type": "integer", "minimum": 0, "maximum": 2, "default": 0, "description": "Push Safer priority level." },
               "timeToLive": { "title": "Time To Live (optional)", "type": "integer", "minimum": 0, "maximum": 43200 },
               "retry": { "title": "Retry (optional)", "type": "integer", "minimum": 0 },
               "expire": { "title": "Expire (optional)", "type": "integer", "minimum": 0 },
-              "animalMessage": { "title": "Animal Detect Message", "type": "string", "default": "Animal Detected 🐕" }, "personMessage": { "title": "Person Detected Message", "type": "string", "default": "Person Detected 🚶‍♂️" }, "vehicleMessage": { "title": "Vehicle Detected Message", "type": "string", "default": "Vehicle Detected 🚗" }, "unidentifiedMessage": { "title": "Unidentified Activity Detected", "type": "string", "default": "Unidentified Activity Detected ⚠️" }
+              "animalMessage": { "title": "Animal Detect Message", "type": "string", "default": "Animal Detected 🐕" },
+              "animalSound": { "title": "Animal Detect Sound", "type": "string", "description": "Push Safer sound name or ID." },
+              "personMessage": { "title": "Person Detected Message", "type": "string", "default": "Person Detected 🚶‍♂️" },
+              "personSound": { "title": "Person Detected Sound", "type": "string", "description": "Push Safer sound name or ID." },
+              "vehicleMessage": { "title": "Vehicle Detected Message", "type": "string", "default": "Vehicle Detected 🚗" },
+              "vehicleSound": { "title": "Vehicle Detected Sound", "type": "string", "description": "Push Safer sound name or ID." },
+              "unidentifiedMessage": { "title": "Unidentified Activity Detected", "type": "string", "default": "Unidentified Activity Detected ⚠️" },
+              "unidentifiedSound": { "title": "Unidentified Activity Sound", "type": "string", "description": "Push Safer sound name or ID." }
             } }
           }
         },
