@@ -146,6 +146,46 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
       }
     }
 
+    if (provider === 'pushsafer') {
+      const privateKey = typeof payload?.privateKey === 'string' ? payload.privateKey.trim() : '';
+      const pushsaferDevice = typeof payload?.pushsaferDevice === 'string' ? payload.pushsaferDevice.trim() : '';
+      const title = typeof payload?.title === 'string' ? payload.title.trim() : '';
+      const icon = Number(payload?.icon ?? 1);
+      const vibration = Number(payload?.vibration ?? 1);
+      const iconColor = typeof payload?.iconColor === 'string' ? payload.iconColor.trim() : '';
+      const url = typeof payload?.url === 'string' ? payload.url.trim() : '';
+      const urlTitle = typeof payload?.urlTitle === 'string' ? payload.urlTitle.trim() : '';
+      const priority = Number(payload?.priority ?? 0);
+      const timeToLive = payload?.timeToLive;
+      const retry = payload?.retry;
+      const expire = payload?.expire;
+      if (!privateKey) throw new RequestError('Push Safer Private Key is required.', { status: 400 });
+      if (!title) throw new RequestError('Push Safer Title is required.', { status: 400 });
+      const form = new URLSearchParams();
+      form.set('k', privateKey);
+      form.set('t', title);
+      form.set('m', TEST_NOTIFICATION_MESSAGE);
+      if (pushsaferDevice) form.set('d', pushsaferDevice);
+      if (Number.isFinite(icon)) form.set('i', String(icon));
+      if (Number.isFinite(vibration)) form.set('v', String(vibration));
+      if (iconColor) form.set('c', iconColor);
+      if (url) form.set('u', url);
+      if (urlTitle) form.set('ut', urlTitle);
+      if (Number.isFinite(priority)) form.set('p', String(priority));
+      if (timeToLive !== undefined && timeToLive !== null && String(timeToLive).trim() !== '') form.set('l', String(timeToLive).trim());
+      if (retry !== undefined && retry !== null && String(retry).trim() !== '') form.set('re', String(retry).trim());
+      if (expire !== undefined && expire !== null && String(expire).trim() !== '') form.set('ex', String(expire).trim());
+      // Deliberately omit the Push Safer sound parameter (s) so the test uses the device default sound.
+      try {
+        const response = await fetch('https://www.pushsafer.com/api', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: form.toString(), signal: AbortSignal.timeout(15000) });
+        const responseText = await response.text();
+        if (!response.ok) throw new Error(responseText || `HTTP ${response.status}`);
+        return { success: true };
+      } catch (error) {
+        throw new RequestError(`Unable to send Push Safer notification: ${error instanceof Error ? error.message : String(error)}`, { status: 502 });
+      }
+    }
+
     throw new RequestError('A notification provider must be selected.', { status: 400 });
   }
 }
