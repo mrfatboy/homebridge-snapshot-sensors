@@ -11,8 +11,18 @@ export interface YoloResult {
   annotatedImage?: Buffer;
 }
 
+interface NativeDetection {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  score: number;
+  class_id: number;
+  class_name: string;
+}
+
 interface NativeResult {
-  detections: Detection[];
+  detections: NativeDetection[];
   annotated_path?: string;
 }
 
@@ -147,7 +157,16 @@ export async function runYolo(image: Buffer, storeSnapshots: StoreSnapshots): Pr
     const result = await yoloWorker.run(imagePath, annotatedPath);
     if (!result) return null;
     const annotatedImage = result.annotated_path ? await readFile(result.annotated_path) : undefined;
-    return { detections: result.detections, annotatedImage };
+    const detections: Detection[] = result.detections.map(detection => ({
+      x1: detection.x1,
+      y1: detection.y1,
+      x2: detection.x2,
+      y2: detection.y2,
+      score: detection.score,
+      classId: detection.class_id,
+      className: detection.class_name,
+    }));
+    return { detections, annotatedImage };
   } finally {
     await rm(workDir, { recursive: true, force: true });
   }

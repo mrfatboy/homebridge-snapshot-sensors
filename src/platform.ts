@@ -4,13 +4,14 @@ import { matchingSensors } from './detector.js';
 import { runYolo } from './yolo.js';
 import type { Detection, SensorSpec, SnapshotConfig, NotificationChannel, Category, StoreSnapshots } from './types.js';
 import { randomUUID } from 'node:crypto';
-import { mkdir, writeFile, chown } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, chown } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import path from 'node:path';
 
 const execFileAsync = promisify(execFile);
 const MAX_SNAPSHOT_SIZE = 10 * 1024 * 1024;
+const TEST_IMAGE_PATH = process.env.SNAPSHOT_SENSORS_TEST_IMAGE?.trim();
 type NotificationCategory = Category | 'unidentified';
 type SnapshotRuntime = { config: SnapshotConfig; sensors: SensorSpec[]; service: Service; running: boolean };
 const detectionMessages: Record<NotificationCategory, string> = {
@@ -30,6 +31,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
   private discoverDevices(): void {
     const snapshots: SnapshotConfig[] = this.config.snapshots ?? [];
     if (snapshots.length === 0) { this.log.info('No snapshots configured.'); return; }
+    if (TEST_IMAGE_PATH) this.log.warn(`[Test Image] Development test image enabled: ${TEST_IMAGE_PATH}`);
     for (const snapshot of snapshots) {
       const snapshotName = typeof snapshot.name === 'string' ? snapshot.name.trim() : '';
       if (!snapshotName) { this.log.error('Snapshot is missing a required name — skipping it'); continue; }
@@ -56,21 +58,35 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     let providerUsed = 'none'; let detectionType = detectionMessages.unidentified;
     const store = (runtime.config.storeSnapshots ?? 'never') as StoreSnapshots;
     try {
-      const response = await fetch(runtime.config.url, { signal: AbortSignal.timeout(15000) });
-      if (!response.ok) throw new Error(`Camera returned HTTP ${response.status}`);
-      const contentLength = response.headers.get('content-length');
-      if (contentLength) {
-        const size = Number(contentLength);
-        if (!Number.isFinite(size) || size < 0) throw new Error('Camera returned an invalid Content-Length header');
-        if (size > MAX_SNAPSHOT_SIZE) throw new Error('Camera snapshot exceeds the maximum allowed size of 10 MB');
+      let image: Buffer;
+      let contentType = 'image/jpeg';
+      if (TEST_IMAGE_PATH) {
+        image = await readFile(TEST_IMAGE_PATH);
+        if (!image.length) throw new Error(`Test image is empty: ${TEST_IMAGE_PATH}`);
+        this.log.info(`[${snapshotName}] [Test Image] Using ${TEST_IMAGE_PATH}`);
+      } else {
+        const response = await fetch(runtime.config.url, { signal: AbortSignal.timeout(15000) });
+        if (!response.ok) throw new Error(`Camera returned HTTP ${response.status}`);
+        const contentLength = response.headers.get('content-length');
+        if (contentLength) {
+          const size = Number(contentLength);
+          if (!Number.isFinite(size) || size < 0) throw new Error('Camera returned an invalid Content-Length header');
+          if (size > MAX_SNAPSHOT_SIZE) throw new Error('Camera snapshot exceeds the maximum allowed size of 10 MB');
+        }
+        contentType = response.headers.get('content-type') || 'image/jpeg'; image = Buffer.from(await response.arrayBuffer());
+        if (!image.length) throw new Error('Camera returned an empty response');
       }
-      const contentType = response.headers.get('content-type') || 'image/jpeg'; const image = Buffer.from(await response.arrayBuffer());
-      if (!image.length) throw new Error('Camera returned an empty response');
-      if (image.length > MAX_SNAPSHOT_SIZE) throw new Error('Camera snapshot exceeds the maximum allowed size of 10 MB');
+      if (image.length > MAX_SNAPSHOT_SIZE) throw new Error('Snapshot image exceeds the maximum allowed size of 10 MB');
       const yolo = await runYolo(image, store);
       if (!yolo) {
         this.log.info(`[${snapshotName}] YOLO is busy; skipping snapshot detection.`);
         return;
+      }
+      if (TEST_IMAGE_PATH) {
+        const details = yolo.detections.length === 0
+          ? 'none'
+          : yolo.detections.map(d => `${d.className} (${d.score.toFixed(3)})`).join(', ');
+        this.log.info(`[${snapshotName}] [Test Image] YOLO detections: ${details}`);
       }
       await this.saveSnapshot(runtime.config, image, yolo.annotatedImage, contentType);
       const matched = matchingSensors(yolo.detections, runtime.sensors);
@@ -94,10 +110,10 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
         }
       }
       const elapsedMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
-      this.log.info(`[${snapshotName}] ${detectionType}; notification provider: ${providerUsed}; image saved: ${store}; total elapsed time: ${this.formatElapsed(elapsedMs)}.`);
+      this.log.info(`[${snapshotName}] ${TEST_IMAGE_PATH ? '[Test Image] ' : ''}${detectionType}; notification provider: ${providerUsed}; image saved: ${store}; total elapsed time: ${this.formatElapsed(elapsedMs)}.`);
     } catch (error) {
       const elapsedMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
-      this.log.error(`[${snapshotName}] Snapshot detection failed after ${this.formatElapsed(elapsedMs)} — ${detectionType}; notification provider: ${providerUsed}; image saved: ${store}; error: ${error instanceof Error ? error.message : String(error)}`);
+      this.log.error(`[${snapshotName}] Snapshot detection failed after ${this.formatElapsed(elapsedMs)} — ${TEST_IMAGE_PATH ? '[Test Image] ' : ''}${detectionType}; notification provider: ${providerUsed}; image saved: ${store}; error: ${error instanceof Error ? error.message : String(error)}`);
     } finally { runtime.running = false; runtime.service.updateCharacteristic(this.Characteristic.On, false); }
   }
   private formatElapsed(ms: number): string { return ms < 1000 ? `${Math.round(ms)} ms` : `${(ms / 1000).toFixed(2)} s`; }
@@ -126,7 +142,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     const notification = config.notifications; const provider = notification?.provider ?? 'none'; if (provider === 'none') return null;
     const channel: NotificationChannel | undefined = provider === 'pushover' ? notification?.pushover : provider === 'pushbullet' ? notification?.pushbullet : provider === 'ntfy' ? notification?.ntfy : notification?.pushsafer;
     if (!channel) return null;
-    const key = category === 'unidentified' ? 'unidentifiedMessage' : `${category.slice(0, -1)}Message`; const message = channel[key as keyof NotificationChannel] as string | undefined; if (!message) return null;
+    const key = category === 'unidentified' ? 'unidentifiedMessage' : category === 'people' ? 'personMessage' : category === 'animals' ? 'animalMessage' : 'vehicleMessage'; const message = channel[key as keyof NotificationChannel] as string | undefined; if (!message) return null;
     const title = channel.title?.trim() || 'Snapshot Sensors';
     if (provider === 'pushover') {
       if (!channel.token || !channel.user) throw new Error('Pushover token and user are required.');
