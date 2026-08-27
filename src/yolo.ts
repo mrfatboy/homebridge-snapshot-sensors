@@ -176,7 +176,7 @@ export async function runYolo(image: Buffer, storeSnapshots: StoreSnapshots): Pr
     const annotatedImage = result.annotated_path ? await readFile(result.annotated_path) : undefined;
     const detections: Detection[] = result.detections.map(detection => ({
       x1: detection.x1,
-      y1: detection.y2,
+      y1: detection.y1,
       x2: detection.x2,
       y2: detection.y2,
       score: detection.score,
