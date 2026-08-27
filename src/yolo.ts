@@ -37,7 +37,12 @@ class YoloWorker {
     try { executable=runnerPath(); runtimeLibrary=runtimeLibraryPath(); }
     catch(error) { this.startupError=error instanceof Error?error:new Error(String(error)); this.readyReject(this.startupError); return; }
     this.child=spawn(executable,[modelPath],{stdio:['pipe','pipe','pipe'],env:{...process.env,ORT_DYLIB_PATH:runtimeLibrary}});
-    this.child.stdout.setEncoding('utf8'); this.child.stderr.setEncoding('utf8'); this.child.stderr.resume(); this.output=createInterface({input:this.child.stdout});
+    this.child.stdout.setEncoding('utf8');
+    this.child.stderr.setEncoding('utf8');
+    this.child.stderr.on('data', data => {
+      console.error(`[SnapshotSensors] YOLO runner stderr: ${data.toString().trim()}`);
+    });
+    this.output=createInterface({input:this.child.stdout});
     this.output.on('line',line=>{ const trimmed=line.trim(); if(!trimmed)return; if(trimmed==='READY'){this.readyResolve();this.onReady?.();return;} if(!trimmed.startsWith('{')||!this.pending)return; const pending=this.pending;this.pending=undefined;try{pending.resolve(JSON.parse(trimmed) as NativeResult);}catch(error){pending.reject(new Error(`Embedded YOLO runner returned invalid JSON: ${String(error)}`));} });
     this.child.once('error',error=>{this.startupError=new Error(`Unable to start embedded YOLO runner: ${error.message}`);this.readyReject(this.startupError);this.rejectPending(this.startupError);});
     this.child.once('close',code=>{const error=new Error(`Embedded YOLO runner stopped unexpectedly (${code??'unknown'})`);this.rejectPending(error);if(!this.startupError){this.startupError=error;this.readyReject(error);}});
