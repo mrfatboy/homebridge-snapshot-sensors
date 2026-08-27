@@ -146,6 +146,33 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
       }
     }
 
+    if (provider === 'ntfy') {
+      const server = typeof payload?.server === 'string' ? payload.server.trim() : '';
+      const topic = typeof payload?.topic === 'string' ? payload.topic.trim() : '';
+      const accessToken = typeof payload?.accessToken === 'string' ? payload.accessToken.trim() : '';
+      const priority = Number(payload?.priority ?? 3);
+      const tags = typeof payload?.tags === 'string' ? payload.tags.trim() : '';
+      const title = typeof payload?.title === 'string' ? payload.title.trim() : '';
+      if (!server) throw new RequestError('ntfy Server URL is required.', { status: 400 });
+      if (!topic) throw new RequestError('ntfy Topic is required.', { status: 400 });
+      if (!title) throw new RequestError('ntfy Title is required.', { status: 400 });
+      let parsedServer;
+      try { parsedServer = new URL(server); } catch { throw new RequestError('The ntfy Server URL is not valid.', { status: 400 }); }
+      if (!['http:', 'https:'].includes(parsedServer.protocol)) throw new RequestError('The ntfy Server URL must use HTTP or HTTPS.', { status: 400 });
+      const endpoint = new URL(topic, `${parsedServer.toString().replace(/\/$/, '')}/`);
+      const headers = { 'Content-Type': 'text/plain', 'Title': title, 'Priority': String(Number.isFinite(priority) ? priority : 3) };
+      if (tags) headers.Tags = tags;
+      if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+      try {
+        const response = await fetch(endpoint, { method: 'POST', headers, body: TEST_NOTIFICATION_MESSAGE, signal: AbortSignal.timeout(15000) });
+        const responseText = await response.text();
+        if (!response.ok) throw new Error(responseText || `HTTP ${response.status}`);
+        return { success: true };
+      } catch (error) {
+        throw new RequestError(`Unable to send ntfy notification: ${error instanceof Error ? error.message : String(error)}`, { status: 502 });
+      }
+    }
+
     if (provider === 'pushsafer') {
       const privateKey = typeof payload?.privateKey === 'string' ? payload.privateKey.trim() : '';
       const pushsaferDevice = typeof payload?.pushsaferDevice === 'string' ? payload.pushsaferDevice.trim() : '';
@@ -162,9 +189,7 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
       if (!privateKey) throw new RequestError('Push Safer Private Key is required.', { status: 400 });
       if (!title) throw new RequestError('Push Safer Title is required.', { status: 400 });
       const form = new URLSearchParams();
-      form.set('k', privateKey);
-      form.set('t', title);
-      form.set('m', TEST_NOTIFICATION_MESSAGE);
+      form.set('k', privateKey); form.set('t', title); form.set('m', TEST_NOTIFICATION_MESSAGE);
       if (pushsaferDevice) form.set('d', pushsaferDevice);
       if (Number.isFinite(icon)) form.set('i', String(icon));
       if (Number.isFinite(vibration)) form.set('v', String(vibration));
@@ -175,7 +200,6 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
       if (timeToLive !== undefined && timeToLive !== null && String(timeToLive).trim() !== '') form.set('l', String(timeToLive).trim());
       if (retry !== undefined && retry !== null && String(retry).trim() !== '') form.set('re', String(retry).trim());
       if (expire !== undefined && expire !== null && String(expire).trim() !== '') form.set('ex', String(expire).trim());
-      // Deliberately omit the Push Safer sound parameter (s) so the test uses the device default sound.
       try {
         const response = await fetch('https://www.pushsafer.com/api', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: form.toString(), signal: AbortSignal.timeout(15000) });
         const responseText = await response.text();
