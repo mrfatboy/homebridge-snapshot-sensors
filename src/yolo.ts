@@ -22,7 +22,7 @@ function nativePlatform(): string {
 function nativeDirectory(): string { return join(packageRoot(), 'native', 'yolo-runner', 'bin', nativePlatform()); }
 function runnerPath(): string { return join(nativeDirectory(), process.platform === 'win32' ? 'snapshot-sensors-yolo.exe' : 'snapshot-sensors-yolo'); }
 function runtimeLibraryPath(): string {
-  if (process.platform === 'linux') return join(nativeDirectory(), 'libonnxruntime.so');
+  if (process.platform === 'linux') return join(nativeDirectory(), 'libonnxruntime.so.1.28.0');
   if (process.platform === 'win32') return join(nativeDirectory(), 'onnxruntime.dll');
   return join(nativeDirectory(), 'libonnxruntime.dylib');
 }
