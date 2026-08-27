@@ -1,0 +1,60 @@
+name: Build macOS YOLO Runners
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: darwin-x64
+            os: macos-13
+          - platform: darwin-arm64
+            os: macos-14
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build native YOLO runner
+        working-directory: native/yolo-runner
+        run: cargo build --release
+
+      - name: Verify macOS build
+        working-directory: native/yolo-runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f target/release/snapshot-sensors-yolo
+          test -f target/release/libonnxruntime.dylib
+          file target/release/snapshot-sensors-yolo
+          file target/release/libonnxruntime.dylib
+          otool -L target/release/snapshot-sensors-yolo
+
+      - name: Stage macOS bundle
+        working-directory: native/yolo-runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$GITHUB_WORKSPACE/native-bundle/${{ matrix.platform }}"
+          mkdir -p "$out"
+          cp target/release/snapshot-sensors-yolo "$out/snapshot-sensors-yolo"
+          cp target/release/libonnxruntime.dylib "$out/libonnxruntime.dylib"
+          chmod +x "$out/snapshot-sensors-yolo"
+          ls -lh "$out"
+
+      - name: Upload macOS bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.platform }}
+          path: native-bundle/${{ matrix.platform }}/
+          if-no-files-found: error
+          compression-level: 0
