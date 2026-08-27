@@ -124,7 +124,7 @@ Notifications are configured independently for each Snapshot.
 
 Only the provider selected for that Snapshot is used.
 
-### Detection messages
+### Detection messages and sounds
 
 Each provider supports separate messages for:
 
@@ -133,7 +133,14 @@ Each provider supports separate messages for:
 - Vehicle detected
 - Unidentified Activity detected
 
-Messages can be customized in the Homebridge configuration UI.
+Pushover and Push Safer also support separate sounds for each detection type:
+
+- Animal detect sound
+- Person detect sound
+- Vehicle detect sound
+- Unidentified Activity sound
+
+Messages and supported sound values can be customized in the Homebridge configuration UI.
 
 ### Notification behavior
 
@@ -163,7 +170,7 @@ For each Snapshot:
 6. Select the desired detection categories.
 7. Set the threshold for each sensor.
 8. Select a notification provider if desired.
-9. Configure the provider's credentials and notification messages.
+9. Configure the provider's credentials, notification messages, and sounds where supported.
 10. Save the configuration.
 
 ### Camera Snapshot URL examples
@@ -247,12 +254,15 @@ Example:
               "token": "YOUR_APP_TOKEN",
               "user": "YOUR_USER_KEY",
               "device": "",
-              "sound": "pushover",
               "title": "Driveway",
               "animalMessage": "Animal detected 🐕",
+              "animalSound": "pushover",
               "personMessage": "Person detected 🚶‍♂️",
+              "personSound": "pushover",
               "vehicleMessage": "Vehicle detected 🚗",
-              "unidentifiedMessage": "Unidentified Activity detected ⚠️"
+              "vehicleSound": "pushover",
+              "unidentifiedMessage": "Unidentified Activity detected ⚠️",
+              "unidentifiedSound": "pushover"
             },
             "pushbullet": {
               "apiKey": "",
@@ -284,7 +294,6 @@ Example:
               "icon": 1,
               "vibration": 1,
               "iconColor": "",
-              "sound": "",
               "url": "",
               "urlTitle": "",
               "priority": 0,
@@ -292,9 +301,13 @@ Example:
               "retry": null,
               "expire": null,
               "animalMessage": "Animal detected 🐕",
+              "animalSound": "",
               "personMessage": "Person detected 🚶‍♂️",
+              "personSound": "",
               "vehicleMessage": "Vehicle detected 🚗",
-              "unidentifiedMessage": "Unidentified Activity detected ⚠️"
+              "vehicleSound": "",
+              "unidentifiedMessage": "Unidentified Activity detected ⚠️",
+              "unidentifiedSound": ""
             }
           }
         }
