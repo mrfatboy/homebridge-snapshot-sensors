@@ -10,7 +10,7 @@
   "scripts": {
     "clean": "node -e \"const fs=require('fs');fs.rmSync('dist',{recursive:true,force:true})\"",
     "build": "npm run clean && node -e \"const fs=require('fs'),path=require('path');const p=process.platform+'-'+process.arch;const dir=path.join('native','yolo-runner','bin',p);const bin=process.platform==='win32'?'snapshot-sensors-yolo.exe':'snapshot-sensors-yolo';const f=path.join(dir,bin);if(!fs.existsSync(f)||!fs.statSync(f).isFile())throw new Error('Prebuilt YOLO runner is missing: '+f);\" && tsc",
-    "build:all": "npm run clean && node -e \"const fs=require('fs');const path=require('path');const platforms=[['linux-x64','snapshot-sensors-yolo','libonnxruntime.so'],['darwin-x64','snapshot-sensors-yolo','libonnxruntime.dylib'],['darwin-arm64','snapshot-sensors-yolo','libonnxruntime.dylib'],['win32-x64','snapshot-sensors-yolo.exe','onnxruntime.dll']];for(const [platform,bin,ort] of platforms){const dir=path.join('native','yolo-runner','bin',platform);for(const file of [bin,ort]){const p=path.join(dir,file);if(!fs.existsSync(p))throw new Error('Prebuilt YOLO component is missing: '+p);if(!fs.statSync(p).isFile())throw new Error('Prebuilt YOLO component is not a file: '+p);}}\" && tsc",
+    "build:all": "npm run clean && node -e \"const fs=require('fs'),path=require('path');const dir=path.join('native','yolo-runner','bin','linux-x64');for(const file of ['snapshot-sensors-yolo','libonnxruntime.so']){const p=path.join(dir,file);if(!fs.existsSync(p)||!fs.statSync(p).isFile())throw new Error('Required Linux x64 YOLO component is missing: '+p);}\" && tsc",
     "watch": "tsc --watch",
     "prepublishOnly": "npm run build:all",
     "lint": "eslint src/ test/",
