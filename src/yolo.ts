@@ -43,9 +43,19 @@ function nativePlatform(): string {
   throw new Error(`Unsupported Homebridge platform for the bundled YOLO runner: ${process.platform}/${process.arch}`);
 }
 
+function nativeDirectory(): string {
+  return join(packageRoot(), 'native', 'yolo-runner', 'bin', nativePlatform());
+}
+
 function runnerPath(): string {
   const executable = process.platform === 'win32' ? 'snapshot-sensors-yolo.exe' : 'snapshot-sensors-yolo';
-  return join(packageRoot(), 'native', 'yolo-runner', 'bin', nativePlatform(), executable);
+  return join(nativeDirectory(), executable);
+}
+
+function runtimeLibraryPath(): string {
+  if (process.platform === 'win32') return join(nativeDirectory(), 'onnxruntime.dll');
+  if (process.platform === 'darwin') return join(nativeDirectory(), 'libonnxruntime.dylib');
+  return join(nativeDirectory(), 'libonnxruntime.so');
 }
 
 class YoloWorker {
@@ -70,15 +80,20 @@ class YoloWorker {
   private start(): void {
     const modelPath = join(packageRoot(), 'model', 'yolo26', 'model.onnx');
     let executable: string;
+    let runtimeLibrary: string;
     try {
       executable = runnerPath();
+      runtimeLibrary = runtimeLibraryPath();
     } catch (error) {
       this.startupError = error instanceof Error ? error : new Error(String(error));
       this.readyReject(this.startupError);
       return;
     }
 
-    this.child = spawn(executable, [modelPath], { stdio: ['pipe', 'pipe', 'pipe'] });
+    this.child = spawn(executable, [modelPath], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: { ...process.env, ORT_DYLIB_PATH: runtimeLibrary },
+    });
     this.child.stdout.setEncoding('utf8');
     this.child.stderr.setEncoding('utf8');
     this.child.stderr.resume();
