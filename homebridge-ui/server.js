@@ -105,14 +105,12 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
       const token = typeof payload?.token === 'string' ? payload.token.trim() : '';
       const user = typeof payload?.user === 'string' ? payload.user.trim() : '';
       const device = typeof payload?.device === 'string' ? payload.device.trim() : '';
-      const sound = typeof payload?.sound === 'string' ? payload.sound.trim() : '';
       const title = typeof payload?.title === 'string' ? payload.title.trim() : '';
       if (!token) throw new RequestError('Pushover Application Token is required.', { status: 400 });
       if (!user) throw new RequestError('Pushover User Key is required.', { status: 400 });
-      if (!sound) throw new RequestError('Pushover Sound is required.', { status: 400 });
       if (!title) throw new RequestError('Pushover Title is required.', { status: 400 });
       const form = new URLSearchParams();
-      form.set('token', token); form.set('user', user); form.set('message', TEST_NOTIFICATION_MESSAGE); form.set('title', title); form.set('sound', sound);
+      form.set('token', token); form.set('user', user); form.set('message', TEST_NOTIFICATION_MESSAGE); form.set('title', title); form.set('sound', 'pushover');
       if (device) form.set('device', device);
       try {
         const response = await fetch('https://api.pushover.net/1/messages.json', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: form.toString(), signal: AbortSignal.timeout(15000) });
