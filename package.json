@@ -9,7 +9,7 @@
   "files": ["dist/", "config.schema.json", "homebridge-ui/", "model/", "native/yolo-runner/bin/", "native/yolo-runner/onnxruntime/", "CHANGELOG.md"],
   "scripts": {
     "clean": "node -e \"const fs=require('fs');fs.rmSync('dist',{recursive:true,force:true})\"",
-    "build": "npm run clean && node -e \"const fs=require('fs');const path=require('path');const p=process.platform+'-'+process.arch;const bin=process.platform==='win32'?'snapshot-sensors-yolo.exe':'snapshot-sensors-yolo';const ort=process.platform==='linux'?'libonnxruntime.so':process.platform==='win32'?'onnxruntime.dll':'libonnxruntime.dylib';const dir=path.join('native','yolo-runner','bin',p);for(const file of [bin,ort]){const f=path.join(dir,file);if(!fs.existsSync(f))throw new Error('Prebuilt YOLO component is missing for '+p+': '+f);if(!fs.statSync(f).isFile())throw new Error('Prebuilt YOLO component is not a file: '+f);}\" && tsc",
+    "build": "npm run clean && node -e \"const fs=require('fs');const f=process.platform==='linux'?'native/yolo-runner/bin/snapshot-sensors-yolo':process.platform==='win32'?'native/yolo-runner/bin/win32-x64/snapshot-sensors-yolo.exe':path.join('native','yolo-runner','bin',process.platform+'-'+process.arch,'snapshot-sensors-yolo');const path=require('path');if(!fs.existsSync(f)||!fs.statSync(f).isFile())throw new Error('Prebuilt YOLO runner is missing: '+f);\" && tsc",
     "build:all": "npm run clean && node -e \"const fs=require('fs');const path=require('path');const platforms=[['linux-x64','snapshot-sensors-yolo','libonnxruntime.so'],['darwin-x64','snapshot-sensors-yolo','libonnxruntime.dylib'],['darwin-arm64','snapshot-sensors-yolo','libonnxruntime.dylib'],['win32-x64','snapshot-sensors-yolo.exe','onnxruntime.dll']];for(const [platform,bin,ort] of platforms){const dir=path.join('native','yolo-runner','bin',platform);for(const file of [bin,ort]){const p=path.join(dir,file);if(!fs.existsSync(p))throw new Error('Prebuilt YOLO component is missing: '+p);if(!fs.statSync(p).isFile())throw new Error('Prebuilt YOLO component is not a file: '+p);}}\" && tsc",
     "watch": "tsc --watch",
     "prepublishOnly": "npm run build:all",
@@ -24,10 +24,7 @@
   "repository": {"type": "git", "url": "git+https://github.com/mrfatboy/homebridge-snapshot-sensors.git"},
   "bugs": {"url": "https://github.com/mrfatboy/homebridge-snapshot-sensors/issues"},
   "homepage": "https://github.com/mrfatboy/homebridge-snapshot-sensors#readme",
-  "author": {
-    "name": "mrfatboy",
-    "url": "https://github.com/mrfatboy"
-  },
+  "author": {"name": "mrfatboy", "url": "https://github.com/mrfatboy"},
   "license": "AGPL-3.0-only",
   "engines": {"node": ">=20.0.0", "homebridge": "^1.8.0 || ^2.0.0"},
   "devDependencies": {
