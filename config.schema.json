@@ -23,8 +23,18 @@
           "properties": {
             "provider": { "title": "Notification Provider", "type": "string", "enum": ["none", "pushover", "pushbullet", "ntfy", "pushsafer"], "default": "none" },
             "pushover": { "title": "Pushover", "type": "object", "properties": {
-              "token": { "title": "Application Token", "type": "string" }, "user": { "title": "User Key", "type": "string" }, "device": { "title": "Device", "type": "string" }, "sound": { "title": "Sound", "type": "string", "default": "pushover" }, "title": { "title": "Title", "type": "string", "default": "Snapshot Sensors" },
-              "animalMessage": { "title": "Animal Detect Message", "type": "string", "default": "Animal Detected 🐕" }, "personMessage": { "title": "Person Detected Message", "type": "string", "default": "Person Detected 🚶‍♂️" }, "vehicleMessage": { "title": "Vehicle Detected Message", "type": "string", "default": "Vehicle Detected 🚗" }, "unidentifiedMessage": { "title": "Unidentified Activity Detected", "type": "string", "default": "Unidentified Activity Detected ⚠️" }
+              "token": { "title": "Application Token", "type": "string" },
+              "user": { "title": "User Key", "type": "string" },
+              "device": { "title": "Device", "type": "string" },
+              "title": { "title": "Title", "type": "string", "default": "Snapshot Sensors" },
+              "animalMessage": { "title": "Animal Detect Message", "type": "string", "default": "Animal Detected 🐕" },
+              "animalSound": { "title": "Animal Detect Sound", "type": "string", "default": "pushover" },
+              "personMessage": { "title": "Person Detected Message", "type": "string", "default": "Person Detected 🚶‍♂️" },
+              "personSound": { "title": "Person Detected Sound", "type": "string", "default": "pushover" },
+              "vehicleMessage": { "title": "Vehicle Detected Message", "type": "string", "default": "Vehicle Detected 🚗" },
+              "vehicleSound": { "title": "Vehicle Detected Sound", "type": "string", "default": "pushover" },
+              "unidentifiedMessage": { "title": "Unidentified Activity Detected", "type": "string", "default": "Unidentified Activity Detected ⚠️" },
+              "unidentifiedSound": { "title": "Unidentified Activity Sound", "type": "string", "default": "pushover" }
             } },
             "pushbullet": { "title": "Pushbullet", "type": "object", "properties": {
               "apiKey": { "title": "Access Token", "type": "string" }, "deviceIden": { "title": "Device Identifier", "type": "string" }, "email": { "title": "Email", "type": "string" }, "channelTag": { "title": "Channel Tag", "type": "string" }, "title": { "title": "Title", "type": "string", "default": "Snapshot Sensors" },
