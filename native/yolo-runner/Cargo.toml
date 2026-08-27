@@ -6,20 +6,6 @@ rust-version = "1.89"
 
 [dependencies]
 ultralytics-inference = { version = "0.0.35", default-features = false, features = ["annotate"] }
-# Enable the same ONNX Runtime version/features used by ultralytics-inference,
-# including runtime loading and bundled binary download/copy support. Cargo
-# feature unification applies these features to ultralytics-inference's ort
-# dependency as well.
-ort = { version = "=2.0.0-rc.13", default-features = false, features = [
-    "std",
-    "ndarray",
-    "download-binaries",
-    "copy-dylibs",
-    "load-dynamic",
-    "half",
-    "tls-native",
-    "num-complex",
-] }
 image = "0.25"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
