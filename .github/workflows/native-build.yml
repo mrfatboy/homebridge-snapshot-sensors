@@ -1,8 +1,6 @@
 name: Build Native YOLO Runners
 
 on:
-  push:
-    branches: [NewFeature]
   workflow_dispatch:
 
 permissions:
@@ -10,7 +8,6 @@ permissions:
 
 jobs:
   build-native:
-    if: ${{ !contains(github.event.head_commit.message, '[native-build]') || github.event_name == 'workflow_dispatch' }}
     strategy:
       fail-fast: false
       matrix:
@@ -53,9 +50,6 @@ jobs:
           runtime="$(find target/release -maxdepth 1 -type f -name '${{ matrix.runtime }}*' | head -n 1)"
           test -n "$runtime"
           cp "$runtime" "$out/${{ matrix.runtime }}"
-          if [ "${{ matrix.platform }}" = "darwin-x64" ] || [ "${{ matrix.platform }}" = "darwin-arm64" ]; then
-            install_name_tool -add_rpath '@loader_path' "$out/${{ matrix.runtime }}" 2>/dev/null || true
-          fi
           chmod +x "$out/${{ matrix.executable }}"
           ls -l "$out"
 
@@ -82,7 +76,6 @@ jobs:
 
   commit-native:
     needs: build-native
-    if: ${{ !contains(github.event.head_commit.message, '[native-build]') || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -110,7 +103,6 @@ jobs:
           chmod +x native/yolo-runner/bin/linux-x64/snapshot-sensors-yolo
           chmod +x native/yolo-runner/bin/darwin-x64/snapshot-sensors-yolo
           chmod +x native/yolo-runner/bin/darwin-arm64/snapshot-sensors-yolo
-          find native/yolo-runner/bin -maxdepth 2 -type f -print
 
       - name: Verify bundled components
         shell: bash
