@@ -10,7 +10,7 @@ ORT_LIB="target/release/libonnxruntime.so"
 echo "=== Building snapshot-sensors-yolo for Linux x64 ==="
 echo
 
-cargo build --release
+RUSTFLAGS='-C link-arg=-Wl,-rpath,\$ORIGIN' cargo build --release
 
 echo
 echo "=== Staging Linux x64 bundle ==="
