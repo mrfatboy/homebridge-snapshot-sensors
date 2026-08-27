@@ -30,5 +30,21 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - Improved native YOLO detection field handling and category matching.
 - YOLO detection diagnostics can be enabled through the development test-image environment variable.
 
+## [1.0.0] - 2026-08-25
+
+### Added
+
+- Initial release of `homebridge-snapshot-sensors`.
+- Camera snapshot retrieval from configured snapshot URLs.
+- Local object detection using the bundled native YOLO/ONNX Runtime engine.
+- HomeKit-compatible Snapshot Sensor switches.
+- Configurable detection categories for animals, people, and vehicles.
+- Per-sensor detection confidence thresholds.
+- Optional original and annotated snapshot storage.
+- Configurable snapshot directory and filename prefix.
+- Support for multiple independent Snapshot Sensor configurations.
+- Homebridge custom configuration UI.
+
 [Unreleased]: https://github.com/mrfatboy/homebridge-snapshot-sensors/compare/main...NewFeature
 [1.0.1]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.1
+[1.0.0]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.0
