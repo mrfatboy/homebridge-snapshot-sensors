@@ -18,6 +18,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - Replaced the custom Rust YOLO runtime with Node.js ONNX Runtime.
 - Switched image processing and detection annotation to Sharp.
 - Updated detection filtering to use the user-defined Animal, Person, and Vehicle confidence thresholds.
+- Enabled cross-platform compatibility through Node.js ONNX Runtime.
 
 ### Removed
 
