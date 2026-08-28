@@ -125,7 +125,7 @@ export async function runYolo(
         const width = Math.max(0, x2 - x);
         const height = Math.max(0, y2 - y);
         const fontSize = Math.max(18, Math.round(Math.min(sourceWidth, sourceHeight) / 30));
-        const label = `${detection.className} ${(detection.score * 100).toFixed(1)}%`;
+        const label = `${detection.className} ${detection.score.toFixed(2).replace(/^0/, '')}`;
 
         return `<rect x="${x}" y="${y}" width="${width}" height="${height}" fill="none" stroke="red" stroke-width="4"/><text x="${x + 6}" y="${Math.max(fontSize, y + fontSize)}" font-family="Arial" font-size="${fontSize}" fill="white">${label}</text>`;
       }).join('');
