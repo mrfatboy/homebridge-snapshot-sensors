@@ -132,8 +132,13 @@ export async function runYolo(
         // Place the label above the bounding box when possible so it does not obscure the detected object.
         // If the box is too close to the top edge, fall back to placing the label inside the box.
         const labelY = y >= fontSize + 6 ? y - 6 : y + fontSize + 6;
+        // Approximate the label width for a high-contrast background panel.
+        const labelPadding = Math.max(4, Math.round(fontSize * 0.25));
+        const labelWidth = Math.min(sourceWidth - x, Math.ceil(label.length * fontSize * 0.6) + (labelPadding * 2));
+        const labelHeight = fontSize + (labelPadding * 2);
+        const labelPanelY = Math.max(0, labelY - fontSize - labelPadding);
 
-        return `<rect x="${x}" y="${y}" width="${width}" height="${height}" fill="none" stroke="red" stroke-width="4"/><text x="${x}" y="${labelY}" font-family="Arial" font-size="${fontSize}" fill="white">${label}</text>`;
+        return `<rect x="${x}" y="${y}" width="${width}" height="${height}" fill="none" stroke="red" stroke-width="4"/><rect x="${x}" y="${labelPanelY}" width="${labelWidth}" height="${labelHeight}" fill="red"/><text x="${x + labelPadding}" y="${labelY}" font-family="Arial" font-size="${fontSize}" fill="white">${label}</text>`;
       }).join('');
 
       const overlay = Buffer.from(`<svg width="${sourceWidth}" height="${sourceHeight}" xmlns="http://www.w3.org/2000/svg">${boxes}</svg>`);
