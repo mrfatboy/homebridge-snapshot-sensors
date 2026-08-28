@@ -101,19 +101,6 @@ export async function runYolo(
       }
     }
 
-    const acceptedDetections = sensors === undefined
-      ? detections
-      : detections.filter(detection => {
-        const category = categoryOfClass(detection.classId);
-        if (category === null) return false;
-
-        return sensors.some(sensor => {
-          if (!sensor.categories.includes(category)) return false;
-          const threshold = sensor.thresholds[category];
-          return threshold !== undefined && detection.score >= threshold;
-        });
-      });
-
     // Annotation is diagnostic only: draw detections from the categories the
     // user selected, with a 5% floor. Sensor thresholds remain unchanged.
     const annotationDetections = sensors === undefined
