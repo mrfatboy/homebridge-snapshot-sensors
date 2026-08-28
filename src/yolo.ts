@@ -107,9 +107,12 @@ export async function runYolo(
       : detections.filter(detection => {
         const category = categoryOfClass(detection.classId);
         if (category === null) return false;
-        return sensors.some(sensor =>
-          sensor.categories.includes(category) && detection.score >= sensor.threshold,
-        );
+        return sensors.some(sensor => {
+          const threshold = sensor.thresholds[category];
+          return sensor.categories.includes(category) &&
+            threshold !== undefined &&
+            detection.score >= threshold;
+        });
       });
 
     let annotatedImage: Buffer | undefined;
