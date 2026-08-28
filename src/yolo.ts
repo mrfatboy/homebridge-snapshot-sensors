@@ -13,6 +13,7 @@ export interface YoloResult {
 
 const MODEL_WIDTH = 1024;
 const MODEL_HEIGHT = 576;
+const ANNOTATION_MIN_CONFIDENCE = 0.01;
 
 function packageRoot(): string {
   return dirname(dirname(dirname(fileURLToPath(import.meta.url))));
@@ -100,8 +101,6 @@ export async function runYolo(
       }
     }
 
-    // The normal plugin path supplies sensor definitions. Test Snapshot does not.
-    // Only apply per-sensor thresholds when sensor definitions are available.
     const acceptedDetections = sensors === undefined
       ? detections
       : detections.filter(detection => {
@@ -115,12 +114,18 @@ export async function runYolo(
         });
       });
 
+    // Annotation is diagnostic only: keep low-confidence detections out of the
+    // saved annotated image while leaving normal sensor thresholds unchanged.
+    const annotationDetections = acceptedDetections.filter(
+      detection => detection.score >= ANNOTATION_MIN_CONFIDENCE,
+    );
+
     let annotatedImage: Buffer | undefined;
 
-    if (storeSnapshots === 'annotated' && acceptedDetections.length > 0) {
+    if (storeSnapshots === 'annotated' && annotationDetections.length > 0) {
       const scaleX = sourceWidth / MODEL_WIDTH;
       const scaleY = sourceHeight / MODEL_HEIGHT;
-      const boxes = acceptedDetections.map(detection => {
+      const boxes = annotationDetections.map(detection => {
         const x = Math.max(0, Math.min(sourceWidth, detection.x1 * scaleX));
         const y = Math.max(0, Math.min(sourceHeight, detection.y1 * scaleY));
         const x2 = Math.max(0, Math.min(sourceWidth, detection.x2 * scaleX));
