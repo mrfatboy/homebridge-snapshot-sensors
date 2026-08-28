@@ -13,7 +13,7 @@ export interface YoloResult {
 
 const MODEL_WIDTH = 1024;
 const MODEL_HEIGHT = 576;
-const ANNOTATION_MIN_CONFIDENCE = 0.05;
+const ANNOTATION_MIN_CONFIDENCE = 0.10;
 
 function packageRoot(): string {
   return dirname(dirname(dirname(fileURLToPath(import.meta.url))));
@@ -102,7 +102,7 @@ export async function runYolo(
     }
 
     // Annotation is diagnostic only: draw detections from the categories the
-    // user selected, with a 5% floor. Sensor thresholds remain unchanged.
+    // user selected, with a 10% floor. Sensor thresholds remain unchanged.
     const annotationDetections = sensors === undefined
       ? detections.filter(detection => detection.score >= ANNOTATION_MIN_CONFIDENCE)
       : detections.filter(detection => {
