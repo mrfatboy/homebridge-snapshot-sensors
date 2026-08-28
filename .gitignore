@@ -8,9 +8,3 @@ dist/
 
 # npm package artifacts
 /homebridge-snapshot-sensors-*.*.*.tgz
-
-# Rust build output
-/native/yolo-runner/target/
-
-# Bundled ONNX Runtime download
-/native/yolo-runner/.ort/
