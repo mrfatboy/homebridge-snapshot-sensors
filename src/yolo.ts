@@ -30,7 +30,7 @@ let inferenceRunning = false;
 export async function runYolo(
   image: Buffer,
   storeSnapshots: StoreSnapshots,
-  sensors: SensorSpec[],
+  sensors?: SensorSpec[],
 ): Promise<YoloResult | null> {
   if (inferenceRunning) return null;
   inferenceRunning = true;
@@ -100,16 +100,20 @@ export async function runYolo(
       }
     }
 
-    const acceptedDetections = detections.filter(detection => {
-      const category = categoryOfClass(detection.classId);
-      if (category === null) return false;
+    // The normal plugin path supplies sensor definitions. Test Snapshot does not.
+    // Only apply per-sensor thresholds when sensor definitions are available.
+    const acceptedDetections = sensors === undefined
+      ? detections
+      : detections.filter(detection => {
+        const category = categoryOfClass(detection.classId);
+        if (category === null) return false;
 
-      return sensors.some(sensor => {
-        if (!sensor.categories.includes(category)) return false;
-        const threshold = sensor.thresholds[category] ?? 0.25;
-        return detection.score >= threshold;
+        return sensors.some(sensor => {
+          if (!sensor.categories.includes(category)) return false;
+          const threshold = sensor.thresholds[category];
+          return threshold !== undefined && detection.score >= threshold;
+        });
       });
-    });
 
     let annotatedImage: Buffer | undefined;
 
