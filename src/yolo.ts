@@ -71,18 +71,21 @@ export async function runYolo(image: Buffer, storeSnapshots: StoreSnapshots): Pr
 
     for (let i = 0; i < output.dims[1]; i++) {
       const offset = i * 6;
-      const score = output.data[offset + 4];
+      const x1 = Number(output.data[offset]);
+      const y1 = Number(output.data[offset + 1]);
+      const x2 = Number(output.data[offset + 2]);
+      const y2 = Number(output.data[offset + 3]);
+      const score = Number(output.data[offset + 4]);
+      const classId = Math.round(Number(output.data[offset + 5]));
 
       if (!Number.isFinite(score) || score <= 0) continue;
 
-      const classId = Math.round(output.data[offset + 5]);
-
       try {
         detections.push({
-          x1: output.data[offset],
-          y1: output.data[offset + 1],
-          x2: output.data[offset + 2],
-          y2: output.data[offset + 3],
+          x1,
+          y1,
+          x2,
+          y2,
           score,
           classId,
           className: getYolo26ClassName(classId),
