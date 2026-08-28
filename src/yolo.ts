@@ -129,8 +129,11 @@ export async function runYolo(
         const height = Math.max(0, y2 - y);
         const fontSize = Math.max(18, Math.round(Math.min(sourceWidth, sourceHeight) / 30));
         const label = `${detection.className} ${detection.score.toFixed(2).replace(/^0/, '')}`;
+        // Place the label above the bounding box when possible so it does not obscure the detected object.
+        // If the box is too close to the top edge, fall back to placing the label inside the box.
+        const labelY = y >= fontSize + 6 ? y - 6 : y + fontSize + 6;
 
-        return `<rect x="${x}" y="${y}" width="${width}" height="${height}" fill="none" stroke="red" stroke-width="4"/><text x="${x + 6}" y="${Math.max(fontSize, y + fontSize)}" font-family="Arial" font-size="${fontSize}" fill="white">${label}</text>`;
+        return `<rect x="${x}" y="${y}" width="${width}" height="${height}" fill="none" stroke="red" stroke-width="4"/><text x="${x}" y="${labelY}" font-family="Arial" font-size="${fontSize}" fill="white">${label}</text>`;
       }).join('');
 
       const overlay = Buffer.from(`<svg width="${sourceWidth}" height="${sourceHeight}" xmlns="http://www.w3.org/2000/svg">${boxes}</svg>`);
