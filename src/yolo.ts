@@ -114,11 +114,16 @@ export async function runYolo(
         });
       });
 
-    // Annotation is diagnostic only: keep low-confidence detections out of the
-    // saved annotated image while leaving normal sensor thresholds unchanged.
-    const annotationDetections = acceptedDetections.filter(
-      detection => detection.score >= ANNOTATION_MIN_CONFIDENCE,
-    );
+    // Annotation is diagnostic only: draw detections from the categories the
+    // user selected, with a 5% floor. Sensor thresholds remain unchanged.
+    const annotationDetections = sensors === undefined
+      ? detections.filter(detection => detection.score >= ANNOTATION_MIN_CONFIDENCE)
+      : detections.filter(detection => {
+        if (detection.score < ANNOTATION_MIN_CONFIDENCE) return false;
+        const category = categoryOfClass(detection.classId);
+        if (category === null) return false;
+        return sensors.some(sensor => sensor.categories.includes(category));
+      });
 
     let annotatedImage: Buffer | undefined;
 
