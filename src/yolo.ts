@@ -13,7 +13,7 @@ export interface YoloResult {
 
 const MODEL_WIDTH = 1024;
 const MODEL_HEIGHT = 576;
-const ANNOTATION_MIN_CONFIDENCE = 0.02;
+const ANNOTATION_MIN_CONFIDENCE = 0.05;
 
 function packageRoot(): string {
   return dirname(dirname(dirname(fileURLToPath(import.meta.url))));
