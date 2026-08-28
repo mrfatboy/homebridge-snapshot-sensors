@@ -19,20 +19,20 @@ No cloud-based object-detection service is required.
 - 🔒 Object detection runs locally on the Homebridge host
 - 🏠 HomeKit-compatible Snapshot Sensor switches
 - ⚡ Stateless switch behavior — the switch automatically turns off after 1 second
-- 🎯 **Per-sensor detection thresholds**
+- 🎯 **Per-category detection thresholds for each sensor**
 - 🐕 Animal detection
 - 🚶 Person detection
 - 🚗 Vehicle detection
 - ⚠️ Unidentified Activity notifications when no configured sensor matches
 - 💾 Save the original camera image
-- 🖼️ Save an annotated image containing YOLO detections
+- 🖼️ Save an annotated image containing matching YOLO detections
 - 🔔 Push notifications
-  -  Pushover support
-  -  Pushbullet support
-  -  ntfy support
-  -  Push Safer support
+  - Pushover support
+  - Pushbullet support
+  - ntfy support
+  - Push Safer support
 - 🔄 Multiple independent Snapshot Sensors
-- Use Third Party sensors to triggers this plugin.
+- Use third-party sensors to trigger this plugin.
 
 ## How it works
 
@@ -44,10 +44,10 @@ When the HomeKit/Homebridge switch is activated:
 2. The image is passed to the local YOLO26 detector.
 3. YOLO analyzes the image for supported objects.
 4. The detections are compared against each configured sensor.
-5. Each sensor uses **its own configured confidence threshold**.
+5. Each sensor applies its own configured confidence threshold for each selected category.
 6. If a configured category matches, the appropriate notification is sent.
 7. If no configured sensor matches the detections, an **Unidentified Activity detected** notification is sent when notifications are enabled.
-8. The image is saved according to the configured storage mode.
+8. The image is saved according to the configured storage mode. Annotated images include only detections that match a sensor's selected category and that category's configured threshold.
 9. The switch automatically returns to Off.
 10. The detection process completes.
 
@@ -62,7 +62,7 @@ The switch is intended to behave as a **stateless trigger**:
 - Turning it Off does not start another detection
 - A second trigger is ignored while that Snapshot Sensor is already processing
 
-This allows the switch to be used as a trigger from HomeKit automations, scenes, shortcuts, or other HomeKit-compatible systems. You can use any sensor or trigger you want to trigger the this plugin. There is no need to rely on the camera's poor detection system. For example, a Hue outdoor sensor is great to pair with this plugin.
+This allows the switch to be used as a trigger from HomeKit automations, scenes, shortcuts, or other HomeKit-compatible systems. You can use any sensor or trigger you want to trigger this plugin. There is no need to rely on the camera's poor detection system. For example, a Hue outdoor sensor is great to pair with this plugin.
 
 ## Detection categories
 
@@ -82,13 +82,15 @@ A sensor specifies:
 
 - Sensor name
 - Detection categories
-- Detection confidence threshold
+- Detection confidence threshold for each selected category
 
-### Per-sensor thresholds
+### Per-category thresholds
 
-Thresholds are configured **independently for each sensor**.
+Thresholds are configured **independently for each selected category within each sensor**.
 
 The lower the threshold value, the more sensitive the sensor is to detections. Lower values allow objects with lower confidence scores to trigger the sensor, while higher values require greater confidence before a detection is considered a match.
+
+For example, a sensor can use one threshold for animals, another for people, and another for vehicles.
 
 ## Image storage
 
@@ -98,7 +100,7 @@ Snapshots can be configured to use one of three storage modes:
 |---|---|
 | **Never** | Image is processed but not saved |
 | **Normal** | Original camera image is saved |
-| **Annotated** | Image with YOLO detection boxes is saved |
+| **Annotated** | Image with matching YOLO detection boxes is saved |
 
 When image storage is enabled, a Snapshot Directory must be configured.
 
@@ -142,7 +144,6 @@ Notifications are configured independently for each Snapshot.
 | Push Safer | ✅ |
 | ntfy | ✅ |
 
-
 Only the provider selected for that Snapshot is used.
 
 ### Detection messages and sounds
@@ -165,7 +166,7 @@ Messages and supported sound values can be customized in the Homebridge configur
 
 ### Notification behavior
 
-A notification is sent only when a detection matches one of the categories configured for a sensor.
+A notification is sent only when a detection matches one of the categories configured for a sensor and meets that category's configured threshold.
 
 For example, if a sensor is configured for **Person** and YOLO detects a vehicle but no person, that sensor does not match.
 
@@ -189,7 +190,7 @@ For each Snapshot:
 4. Configure the Snapshot Directory if images are being saved.
 5. Configure one or more sensors.
 6. Select the desired detection categories.
-7. Set the threshold for each sensor.
+7. Set the threshold for each selected category.
 8. Select a notification provider if desired.
 9. Configure the provider's credentials, notification messages, and sounds where supported.
 10. Save the configuration.
@@ -205,7 +206,6 @@ Common examples:
 | **Foscam** | `http://CAMERA_IP/cgi-bin/CGIProxy.fcgi?cmd=snapPicture2&usr=USERNAME&pwd=PASSWORD` |
 | **Reolink** | `http://CAMERA_IP/cgi-bin/api.cgi?cmd=Snap&channel=0&rs=VALUE&user=USERNAME&password=PASSWORD` |
 | **Hikvision** | `http://CAMERA_IP/ISAPI/Streaming/channels/1/picture` |
-
 
 For example:
 
@@ -346,13 +346,13 @@ Example:
 - A supported 64-bit macOS, Linux, or Windows environment
 - Sufficient CPU resources for local YOLO inference
 
-The plugin includes its native YOLO runner and ONNX Runtime components.
+The plugin uses the Node.js ONNX Runtime package with the bundled YOLO26 model.
 
 ## Privacy
 
-Object detection is performed locally on the Homebridge host.
+Object detection is performed locally on the Homebridge host using the YOLO26 model and Node.js ONNX Runtime.
 
-The camera image is retrieved from the configured camera and passed to the bundled local detection engine.
+The camera image is retrieved from the configured camera and processed by the local detection engine.
 
 The plugin does not require sending camera images to a cloud-based object-detection service.
 
@@ -375,17 +375,17 @@ Check:
 Check:
 
 - The sensor's selected categories
-- The sensor's individual threshold
+- The threshold for the detected category on that sensor
 - Whether the object is large enough in the image
 - Whether YOLO recognizes the object as one of the supported classes
 
-Try lowering the **specific sensor's threshold** rather than looking for a global threshold.
+Try lowering the **specific category's threshold** rather than looking for a global threshold.
 
 ### Too many detections
 
-Increase the threshold for the affected sensor.
+Increase the threshold for the affected category on the affected sensor.
 
-Because thresholds are configured per sensor, changing one sensor does not change the others.
+Because thresholds are configured per category and per sensor, changing one threshold does not change the others.
 
 ### No notification
 
@@ -394,7 +394,7 @@ Check:
 - A notification provider is selected.
 - The provider credentials are correct.
 - The desired category is enabled on a sensor.
-- The detection meets that sensor's threshold.
+- The detection meets that sensor/category's threshold.
 - The Homebridge log for provider errors.
 
 ### Annotated images are not saved

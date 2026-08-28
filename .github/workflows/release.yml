@@ -1,0 +1,59 @@
+name: Create GitHub Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract release notes from CHANGELOG.md
+        id: changelog
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version="${GITHUB_REF_NAME#v}"
+
+          notes="$(awk -v version="$version" '
+            $0 ~ "^## \\[" version "\\]" {
+              found=1
+              next
+            }
+            found && $0 ~ "^## \\[" {
+              exit
+            }
+            found {
+              print
+            }
+          ' CHANGELOG.md)"
+
+          if [ -z "$notes" ]; then
+            echo "Could not find release notes for version $version in CHANGELOG.md"
+            exit 1
+          fi
+
+          {
+            echo "notes<<EOF"
+            echo "$notes"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "$GITHUB_REF_NAME" \
+            --notes "${{ steps.changelog.outputs.notes }}"

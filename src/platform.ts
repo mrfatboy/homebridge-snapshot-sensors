@@ -77,16 +77,23 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
         if (!image.length) throw new Error('Camera returned an empty response');
       }
       if (image.length > MAX_SNAPSHOT_SIZE) throw new Error('Snapshot image exceeds the maximum allowed size of 10 MB');
-      const yolo = await runYolo(image, store);
+      const yolo = await runYolo(image, store, runtime.sensors);
       if (!yolo) {
         this.log.info(`[${snapshotName}] YOLO is busy; skipping snapshot detection.`);
         return;
       }
       if (TEST_IMAGE_PATH) {
-        const details = yolo.detections.length === 0
-          ? 'none'
-          : yolo.detections.map(d => `${d.className} (${d.score.toFixed(3)})`).join(', ');
-        this.log.info(`[${snapshotName}] [Test Image] YOLO detections: ${details}`);
+        const details = yolo.detections
+          .filter(d => {
+            const category = this.categoryForDetection(d);
+            return category !== null && runtime.sensors.some(sensor =>
+              sensor.categories.includes(category) &&
+              sensor.thresholds[category] !== undefined &&
+              d.score >= sensor.thresholds[category]!,
+            );
+          })
+          .map(d => `${d.className} (${d.score.toFixed(3)})`);
+        this.log.info(`[${snapshotName}] [Test Image] Accepted detections: ${details.length === 0 ? 'none' : details.join(', ')}`);
       }
       await this.saveSnapshot(runtime.config, image, yolo.annotatedImage, contentType);
       const matched = matchingSensors(yolo.detections, runtime.sensors);

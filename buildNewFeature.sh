@@ -4,7 +4,7 @@ clear
 
 cd ~/HomebridgeDev/homebridge-snapshot-sensors || exit 1
 
-git pull origin NewFeature || exit 1
+git pull --ff-only origin NewFeature || exit 1
 
 npm run build || exit 1
 
