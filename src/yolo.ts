@@ -13,7 +13,6 @@ export interface YoloResult {
 
 const MODEL_WIDTH = 1024;
 const MODEL_HEIGHT = 576;
-const ANNOTATION_MIN_CONFIDENCE = 0.10;
 
 function packageRoot(): string {
   return dirname(dirname(dirname(fileURLToPath(import.meta.url))));
@@ -101,15 +100,16 @@ export async function runYolo(
       }
     }
 
-    // Annotation is diagnostic only: draw detections from the categories the
-    // user selected, with a 10% floor. Sensor thresholds remain unchanged.
+    // Annotation uses the same user-defined category confidence thresholds
+    // as sensor triggering. There is no separate global annotation threshold.
     const annotationDetections = sensors === undefined
-      ? detections.filter(detection => detection.score >= ANNOTATION_MIN_CONFIDENCE)
+      ? []
       : detections.filter(detection => {
-        if (detection.score < ANNOTATION_MIN_CONFIDENCE) return false;
         const category = categoryOfClass(detection.classId);
         if (category === null) return false;
-        return sensors.some(sensor => sensor.categories.includes(category));
+        return sensors.some(sensor =>
+          sensor.categories.includes(category) && detection.score >= sensor.threshold,
+        );
       });
 
     let annotatedImage: Buffer | undefined;
