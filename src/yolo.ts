@@ -3,7 +3,8 @@ import * as ort from 'onnxruntime-node';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getYolo26ClassName } from '../model/yolo26/classes.js';
-import type { Detection, StoreSnapshots } from './types.js';
+import { categoryOfClass } from './categories.js';
+import type { Detection, SensorSpec, StoreSnapshots } from './types.js';
 
 export interface YoloResult {
   detections: Detection[];
@@ -26,7 +27,11 @@ const sessionPromise = ort.InferenceSession.create(modelPath).then(session => {
 
 let inferenceRunning = false;
 
-export async function runYolo(image: Buffer, storeSnapshots: StoreSnapshots): Promise<YoloResult | null> {
+export async function runYolo(
+  image: Buffer,
+  storeSnapshots: StoreSnapshots,
+  sensors: SensorSpec[],
+): Promise<YoloResult | null> {
   if (inferenceRunning) return null;
   inferenceRunning = true;
 
@@ -95,12 +100,23 @@ export async function runYolo(image: Buffer, storeSnapshots: StoreSnapshots): Pr
       }
     }
 
+    const acceptedDetections = detections.filter(detection => {
+      const category = categoryOfClass(detection.classId);
+      if (category === null) return false;
+
+      return sensors.some(sensor => {
+        if (!sensor.categories.includes(category)) return false;
+        const threshold = sensor.thresholds[category] ?? 0.25;
+        return detection.score >= threshold;
+      });
+    });
+
     let annotatedImage: Buffer | undefined;
 
-    if (storeSnapshots === 'annotated' && detections.length > 0) {
+    if (storeSnapshots === 'annotated' && acceptedDetections.length > 0) {
       const scaleX = sourceWidth / MODEL_WIDTH;
       const scaleY = sourceHeight / MODEL_HEIGHT;
-      const boxes = detections.map(detection => {
+      const boxes = acceptedDetections.map(detection => {
         const x = Math.max(0, Math.min(sourceWidth, detection.x1 * scaleX));
         const y = Math.max(0, Math.min(sourceHeight, detection.y1 * scaleY));
         const x2 = Math.max(0, Math.min(sourceWidth, detection.x2 * scaleX));
