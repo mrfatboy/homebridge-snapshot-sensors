@@ -1,62 +1,126 @@
-import { mkdtemp, readFile, rm, writeFile } from 'fs/promises';
-import { tmpdir } from 'os';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
-import { createInterface, Interface } from 'readline';
+import sharp from 'sharp';
+import * as ort from 'onnxruntime-node';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { getYolo26ClassName } from '../model/yolo26/classes.js';
 import type { Detection, StoreSnapshots } from './types.js';
 
-export interface YoloResult { detections: Detection[]; annotatedImage?: Buffer; }
-interface NativeDetection { x1:number; y1:number; x2:number; y2:number; score:number; class_id:number; class_name:string; }
-interface NativeResult { detections: NativeDetection[]; annotated_path?: string; }
-interface PendingRequest { resolve:(result:NativeResult)=>void; reject:(error:Error)=>void; }
-
-function packageRoot(): string { return dirname(dirname(dirname(fileURLToPath(import.meta.url)))); }
-function nativePlatform(): string {
-  if (process.platform === 'linux' && process.arch === 'x64') return 'linux-x64';
-  if (process.platform === 'darwin' && process.arch === 'x64') return 'darwin-x64';
-  if (process.platform === 'darwin' && process.arch === 'arm64') return 'darwin-arm64';
-  if (process.platform === 'win32' && process.arch === 'x64') return 'win32-x64';
-  throw new Error(`Unsupported Homebridge platform for the bundled YOLO runner: ${process.platform}/${process.arch}`);
-}
-function nativeDirectory(): string { return join(packageRoot(), 'native', 'yolo-runner', 'bin', nativePlatform()); }
-function runnerPath(): string { return join(nativeDirectory(), process.platform === 'win32' ? 'snapshot-sensors-yolo.exe' : 'snapshot-sensors-yolo'); }
-function runtimeLibraryPath(): string {
-  if (process.platform === 'linux') return join(nativeDirectory(), 'libonnxruntime.so.1.28.0');
-  if (process.platform === 'win32') return join(nativeDirectory(), 'onnxruntime.dll');
-  return join(nativeDirectory(), 'libonnxruntime.dylib');
+export interface YoloResult {
+  detections: Detection[];
+  annotatedImage?: Buffer;
 }
 
-class YoloWorker {
-  private child?: ChildProcessWithoutNullStreams; private output?: Interface; private pending?: PendingRequest;
-  private ready: Promise<void>; private readyResolve!:()=>void; private readyReject!:(error:Error)=>void; private startupError?:Error; private onReady?:()=>void;
-  constructor(onReady?:()=>void) { this.onReady=onReady; this.ready=new Promise((resolve,reject)=>{this.readyResolve=resolve;this.readyReject=reject;}); this.start(); }
-  private start():void {
-    const modelPath=join(packageRoot(),'model','yolo26','model.onnx');
-    let executable:string; let runtimeLibrary:string;
-    try { executable=runnerPath(); runtimeLibrary=runtimeLibraryPath(); }
-    catch(error) { this.startupError=error instanceof Error?error:new Error(String(error)); this.readyReject(this.startupError); return; }
-    this.child=spawn(executable,[modelPath],{stdio:['pipe','pipe','pipe'],env:{...process.env,ORT_DYLIB_PATH:runtimeLibrary}});
-    this.child.stdout.setEncoding('utf8');
-    this.child.stderr.setEncoding('utf8');
-    this.child.stderr.on('data', data => {
-      console.error(`[SnapshotSensors] YOLO runner stderr: ${data.toString().trim()}`);
-    });
-    this.output=createInterface({input:this.child.stdout});
-    this.output.on('line',line=>{ const trimmed=line.trim(); if(!trimmed)return; if(trimmed==='READY'){this.readyResolve();this.onReady?.();return;} if(!trimmed.startsWith('{')||!this.pending)return; const pending=this.pending;this.pending=undefined;try{pending.resolve(JSON.parse(trimmed) as NativeResult);}catch(error){pending.reject(new Error(`Embedded YOLO runner returned invalid JSON: ${String(error)}`));} });
-    this.child.once('error',error=>{this.startupError=new Error(`Unable to start embedded YOLO runner: ${error.message}`);this.readyReject(this.startupError);this.rejectPending(this.startupError);});
-    this.child.once('close',code=>{const error=new Error(`Embedded YOLO runner stopped unexpectedly (${code??'unknown'})`);this.rejectPending(error);if(!this.startupError){this.startupError=error;this.readyReject(error);}});
+const MODEL_WIDTH = 1024;
+const MODEL_HEIGHT = 576;
+
+function packageRoot(): string {
+  return dirname(dirname(dirname(fileURLToPath(import.meta.url))));
+}
+
+const modelPath = join(packageRoot(), 'model', 'yolo26', 'model.onnx');
+
+const sessionPromise = ort.InferenceSession.create(modelPath).then(session => {
+  console.log(`[${new Date().toLocaleString('en-US')}] [SnapshotSensors] Plugin loaded successfully — YOLO26 model loaded and ready for detection.`);
+  return session;
+});
+
+let inferenceRunning = false;
+
+export async function runYolo(image: Buffer, storeSnapshots: StoreSnapshots): Promise<YoloResult | null> {
+  if (inferenceRunning) return null;
+  inferenceRunning = true;
+
+  try {
+    const source = sharp(image).rotate();
+    const metadata = await source.metadata();
+    const sourceWidth = metadata.width;
+    const sourceHeight = metadata.height;
+
+    if (!sourceWidth || !sourceHeight) {
+      throw new Error('Unable to determine snapshot image dimensions');
+    }
+
+    const { data } = await source
+      .clone()
+      .resize(MODEL_WIDTH, MODEL_HEIGHT, { fit: 'fill' })
+      .removeAlpha()
+      .toColourspace('srgb')
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+
+    const pixels = MODEL_WIDTH * MODEL_HEIGHT;
+    const tensorData = new Float32Array(3 * pixels);
+
+    for (let i = 0; i < pixels; i++) {
+      const pixelOffset = i * 3;
+      tensorData[i] = data[pixelOffset] / 255;
+      tensorData[pixels + i] = data[pixelOffset + 1] / 255;
+      tensorData[(2 * pixels) + i] = data[pixelOffset + 2] / 255;
+    }
+
+    const session = await sessionPromise;
+    const tensor = new ort.Tensor('float32', tensorData, [1, 3, MODEL_HEIGHT, MODEL_WIDTH]);
+    const results = await session.run({ images: tensor });
+    const output = results.output0;
+
+    if (!output) {
+      throw new Error('YOLO26 model did not return output0');
+    }
+
+    const detections: Detection[] = [];
+
+    for (let i = 0; i < output.dims[1]; i++) {
+      const offset = i * 6;
+      const score = output.data[offset + 4];
+
+      if (!Number.isFinite(score) || score <= 0) continue;
+
+      const classId = Math.round(output.data[offset + 5]);
+
+      try {
+        detections.push({
+          x1: output.data[offset],
+          y1: output.data[offset + 1],
+          x2: output.data[offset + 2],
+          y2: output.data[offset + 3],
+          score,
+          classId,
+          className: getYolo26ClassName(classId),
+        });
+      } catch {
+        // Ignore invalid class IDs returned by the model.
+      }
+    }
+
+    let annotatedImage: Buffer | undefined;
+
+    if (storeSnapshots === 'annotated' && detections.length > 0) {
+      const scaleX = sourceWidth / MODEL_WIDTH;
+      const scaleY = sourceHeight / MODEL_HEIGHT;
+      const boxes = detections.map(detection => {
+        const x = Math.max(0, Math.min(sourceWidth, detection.x1 * scaleX));
+        const y = Math.max(0, Math.min(sourceHeight, detection.y1 * scaleY));
+        const x2 = Math.max(0, Math.min(sourceWidth, detection.x2 * scaleX));
+        const y2 = Math.max(0, Math.min(sourceHeight, detection.y2 * scaleY));
+        const width = Math.max(0, x2 - x);
+        const height = Math.max(0, y2 - y);
+        const fontSize = Math.max(18, Math.round(Math.min(sourceWidth, sourceHeight) / 30));
+        const label = `${detection.className} ${(detection.score * 100).toFixed(1)}%`;
+
+        return `<rect x="${x}" y="${y}" width="${width}" height="${height}" fill="none" stroke="red" stroke-width="4"/><text x="${x + 6}" y="${Math.max(fontSize, y + fontSize)}" font-family="Arial" font-size="${fontSize}" fill="white">${label}</text>`;
+      }).join('');
+
+      const overlay = Buffer.from(`<svg width="${sourceWidth}" height="${sourceHeight}" xmlns="http://www.w3.org/2000/svg">${boxes}</svg>`);
+
+      annotatedImage = await source
+        .clone()
+        .composite([{ input: overlay }])
+        .jpeg()
+        .toBuffer();
+    }
+
+    return { detections, annotatedImage };
+  } finally {
+    inferenceRunning = false;
   }
-  private rejectPending(error:Error):void { if(this.pending){const pending=this.pending;this.pending=undefined;pending.reject(error);} }
-  isBusy():boolean { return this.pending!==undefined; }
-  async run(imagePath:string,annotatedPath?:string):Promise<NativeResult|null>{ await this.ready;if(this.startupError||!this.child?.stdin.writable)throw this.startupError??new Error('Embedded YOLO runner is not available');if(this.pending)return null;return new Promise((resolve,reject)=>{this.pending={resolve,reject};const request=JSON.stringify({image:imagePath,annotated:annotatedPath});this.child!.stdin.write(`${request}\n`,error=>{if(error){this.pending=undefined;reject(new Error(`Unable to send request to embedded YOLO runner: ${error.message}`));}});}); }
-}
-
-const yoloWorker=new YoloWorker(()=>{console.log(`[${new Date().toLocaleString('en-US')}] [SnapshotSensors] Plugin loaded successfully — YOLO26 model loaded and ready for detection.`);});
-
-export async function runYolo(image:Buffer,storeSnapshots:StoreSnapshots):Promise<YoloResult|null>{
-  if(yoloWorker.isBusy())return null;
-  const workDir=await mkdtemp(join(tmpdir(),'snapshot-sensors-yolo-'));const imagePath=join(workDir,'input.jpg');const annotatedPath=storeSnapshots==='annotated'?join(workDir,'annotated.jpg'):undefined;
-  try { await writeFile(imagePath,image);const result=await yoloWorker.run(imagePath,annotatedPath);if(!result)return null;const annotatedImage=result.annotated_path?await readFile(result.annotated_path):undefined;const detections:Detection[]=result.detections.map(detection=>({x1:detection.x1,y1:detection.y2,x2:detection.x2,y2:detection.y2,score:detection.score,classId:detection.class_id,className:detection.class_name}));return{detections,annotatedImage}; }
-  finally { await rm(workDir,{recursive:true,force:true}); }
 }
