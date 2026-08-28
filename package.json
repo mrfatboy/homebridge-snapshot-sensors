@@ -6,13 +6,13 @@
   "type": "module",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
-  "files": ["dist/", "config.schema.json", "homebridge-ui/", "model/", "native/yolo-runner/bin/", "CHANGELOG.md"],
+  "files": ["dist/", "config.schema.json", "homebridge-ui/", "model/", "CHANGELOG.md"],
   "scripts": {
     "clean": "node -e \"const fs=require('fs');fs.rmSync('dist',{recursive:true,force:true})\"",
-    "build": "npm run clean && node -e \"const fs=require('fs'),path=require('path');const p=process.platform+'-'+process.arch;const dir=path.join('native','yolo-runner','bin',p);const bin=process.platform==='win32'?'snapshot-sensors-yolo.exe':'snapshot-sensors-yolo';const f=path.join(dir,bin);if(!fs.existsSync(f)||!fs.statSync(f).isFile())throw new Error('Prebuilt YOLO runner is missing: '+f);\" && tsc",
-    "build:all": "npm run clean && node -e \"const fs=require('fs'),path=require('path');const dir=path.join('native','yolo-runner','bin','linux-x64');for(const file of ['snapshot-sensors-yolo','libonnxruntime.so']){const p=path.join(dir,file);if(!fs.existsSync(p)||!fs.statSync(p).isFile())throw new Error('Required Linux x64 YOLO component is missing: '+p);}\" && tsc",
+    "build": "npm run clean && tsc",
+    "build:all": "npm run build",
     "watch": "tsc --watch",
-    "prepublishOnly": "npm run build:all",
+    "prepublishOnly": "npm run build",
     "lint": "eslint src/ test/",
     "lint:fix": "eslint src/ test/ --fix",
     "format": "prettier --write \"{src,test}/**/*.ts\"",
@@ -28,5 +28,5 @@
   "license": "AGPL-3.0-only",
   "engines": {"node": ">=20.0.0", "homebridge": "^1.8.0 || ^2.0.0"},
   "devDependencies": {"@types/node":"^22.0.0","@typescript-eslint/eslint-plugin":"^8.0.0","@typescript-eslint/parser":"^8.0.0","eslint":"^9.0.0","eslint-config-prettier":"^10.1.8","homebridge":"^2.0.0","prettier":"^3.8.3","typescript":"^5.0.0","vitest":"^4.1.7"},
-  "dependencies": {"@homebridge/plugin-ui-utils":"^2.2.5"}
+  "dependencies": {"@homebridge/plugin-ui-utils":"^2.2.5","onnxruntime-node":"^1.29.0","sharp":"^0.35.4"}
 }
