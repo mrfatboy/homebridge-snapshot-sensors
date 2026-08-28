@@ -77,7 +77,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
         if (!image.length) throw new Error('Camera returned an empty response');
       }
       if (image.length > MAX_SNAPSHOT_SIZE) throw new Error('Snapshot image exceeds the maximum allowed size of 10 MB');
-      const yolo = await runYolo(image, store);
+      const yolo = await runYolo(image, store, runtime.sensors);
       if (!yolo) {
         this.log.info(`[${snapshotName}] YOLO is busy; skipping snapshot detection.`);
         return;
