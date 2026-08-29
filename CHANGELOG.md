@@ -7,11 +7,11 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-08-29
+
 ### Changed
 
 - Improved annotated detection labels by moving them outside bounding boxes and adding a background panel for better visibility.
-
-## [1.0.4] - 2026-08-29
 
 ### Fixed
 
