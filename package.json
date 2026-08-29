@@ -1,7 +1,7 @@
 {
   "name": "homebridge-snapshot-sensors",
-  "displayName": "Snapshot Sensors",
-  "version": "1.0.3",
+  "displayName": "Homebridge Snapshot Sensors",
+  "version": "1.0.4",
   "description": "Homebridge plugin that retrieves camera snapshots and runs on-device YOLO object detection",
   "type": "module",
   "main": "dist/src/index.js",

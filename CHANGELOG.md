@@ -7,6 +7,16 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-08-29
+
+### Changed
+
+- Improved annotated detection labels by moving them outside bounding boxes and adding a background panel for better visibility.
+
+### Fixed
+
+- Fixed the Homebridge UI plugin display name to consistently use **Homebridge Snapshot Sensors**.
+
 ## [1.0.3] - 2026-08-28
 
 ### Changed
@@ -14,6 +24,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - Replaced the custom Rust YOLO runtime with Node.js ONNX Runtime.
 - Switched image processing and detection annotation to Sharp.
 - Updated detection filtering to use the user-defined Animal, Person, and Vehicle confidence thresholds.
+- Enabled cross-platform compatibility through Node.js ONNX Runtime.
 
 ### Removed
 
@@ -62,6 +73,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - Homebridge custom configuration UI.
 
 [Unreleased]: https://github.com/mrfatboy/homebridge-snapshot-sensors/compare/main...NewFeature
+[1.0.4]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.4
 [1.0.3]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.3
 [1.0.2]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.2
 [1.0.1]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.1

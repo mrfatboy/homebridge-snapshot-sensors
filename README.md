@@ -1,4 +1,4 @@
-# homebridge-snapshot-sensors
+# Homebridge Snapshot Sensors
 
 [![CI](https://github.com/mrfatboy/homebridge-snapshot-sensors/actions/workflows/ci.yml/badge.svg)](https://github.com/mrfatboy/homebridge-snapshot-sensors/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/homebridge-snapshot-sensors)](https://www.npmjs.com/package/homebridge-snapshot-sensors)
@@ -345,8 +345,9 @@ Example:
 - A camera providing a still-image/snapshot URL
 - A supported 64-bit macOS, Linux, or Windows environment
 - Sufficient CPU resources for local YOLO inference
+- The Sharp Node.js image-processing library for generating annotated detection images
 
-The plugin uses the Node.js ONNX Runtime package with the bundled YOLO26 model.
+The plugin uses the Node.js ONNX Runtime package with the bundled YOLO26 model. Sharp is used to generate annotated images, including detection bounding boxes, labels, confidence values, and annotation background panels.
 
 ## Privacy
 
