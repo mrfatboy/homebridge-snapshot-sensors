@@ -11,6 +11,10 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 - Improved annotated detection labels by moving them outside bounding boxes and adding a background panel for better visibility.
 
+### Fixed
+
+- Fixed the Homebridge UI plugin display name to consistently use **Homebridge Snapshot Sensors**.
+
 ## [1.0.3] - 2026-08-28
 
 ### Changed
