@@ -1,4 +1,4 @@
-# homebridge-snapshot-sensors
+# Homebridge Snapshot Sensors
 
 [![CI](https://github.com/mrfatboy/homebridge-snapshot-sensors/actions/workflows/ci.yml/badge.svg)](https://github.com/mrfatboy/homebridge-snapshot-sensors/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/homebridge-snapshot-sensors)](https://www.npmjs.com/package/homebridge-snapshot-sensors)
