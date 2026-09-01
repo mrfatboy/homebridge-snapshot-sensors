@@ -65,6 +65,7 @@ export interface SensorSpec {
   name: string;
   categories: Category[];
   thresholds: Partial<Record<Category, number>>;
+  unidentifiedMotionActivity: boolean;
 }
 
 export interface Detection {
