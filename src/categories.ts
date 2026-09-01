@@ -64,7 +64,7 @@ export function resolveSensors(
     const name = typeof raw?.name === 'string' ? raw.name.trim() : '';
     const label = name || `${snapshotName} ${sensorName(categories)}`;
 
-    resolved.push({ name: label, categories, thresholds });
+    resolved.push({ name: label, categories, thresholds, unidentifiedMotionActivity: raw?.unidentifiedMotionActivity !== false });
   }
 
   return resolved;
