@@ -7,6 +7,10 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Added **Unidentified Motion Activity ⚠️** as an optional fallback notification when YOLO detects objects that do not match any selected Animal, Person, or Vehicle category. Matching selected-category detections take priority.
+
 ## [1.0.4] - 2026-08-29
 
 ### Changed
