@@ -55,7 +55,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
       return;
     }
     const startedAt = process.hrtime.bigint(); runtime.running = true;
-    let providerUsed = 'none'; let detectionType = detectionMessages.unidentified;
+    let providerUsed = 'none'; let detectionType = 'no selected object was detected';
     const store = (runtime.config.storeSnapshots ?? 'never') as StoreSnapshots;
     try {
       let image: Buffer;
@@ -98,8 +98,12 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
       await this.saveSnapshot(runtime.config, image, yolo.annotatedImage, contentType);
       const matched = matchingSensors(yolo.detections, runtime.sensors);
       if (matched.length === 0) {
-        const used = await this.sendNotification(runtime.config, 'unidentified');
-        if (used) providerUsed = used;
+        const unidentifiedMotionActivityEnabled = runtime.sensors.some(sensor => sensor.unidentifiedMotionActivity);
+        if (yolo.detections.length > 0 && unidentifiedMotionActivityEnabled) {
+          detectionType = detectionMessages.unidentified;
+          const used = await this.sendNotification(runtime.config, 'unidentified');
+          if (used) providerUsed = used;
+        }
       } else {
         let bestMatch: { category: Category; score: number } | null = null;
         for (const sensor of matched) {
