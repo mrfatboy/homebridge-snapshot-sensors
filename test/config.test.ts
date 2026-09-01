@@ -60,12 +60,12 @@ describe('resolveSensors()', () => {
   it('one category, no name → auto-named with the stream prefix, default threshold', () => {
     const [s, ...rest] = resolveSensors('Garden', [{ categories: ['animals'] }], () => {});
     expect(rest).toHaveLength(0);
-    expect(s).toEqual({ name: 'Garden Animals Sensor', categories: ['animals'], thresholds: { animals: THRESHOLD } });
+    expect(s).toEqual({ name: 'Garden Animals Sensor', categories: ['animals'], thresholds: { animals: THRESHOLD }, unidentifiedMotionActivity: true });
   });
 
   it('multiple categories → one OR-sensor, auto-named', () => {
     const [s] = resolveSensors('Garden', [{ categories: ['animals', 'people'] }], () => {});
-    expect(s).toEqual({ name: 'Garden Animals & People Sensor', categories: ['animals', 'people'], thresholds: { animals: THRESHOLD, people: THRESHOLD } });
+    expect(s).toEqual({ name: 'Garden Animals & People Sensor', categories: ['animals', 'people'], thresholds: { animals: THRESHOLD, people: THRESHOLD }, unidentifiedMotionActivity: true });
   });
 
   it('applies category-specific thresholds to the sensor', () => {
@@ -76,7 +76,7 @@ describe('resolveSensors()', () => {
 
   it('explicit name is used verbatim (no stream prefix)', () => {
     const [s] = resolveSensors('Garden', [{ name: 'Front Door', categories: ['people'] }], () => {});
-    expect(s).toEqual({ name: 'Front Door', categories: ['people'], thresholds: { people: THRESHOLD } });
+    expect(s).toEqual({ name: 'Front Door', categories: ['people'], thresholds: { people: THRESHOLD }, unidentifiedMotionActivity: true });
   });
 
   it('warns and drops unknown categories; skips a sensor left with none', () => {

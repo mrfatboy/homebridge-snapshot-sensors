@@ -47,6 +47,7 @@ export interface RawSensor {
   name?: string;
   categories?: string[];
   thresholds?: Partial<Record<Category, number>>;
+  unidentifiedMotionActivity?: boolean;
 }
 
 export interface SnapshotConfig {
@@ -64,6 +65,7 @@ export interface SensorSpec {
   name: string;
   categories: Category[];
   thresholds: Partial<Record<Category, number>>;
+  unidentifiedMotionActivity: boolean;
 }
 
 export interface Detection {
