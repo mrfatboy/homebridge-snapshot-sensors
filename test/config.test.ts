@@ -102,7 +102,7 @@ describe('resolveSensors()', () => {
   it('clamps an out-of-range category threshold back to the default', () => {
     const warn = vi.fn();
     const [s] = resolveSensors('Garden', [{ categories: ['animals'], thresholds: { animals: 5 } }], warn);
-    expect(s.thresholds).toEqual({ animals: 0.5 });
+    expect(s.thresholds).toEqual({ animals: THRESHOLD });
     expect(warn).toHaveBeenCalled();
   });
 });
