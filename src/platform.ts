@@ -55,7 +55,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
       return;
     }
     const startedAt = process.hrtime.bigint(); runtime.running = true;
-    let providerUsed = 'none'; let detectionType = 'no selected object was detected';
+    let providerUsed = 'none'; let detectionType = 'No objects matching the selected categories were detected';
     const store = (runtime.config.storeSnapshots ?? 'never') as StoreSnapshots;
     try {
       let image: Buffer;
@@ -154,8 +154,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     const channel: NotificationChannel | undefined = provider === 'pushover' ? notification?.pushover : provider === 'pushbullet' ? notification?.pushbullet : provider === 'ntfy' ? notification?.ntfy : notification?.pushsafer;
     if (!channel) return null;
     const key = category === 'unidentified' ? 'unidentifiedMessage' : category === 'people' ? 'personMessage' : category === 'animals' ? 'animalMessage' : 'vehicleMessage'; const message = channel[key as keyof NotificationChannel] as string | undefined; if (!message) return null;
-    const soundKey = category === 'unidentified' ? 'unidentifiedSound' : category === 'people' ? 'personSound' : category === 'animals' ? 'animalSound' : 'vehicleSound';
-    const sound = channel[soundKey as keyof NotificationChannel] as string | undefined;
+    const soundKey = category === 'unidentified' ? 'unidentifiedSound' : category === 'people' ? 'personSound' : category === 'animals' ? 'animalSound' : 'vehicleSound'; const sound = channel[soundKey as keyof NotificationChannel] as string | undefined;
     const title = channel.title?.trim() || 'Snapshot Sensors';
     if (provider === 'pushover') {
       if (!channel.token || !channel.user) throw new Error('Pushover token and user are required.');
@@ -169,21 +168,13 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     }
     if (provider === 'ntfy') {
       const server = (channel.server?.trim() || 'https://ntfy.sh').replace(/\/+$/, ''); const topic = channel.topic?.trim(); if (!topic) throw new Error('ntfy Topic is required.');
-      const url = `${server}/${encodeURIComponent(topic)}`; const headers: Record<string, string> = { 'Content-Type': 'text/plain; charset=utf-8', 'Title': title, 'Priority': String(channel.priority ?? 3) };
-      if (channel.tags?.trim()) headers.Tags = channel.tags.trim(); if (channel.accessToken?.trim()) headers.Authorization = `Bearer ${channel.accessToken.trim()}`;
+      const url = `${server}/${encodeURIComponent(topic)}`; const headers: Record<string, string> = { 'Content-Type': 'text/plain; charset=utf-8', 'Title': title, 'Priority': String(channel.priority ?? 3) }; if (channel.tags?.trim()) headers.Tags = channel.tags.trim(); if (channel.accessToken?.trim()) headers.Authorization = `Bearer ${channel.accessToken.trim()}`;
       const response = await fetch(url, { method: 'POST', headers, body: message, signal: AbortSignal.timeout(15000) }); if (!response.ok) throw new Error(`ntfy returned HTTP ${response.status}`); return 'ntfy';
     }
     if (!channel.privateKey?.trim()) throw new Error('Push Safer Private Key is required.');
     const form = new URLSearchParams({ k: channel.privateKey.trim(), t: title, m: message, d: channel.pushsaferDevice?.trim() || '', i: String(channel.icon ?? 1), v: String(channel.vibration ?? 1), p: String(channel.priority ?? 0) });
-    if (sound?.trim()) form.set('s', sound.trim());
-    if (channel.iconColor?.trim()) form.set('c', channel.iconColor.trim());
-    if (channel.url?.trim()) form.set('u', channel.url.trim());
-    if (channel.urlTitle?.trim()) form.set('ut', channel.urlTitle.trim());
-    if (channel.timeToLive !== undefined) form.set('l', String(channel.timeToLive));
-    if (channel.retry !== undefined) form.set('re', String(channel.retry));
-    if (channel.expire !== undefined) form.set('ex', String(channel.expire));
-    const response = await fetch('https://www.pushsafer.com/api', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: form.toString(), signal: AbortSignal.timeout(15000) });
-    if (!response.ok) throw new Error(`Push Safer returned HTTP ${response.status}`);
+    if (sound?.trim()) form.set('s', sound.trim()); if (channel.iconColor?.trim()) form.set('c', channel.iconColor.trim()); if (channel.url?.trim()) form.set('u', channel.url.trim()); if (channel.urlTitle?.trim()) form.set('ut', channel.urlTitle.trim()); if (channel.timeToLive !== undefined) form.set('l', String(channel.timeToLive)); if (channel.retry !== undefined) form.set('re', String(channel.retry)); if (channel.expire !== undefined) form.set('ex', String(channel.expire));
+    const response = await fetch('https://www.pushsafer.com/api', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: form.toString(), signal: AbortSignal.timeout(15000) }); if (!response.ok) throw new Error(`Push Safer returned HTTP ${response.status}`);
     return 'Push Safer';
   }
 }
