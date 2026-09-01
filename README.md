@@ -46,10 +46,11 @@ When the HomeKit/Homebridge switch is activated:
 4. The detections are compared against each configured sensor.
 5. Each sensor applies its own configured confidence threshold for each selected category.
 6. If a configured category matches, the appropriate notification is sent.
-7. If one or more objects are detected but none match a selected category, an **Unidentified Activity detected** notification is sent only when **Unidentified Motion Activity ⚠️** is enabled and notifications are enabled. If the option is disabled, the result is logged as **no selected object was detected** and no push notification is sent.
-8. The image is saved according to the configured storage mode. Annotated images include only detections that match a sensor's selected category and that category's configured threshold.
-9. The switch automatically returns to Off.
-10. The detection process completes.
+7. If YOLO detects one or more objects but none match any selected Animal, Person, or Vehicle category, an **Unidentified Activity detected** notification is sent only when **Unidentified Motion Activity ⚠️** is enabled and notifications are enabled. If the option is disabled, no push notification is sent and the result is logged as **No objects matching the selected categories were detected**.
+8. If both matching and unmatched objects are detected, the matching selected category takes priority and no additional Unidentified Activity notification is sent.
+9. The image is saved according to the configured storage mode. Annotated images include only detections that match a sensor's selected category and that category's configured threshold.
+10. The switch automatically returns to Off.
+11. The detection process completes.
 
 ## HomeKit behavior
 
@@ -167,15 +168,15 @@ Messages and supported sound values can be customized in the Homebridge configur
 
 ### Notification behavior
 
-A notification is sent only when a detection matches one of the categories configured for a sensor and meets that category's configured threshold.
+A notification is sent when a detection matches one of the categories configured for a sensor and meets that category's configured threshold.
 
-For example, if a sensor is configured for **Person** and YOLO detects a vehicle but no person, that sensor does not match.
+For example, if a sensor is configured for **Person** and YOLO detects a vehicle but no person, there is no matching selected category.
 
-If one or more objects are detected but no configured sensor matches the selected categories, the plugin sends:
+If YOLO detects one or more objects but none match any selected Animal, Person, or Vehicle category, the plugin sends the configured **Unidentified Activity** notification only when **Unidentified Motion Activity ⚠️** is enabled and a notification provider is configured.
 
-> **Unidentified Activity detected**
+If **Unidentified Motion Activity ⚠️** is disabled, no push notification is sent when detections do not match any selected category, and the result is logged as **No objects matching the selected categories were detected**.
 
-only when **Unidentified Motion Activity ⚠️** is enabled and a notification provider is configured. When the option is disabled, no push notification is sent and the result is logged as **no selected object was detected**.
+If YOLO detects both a selected-category object and an unmatched object, the selected-category match wins and the plugin sends the matching category notification. It does not send an additional Unidentified Activity notification for the unmatched object.
 
 ## Configuration
 
@@ -267,7 +268,8 @@ Example:
                 "animals": 0.40,
                 "people": 0.25,
                 "vehicles": 0.50
-              }
+              },
+              "unidentifiedMotionActivity": true
             }
           ],
           "notifications": {
