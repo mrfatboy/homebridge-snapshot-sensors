@@ -9,12 +9,8 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- Added **Pushcut** as a notification provider using Pushcut's secret webhook URL.
-- Added Pushcut-specific notification title and per-detection-category message configuration.
-- Added dynamic Pushcut notification title and message overrides using the configured webhook URL.
-- Added a Pushcut **Test Notification** button to the configuration UI.
-- Added HTTPS validation and 15-second request timeout for Pushcut webhook requests.
-- Added generic webhook integration for external automations/services.
+- Added **Pushcut** as a notification provider.
+- Added **webhook support**.
 
 ## [1.0.6-beta.1] - 2026-09-02
 
@@ -26,9 +22,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ### Performance
 
-- Deferred annotated snapshot generation until after sensor matching so unnecessary image compositing and JPEG encoding are avoided.
-- Resolved each YOLO detection's Snapshot Sensor category once and reused it throughout detection matching and notification processing.
-- Cached snapshot ownership UID/GID resolution to avoid repeated `getent` process launches for the same ownership setting.
+- Optimized code for improved performance and efficiency.
 
 ## [1.0.5] - 2026-09-01
 
