@@ -7,6 +7,13 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Added **Pushcut** as a notification provider using Pushcut's secret webhook URL.
+- Added Pushcut-specific notification title and per-detection-category message configuration.
+- Added a Pushcut **Test Notification** button to the configuration UI.
+- Added HTTPS validation and 15-second request timeout for Pushcut webhook requests.
+
 ## [1.0.6-beta.1] - 2026-09-02
 
 ### Added
