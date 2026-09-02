@@ -14,6 +14,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - Added dynamic Pushcut notification title and message overrides using the configured webhook URL.
 - Added a Pushcut **Test Notification** button to the configuration UI.
 - Added HTTPS validation and 15-second request timeout for Pushcut webhook requests.
+- Added generic webhook integration for external automations/services.
 
 ## [1.0.6-beta.1] - 2026-09-02
 
