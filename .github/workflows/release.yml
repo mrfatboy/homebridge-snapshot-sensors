@@ -1,12 +1,17 @@
-name: Create GitHub Release
+name: Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   release:
@@ -18,15 +23,112 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Extract release notes from CHANGELOG.md
-        id: changelog
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      - name: Read package version
+        id: version
         shell: bash
         run: |
           set -euo pipefail
 
-          version="${GITHUB_REF_NAME#v}"
+          version="$(node -p "require('./package.json').version")"
+          lock_version="$(node -p "require('./package-lock.json').version")"
 
-          notes="$(awk -v version="$version" '
+          if [ "$version" != "$lock_version" ]; then
+            echo "package.json version ($version) does not match package-lock.json version ($lock_version)"
+            exit 1
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Release version: $version"
+
+      - name: Verify release version is new
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          tag="v$VERSION"
+
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+            echo "Release tag $tag already exists. This version has already been released."
+            exit 1
+          fi
+
+          if npm view "homebridge-snapshot-sensors@$VERSION" version >/dev/null 2>&1; then
+            echo "Version $VERSION already exists on npm. Refusing to publish it again."
+            exit 1
+          fi
+
+      - name: Verify changelog entry
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if ! grep -q "^## \[$VERSION\]" CHANGELOG.md; then
+            echo "Could not find release notes for version $VERSION in CHANGELOG.md"
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
+
+      - name: Verify npm package contents
+        run: |
+          set -euo pipefail
+          npm pack --dry-run
+
+      - name: Publish to npm
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "$VERSION" == *-* ]]; then
+            npm publish --provenance --access public --tag beta
+          else
+            npm publish --provenance --access public
+          fi
+
+      - name: Create Git tag
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          tag="v$VERSION"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$tag" -m "Release $VERSION"
+          git push origin "$tag"
+
+      - name: Extract release notes
+        id: changelog
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          notes="$(awk -v version="$VERSION" '
             $0 ~ "^## \\[" version "\\]" {
               found=1
               next
@@ -40,7 +142,7 @@ jobs:
           ' CHANGELOG.md)"
 
           if [ -z "$notes" ]; then
-            echo "Could not find release notes for version $version in CHANGELOG.md"
+            echo "Could not extract release notes for version $VERSION"
             exit 1
           fi
 
@@ -53,7 +155,8 @@ jobs:
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          gh release create "$GITHUB_REF_NAME" \
-            --title "$GITHUB_REF_NAME" \
+          gh release create "v$VERSION" \
+            --title "v$VERSION" \
             --notes "${{ steps.changelog.outputs.notes }}"
