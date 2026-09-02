@@ -160,6 +160,24 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
       }
     }
 
+    if (provider === 'pushcut') {
+      const url = typeof payload?.url === 'string' ? payload.url.trim() : '';
+      const title = typeof payload?.title === 'string' ? payload.title.trim() : '';
+      if (!url) throw new RequestError('Pushcut Webhook URL is required.', { status: 400 });
+      if (!title) throw new RequestError('Pushcut Title is required.', { status: 400 });
+      let endpoint;
+      try { endpoint = new URL(url); } catch { throw new RequestError('The Pushcut Webhook URL is not valid.', { status: 400 }); }
+      if (endpoint.protocol !== 'https:') throw new RequestError('The Pushcut Webhook URL must use HTTPS.', { status: 400 });
+      try {
+        const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, text: TEST_NOTIFICATION_MESSAGE }), signal: AbortSignal.timeout(15000) });
+        const responseText = await response.text();
+        if (!response.ok) throw new Error(responseText || `HTTP ${response.status}`);
+        return { success: true };
+      } catch (error) {
+        throw new RequestError(`Unable to send Pushcut notification: ${error instanceof Error ? error.message : String(error)}`, { status: 502 });
+      }
+    }
+
     if (provider === 'pushbullet') {
       const apiKey = typeof payload?.apiKey === 'string' ? payload.apiKey.trim() : '';
       const deviceIden = typeof payload?.deviceIden === 'string' ? payload.deviceIden.trim() : '';

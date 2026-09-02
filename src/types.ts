@@ -33,14 +33,16 @@ export interface NotificationChannel {
   timeToLive?: number;
   retry?: number;
   expire?: number;
+  pushcutUrl?: string;
 }
 
 export interface NotificationConfig {
-  provider?: 'none' | 'pushover' | 'pushbullet' | 'ntfy' | 'pushsafer';
+  provider?: 'none' | 'pushover' | 'pushbullet' | 'ntfy' | 'pushsafer' | 'pushcut';
   pushover?: NotificationChannel;
   pushbullet?: NotificationChannel;
   ntfy?: NotificationChannel;
   pushsafer?: NotificationChannel;
+  pushcut?: NotificationChannel;
 }
 
 export interface WebhookConfig {

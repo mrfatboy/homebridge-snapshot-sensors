@@ -11,15 +11,12 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- Added optional webhook delivery for matching detections and Unidentified Activity events.
-- Added GET and POST webhook methods with a minimal detection payload containing camera, object, and confidence.
-- Added **Test Webhook** configuration support with the same size, color, and placement as the existing test buttons.
+- Added **Pushcut** as a notification provider.
+- Added **webhook support**.
 
 ### Performance
 
-- Deferred annotated snapshot generation until after sensor matching so unnecessary image compositing and JPEG encoding are avoided.
-- Resolved each YOLO detection's Snapshot Sensor category once and reused it throughout detection matching and notification processing.
-- Cached snapshot ownership UID/GID resolution to avoid repeated `getent` process launches for the same ownership setting.
+- Optimized code for improved performance and efficiency.
 
 ## [1.0.5] - 2026-09-01
 
