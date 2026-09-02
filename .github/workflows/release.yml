@@ -1,4 +1,4 @@
-name: Release
+name: Release Validation
 
 on:
   push:
@@ -10,11 +10,10 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write
-  id-token: write
+  contents: read
 
 jobs:
-  release:
+  release-validation:
     runs-on: ubuntu-latest
 
     steps:
@@ -27,7 +26,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org
           cache: npm
 
       - name: Read package version
@@ -62,7 +60,7 @@ jobs:
           fi
 
           if npm view "homebridge-snapshot-sensors@$VERSION" version >/dev/null 2>&1; then
-            echo "Version $VERSION already exists on npm. Refusing to publish it again."
+            echo "Version $VERSION already exists on npm. Refusing to release it again."
             exit 1
           fi
 
@@ -95,68 +93,9 @@ jobs:
           set -euo pipefail
           npm pack --dry-run
 
-      - name: Publish to npm
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          if [[ "$VERSION" == *-* ]]; then
-            npm publish --provenance --access public --tag beta
-          else
-            npm publish --provenance --access public
-          fi
-
-      - name: Create Git tag
+      - name: Release validation complete
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          set -euo pipefail
-
-          tag="v$VERSION"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "$tag" -m "Release $VERSION"
-          git push origin "$tag"
-
-      - name: Extract release notes
-        id: changelog
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          notes="$(awk -v version="$VERSION" '
-            $0 ~ "^## \\[" version "\\]" {
-              found=1
-              next
-            }
-            found && $0 ~ "^## \\[" {
-              exit
-            }
-            found {
-              print
-            }
-          ' CHANGELOG.md)"
-
-          if [ -z "$notes" ]; then
-            echo "Could not extract release notes for version $VERSION"
-            exit 1
-          fi
-
-          {
-            echo "notes<<EOF"
-            echo "$notes"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Create GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          gh release create "v$VERSION" \
-            --title "v$VERSION" \
-            --notes "${{ steps.changelog.outputs.notes }}"
+          echo "Release $VERSION passed all automated validation checks."
+          echo "Publish this version to npm manually, including 2FA, then run the Finalize Release workflow."
