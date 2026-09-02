@@ -1,6 +1,6 @@
 (() => {
   const cards = () => Array.from(document.querySelectorAll('.snapshot-card'));
-  const webhookHtml = () => `<div class="webhook-controls form-group mb-3" style="display:none"><div class="form-group mb-3"><label>Enable Webhook</label><div class="form-check"><input class="form-check-input webhook-enabled" type="checkbox"><label class="form-check-label ms-2">Send detection events to a webhook</label></div></div><div class="form-group mb-3"><label>Webhook URL</label><input class="form-control webhook-url" type="url" placeholder="http://192.168.1.100:8080/webhook"><div class="help-text mt-1">Sends the highest-confidence matching detection. Webhook failures do not affect detection or push notifications.</div></div><div class="form-group mb-3"><label>Webhook Method</label><select class="form-control webhook-method"><option value="POST">POST</option><option value="GET">GET</option></select></div><div class="form-group mb-3"><button type="button" class="btn btn-outline-secondary test-webhook" disabled>🔗 Test Webhook</button><div style="clear:both"></div></div></div>`;
+  const webhookHtml = () => `<div class="webhook-controls form-group mb-3"><div class="form-group mb-3"><label>Enable Webhook</label><div class="form-check"><input class="form-check-input webhook-enabled" type="checkbox"><label class="form-check-label ms-2">Send detection events to a webhook</label></div></div><div class="form-group mb-3"><label>Webhook URL</label><input class="form-control webhook-url" type="url" placeholder="http://192.168.1.100:8080/webhook"><div class="help-text mt-1">Sends the highest-confidence matching detection. Webhook failures do not affect detection or push notifications.</div></div><div class="form-group mb-3"><label>Webhook Method</label><select class="form-control webhook-method"><option value="POST">POST</option><option value="GET">GET</option></select></div><div class="form-group mb-3"><button type="button" class="btn btn-outline-secondary test-webhook" disabled>🔗 Test Webhook</button><div style="clear:both"></div></div></div>`;
   const addControls = (card) => {
     if (card.querySelector('.webhook-controls')) return;
     const notifications = card.querySelector('.notifications-heading')?.closest('.form-group');
@@ -9,12 +9,9 @@
     update(card);
   };
   const update = (card) => {
-    const enabled = card.querySelector('.webhook-enabled');
-    const controls = card.querySelector('.webhook-controls');
     const url = card.querySelector('.webhook-url');
     const test = card.querySelector('.test-webhook');
-    if (!enabled || !controls || !url || !test) return;
-    controls.style.display = enabled.checked ? '' : 'none';
+    if (!url || !test) return;
     test.disabled = !url.value.trim();
   };
   const ensureAll = () => cards().forEach(addControls);
@@ -59,10 +56,6 @@
   document.querySelector('#snapshots').addEventListener('input', (event) => {
     const card = event.target.closest('.snapshot-card');
     if (card && event.target.classList.contains('webhook-url')) update(card);
-  });
-  document.querySelector('#snapshots').addEventListener('change', (event) => {
-    const card = event.target.closest('.snapshot-card');
-    if (card && (event.target.classList.contains('webhook-enabled') || event.target.classList.contains('webhook-method'))) update(card);
   });
   document.querySelector('#snapshots').addEventListener('click', async (event) => {
     const button = event.target.closest('.test-webhook');
