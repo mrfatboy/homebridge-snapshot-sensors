@@ -89,7 +89,7 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
           const groupFields = groupOutput.trim().split(':');
           if (groupFields.length < 3) throw new Error(`Unable to resolve snapshot group: ${group}`);
           gid = Number(groupFields[2]);
-          if (!Number.isInteger(gid)) throw new Error(`Unable to resolve snapshot group: ${group}`);
+          if (!Number.isInteger(gid)) throw new Error(`Unable to resolve snapshot owner group: ${group}`);
         }
         await fs.chown(filePath, uid, gid);
       }
@@ -119,11 +119,15 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
         endpoint.searchParams.set('camera', payloadBody.camera);
         endpoint.searchParams.set('object', payloadBody.object);
       }
+      this.log.info(`Webhook test: sending ${method} request to ${endpoint.toString()}`);
       const response = await fetch(endpoint, options);
+      this.log.info(`Webhook test: received HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ''}`);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return { success: true, status: response.status, statusText: response.statusText || 'OK' };
     } catch (error) {
-      throw new RequestError(`Unable to send webhook: ${error instanceof Error ? error.message : String(error)}`, { status: 502 });
+      const message = error instanceof Error ? error.message : String(error);
+      this.log.error(`Webhook test failed: ${method} ${parsed.toString()} - ${message}`);
+      throw new RequestError(`Unable to send webhook: ${message}`, { status: 502 });
     }
   }
 
@@ -238,7 +242,7 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
       }
     }
 
-    throw new RequestError('A notification provider must be selected.', { status: 400 });
+    throw new RequestError(`Unsupported notification provider: ${provider}`, { status: 400 });
   }
 }
 
