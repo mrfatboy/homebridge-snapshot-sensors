@@ -8,11 +8,14 @@
 .snapshot-card button { font-size: 12px; padding: .2rem .4rem; }
 .snapshot-card .test-snapshot,
 .snapshot-card .test-notification,
-.snapshot-card .test-webhook { background-color: #800080; border-color: #800080; color: #fff; float: right; }
+.snapshot-card .test-webhook,
+.snapshot-card .test-pushcut { background-color: #800080; border-color: #800080; color: #fff; float: right; }
 .snapshot-card .test-snapshot:hover,
 .snapshot-card .test-notification:hover,
-.snapshot-card .test-webhook:hover { background-color: #6a006a; border-color: #6a006a; color: #fff; }
-.snapshot-card .test-webhook:disabled { background-color: #800080; border-color: #800080; color: #fff; opacity: .65; }
+.snapshot-card .test-webhook:hover,
+.snapshot-card .test-pushcut:hover { background-color: #6a006a; border-color: #6a006a; color: #fff; }
+.snapshot-card .test-webhook:disabled,
+.snapshot-card .test-pushcut:disabled { background-color: #800080; border-color: #800080; color: #fff; opacity: .65; }
 .sensor-heading,
 .notifications-heading,
 .camera-snapshot-heading,
