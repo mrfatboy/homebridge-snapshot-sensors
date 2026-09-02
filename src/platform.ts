@@ -132,7 +132,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     try {
       parsed = new URL(webhook.url.trim());
       if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('Webhook URL must use HTTP or HTTPS');
-    } catch (error) {
+    } catch  {
       this.log.warn(`[${config.name}] Webhook failed: ${method} [invalid URL]`);
       return;
     }
