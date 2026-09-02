@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
 permissions:
   contents: write
   id-token: write
@@ -53,8 +57,8 @@ jobs:
           tag="v$VERSION"
 
           if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
-            echo "Release tag $tag already exists. Nothing to release."
-            exit 0
+            echo "Release tag $tag already exists. This version has already been released."
+            exit 1
           fi
 
           if npm view "homebridge-snapshot-sensors@$VERSION" version >/dev/null 2>&1; then
