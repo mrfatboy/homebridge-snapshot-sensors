@@ -2,7 +2,7 @@ import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, 
 import { resolveSensors } from './categories.js';
 import { matchingSensors } from './detector.js';
 import { runYolo } from './yolo.js';
-import type { SensorSpec, SnapshotConfig, NotificationChannel, Category, StoreSnapshots } from './types.js';
+import type { SensorSpec, SnapshotConfig, NotificationChannel, Category, StoreSnapshots, Detection } from './types.js';
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile, chown } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
@@ -18,6 +18,8 @@ type OwnershipIds = { uid: number; gid: number };
 const detectionMessages: Record<NotificationCategory, string> = {
   people: 'Person detected', animals: 'Animal detected', vehicles: 'Vehicle detected', unidentified: 'Unidentified Activity detected',
 };
+
+type WebhookPayload = { camera: string; object: string; confidence: number | null };
 
 export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service;
@@ -94,35 +96,65 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
         annotatedImage = await yolo.createAnnotatedImage(runtime.sensors);
       }
       await this.saveSnapshot(runtime.config, image, annotatedImage, contentType);
+      let webhookPayload: WebhookPayload | null = null;
       if (matched.length === 0) {
         const unidentifiedMotionActivityEnabled = runtime.sensors.some(sensor => sensor.unidentifiedMotionActivity);
         if (yolo.detections.length > 0 && unidentifiedMotionActivityEnabled) {
           detectionType = detectionMessages.unidentified;
           const used = await this.sendNotification(runtime.config, 'unidentified');
           if (used) providerUsed = used;
+          webhookPayload = { camera: snapshotName, object: 'unidentified', confidence: null };
         }
       } else {
-        let bestMatch: { category: Category; score: number } | null = null;
+        let bestMatch: { category: Category; score: number; className: string } | null = null;
         for (const sensor of matched) {
           for (const detection of yolo.detections) {
             const category = detection.category;
             if (!category || !sensor.categories.includes(category)) continue;
             if (detection.score < (sensor.thresholds[category] ?? 0.25)) continue;
-            if (!bestMatch || detection.score > bestMatch.score) bestMatch = { category, score: detection.score };
+            if (!bestMatch || detection.score > bestMatch.score) bestMatch = { category, score: detection.score, className: detection.className };
           }
         }
         if (bestMatch) {
           detectionType = detectionMessages[bestMatch.category];
           const used = await this.sendNotification(runtime.config, bestMatch.category);
           if (used) providerUsed = used;
+          webhookPayload = { camera: snapshotName, object: bestMatch.className, confidence: bestMatch.score };
         }
       }
+      if (webhookPayload) void this.sendWebhook(runtime.config, webhookPayload);
       const elapsedMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
       this.log.info(`[${snapshotName}] ${TEST_IMAGE_PATH ? '[Test Image] ' : ''}${detectionType}; notification provider: ${providerUsed}; image saved: ${store}; total elapsed time: ${this.formatElapsed(elapsedMs)}.`);
     } catch (error) {
       const elapsedMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
       this.log.error(`[${snapshotName}] Snapshot detection failed after ${this.formatElapsed(elapsedMs)} — ${TEST_IMAGE_PATH ? '[Test Image] ' : ''}${detectionType}; notification provider: ${providerUsed}; image saved: ${store}; error: ${error instanceof Error ? error.message : String(error)}`);
     } finally { runtime.running = false; runtime.service.updateCharacteristic(this.Characteristic.On, false); }
+  }
+  private async sendWebhook(config: SnapshotConfig, payload: WebhookPayload): Promise<void> {
+    const webhook = config.webhook;
+    if (!webhook?.enabled || !webhook.url?.trim()) return;
+    try {
+      const parsed = new URL(webhook.url.trim());
+      if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('Webhook URL must use HTTP or HTTPS');
+      const method = webhook.method === 'GET' ? 'GET' : 'POST';
+      let url = parsed;
+      const options: RequestInit = { method, signal: AbortSignal.timeout(15000) };
+      if (method === 'POST') {
+        options.headers = { 'Content-Type': 'application/json' };
+        options.body = JSON.stringify(payload);
+      } else {
+        url = new URL(parsed.toString());
+        url.searchParams.set('camera', payload.camera);
+        url.searchParams.set('object', payload.object);
+        if (payload.confidence === null) url.searchParams.delete('confidence');
+        else url.searchParams.set('confidence', String(payload.confidence));
+      }
+      const response = await fetch(url, options);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      this.log.info(`[${config.name}] Webhook sent: HTTP ${response.status} — ${response.statusText || 'OK'}`);
+    } catch (error) {
+      this.log.warn(`[${config.name}] Webhook failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
   private formatElapsed(ms: number): string { return ms < 1000 ? `${Math.round(ms)} ms` : `${(ms / 1000).toFixed(2)} s`; }
   private async saveSnapshot(config: SnapshotConfig, image: Buffer, annotated: Buffer | undefined, contentType: string): Promise<void> {
