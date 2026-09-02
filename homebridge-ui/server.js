@@ -11,6 +11,7 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
     this.onRequest('/browse', this.handleBrowse.bind(this));
     this.onRequest('/test-snapshot', this.testSnapshot.bind(this));
     this.onRequest('/test-notification', this.testNotification.bind(this));
+    this.onRequest('/test-webhook', this.testWebhook.bind(this));
     this.ready();
   }
 
@@ -96,6 +97,33 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new RequestError(`Unable to retrieve snapshot: ${message}`, { status: 502 });
+    }
+  }
+
+  async testWebhook(payload) {
+    const url = typeof payload?.url === 'string' ? payload.url.trim() : '';
+    const method = payload?.method === 'GET' ? 'GET' : 'POST';
+    if (!url) throw new RequestError('Webhook URL is required.', { status: 400 });
+    let parsed;
+    try { parsed = new URL(url); } catch { throw new RequestError('The Webhook URL is not valid.', { status: 400 }); }
+    if (!['http:', 'https:'].includes(parsed.protocol)) throw new RequestError('The Webhook URL must use HTTP or HTTPS.', { status: 400 });
+    const payloadBody = { camera: 'Test', object: 'test', confidence: null };
+    try {
+      let endpoint = parsed;
+      const options = { method, signal: AbortSignal.timeout(15000) };
+      if (method === 'POST') {
+        options.headers = { 'Content-Type': 'application/json' };
+        options.body = JSON.stringify(payloadBody);
+      } else {
+        endpoint = new URL(parsed.toString());
+        endpoint.searchParams.set('camera', payloadBody.camera);
+        endpoint.searchParams.set('object', payloadBody.object);
+      }
+      const response = await fetch(endpoint, options);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return { success: true, status: response.status, statusText: response.statusText || 'OK' };
+    } catch (error) {
+      throw new RequestError(`Unable to send webhook: ${error instanceof Error ? error.message : String(error)}`, { status: 502 });
     }
   }
 
