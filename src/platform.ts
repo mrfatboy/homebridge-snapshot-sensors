@@ -148,11 +148,15 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
         url.searchParams.set('object', payload.object);
         url.searchParams.set('confidence', payload.confidence === null ? 'null' : String(payload.confidence));
       }
+      const logEndpoint = `${parsed.origin}${parsed.pathname}`;
+      console.log(`[Snapshot Sensors] Webhook: sending ${method} request to ${logEndpoint}`);
       const response = await fetch(url, options);
+      console.log(`[Snapshot Sensors] Webhook: received HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ''}`);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      this.log.info(`[${config.name}] Webhook sent: HTTP ${response.status} — ${response.statusText || 'OK'}`);
     } catch (error) {
-      this.log.warn(`[${config.name}] Webhook failed: ${error instanceof Error ? error.message : String(error)}`);
+      const message = error instanceof Error ? error.message : String(error);
+      const logEndpoint = (() => { try { const value = new URL(webhook.url.trim()); return `${value.origin}${value.pathname}`; } catch { return '[invalid URL]'; } })();
+      console.error(`[Snapshot Sensors] Webhook failed: ${methodSafe(webhook.method)} ${logEndpoint} - ${message}`);
     }
   }
   private formatElapsed(ms: number): string { return ms < 1000 ? `${Math.round(ms)} ms` : `${(ms / 1000).toFixed(2)} s`; }
