@@ -2,7 +2,7 @@ import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, 
 import { resolveSensors } from './categories.js';
 import { matchingSensors } from './detector.js';
 import { runYolo } from './yolo.js';
-import type { Detection, SensorSpec, SnapshotConfig, NotificationChannel, Category, StoreSnapshots } from './types.js';
+import type { SensorSpec, SnapshotConfig, NotificationChannel, Category, StoreSnapshots } from './types.js';
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile, chown } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
