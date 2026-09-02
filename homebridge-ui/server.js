@@ -119,14 +119,14 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
         endpoint.searchParams.set('camera', payloadBody.camera);
         endpoint.searchParams.set('object', payloadBody.object);
       }
-      this.log.info(`Webhook test: sending ${method} request to ${endpoint.toString()}`);
+      console.log(`[Snapshot Sensors] Webhook test: sending ${method} request to ${endpoint.toString()}`);
       const response = await fetch(endpoint, options);
-      this.log.info(`Webhook test: received HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ''}`);
+      console.log(`[Snapshot Sensors] Webhook test: received HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ''}`);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return { success: true, status: response.status, statusText: response.statusText || 'OK' };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      this.log.error(`Webhook test failed: ${method} ${parsed.toString()} - ${message}`);
+      console.error(`[Snapshot Sensors] Webhook test failed: ${method} ${parsed.toString()} - ${message}`);
       throw new RequestError(`Unable to send webhook: ${message}`, { status: 502 });
     }
   }
