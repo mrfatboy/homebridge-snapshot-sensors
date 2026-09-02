@@ -32,6 +32,7 @@ No cloud-based object-detection service is required.
   - Pushbullet support
   - Push Safer support
   - ntfy support
+- 🔗 Generic webhook integration for external automations/services
 - 🔄 Multiple independent Snapshot Sensors
 - Use third-party sensors to trigger this plugin.
 
