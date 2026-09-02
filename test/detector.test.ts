@@ -4,11 +4,11 @@ import { categoryOfClass } from '../src/categories.js';
 import type { Detection, SensorSpec } from '../src/types.js';
 
 const det = (classId: number, score: number, w = 200, h = 200): Detection => {
-  return { x1: 0, y1: 0, x2: w, y2: h, score, classId, className: '' };
+  return { x1: 0, y1: 0, x2: w, y2: h, score, classId, className: '', category: categoryOfClass(classId) };
 };
 
 const sensor = (categories: SensorSpec['categories'], thresholds: SensorSpec['thresholds']): SensorSpec => ({
-  name: 'Test Sensor', categories, thresholds,
+  name: 'Test Sensor', categories, thresholds, unidentifiedMotionActivity: true,
 });
 
 describe('categoryOfClass()', () => {
@@ -31,6 +31,12 @@ describe('scoreCategories()', () => {
     expect(scores.get('animals')).toBe(0.8);
     expect(scores.get('people')).toBe(0.6);
     expect(scores.has('vehicles')).toBe(false);
+  });
+
+  it('uses the category stored on each detection', () => {
+    const detection = det(0, 0.8);
+    expect(detection.category).toBe('people');
+    expect(scoreCategories([detection]).get('people')).toBe(0.8);
   });
 
   it('does not reject detections based on bounding-box size', () => {
@@ -67,7 +73,7 @@ describe('detectCategories()', () => {
     expect(cats.has('animals')).toBe(false);
   });
 
-  it('returns an empty set when nothing clears the threshold', () => {
+  it('returns an empty set when nothing clears the supplied threshold', () => {
     expect(detectCategories([det(0, 0.2)], 0.5).size).toBe(0);
   });
 });

@@ -43,6 +43,12 @@ export interface NotificationConfig {
   pushsafer?: NotificationChannel;
 }
 
+export interface WebhookConfig {
+  enabled?: boolean;
+  url?: string;
+  method?: 'GET' | 'POST';
+}
+
 export interface RawSensor {
   name?: string;
   categories?: string[];
@@ -59,6 +65,7 @@ export interface SnapshotConfig {
   snapshotPrefix?: string;
   sensors: RawSensor[];
   notifications?: NotificationConfig;
+  webhook?: WebhookConfig;
 }
 
 export interface SensorSpec {
@@ -76,4 +83,5 @@ export interface Detection {
   score: number;
   classId: number;
   className: string;
+  category: Category | null;
 }

@@ -8,7 +8,7 @@ import type { Detection, SensorSpec, StoreSnapshots } from './types.js';
 
 export interface YoloResult {
   detections: Detection[];
-  annotatedImage?: Buffer;
+  createAnnotatedImage?: (sensors: SensorSpec[]) => Promise<Buffer>;
 }
 
 const MODEL_WIDTH = 1024;
@@ -27,11 +27,7 @@ const sessionPromise = ort.InferenceSession.create(modelPath).then(session => {
 
 let inferenceRunning = false;
 
-export async function runYolo(
-  image: Buffer,
-  storeSnapshots: StoreSnapshots,
-  sensors?: SensorSpec[],
-): Promise<YoloResult | null> {
+export async function runYolo(image: Buffer, storeSnapshots: StoreSnapshots): Promise<YoloResult | null> {
   if (inferenceRunning) return null;
   inferenceRunning = true;
 
@@ -41,12 +37,9 @@ export async function runYolo(
     const sourceWidth = metadata.width;
     const sourceHeight = metadata.height;
 
-    if (!sourceWidth || !sourceHeight) {
-      throw new Error('Unable to determine snapshot image dimensions');
-    }
+    if (!sourceWidth || !sourceHeight) throw new Error('Unable to determine snapshot image dimensions');
 
-    const { data } = await source
-      .clone()
+    const { data } = await source.clone()
       .resize(MODEL_WIDTH, MODEL_HEIGHT, { fit: 'fill' })
       .removeAlpha()
       .toColourspace('srgb')
@@ -55,7 +48,6 @@ export async function runYolo(
 
     const pixels = MODEL_WIDTH * MODEL_HEIGHT;
     const tensorData = new Float32Array(3 * pixels);
-
     for (let i = 0; i < pixels; i++) {
       const pixelOffset = i * 3;
       tensorData[i] = data[pixelOffset] / 255;
@@ -67,13 +59,9 @@ export async function runYolo(
     const tensor = new ort.Tensor('float32', tensorData, [1, 3, MODEL_HEIGHT, MODEL_WIDTH]);
     const results = await session.run({ images: tensor });
     const output = results.output0;
-
-    if (!output) {
-      throw new Error('YOLO26 model did not return output0');
-    }
+    if (!output) throw new Error('YOLO26 model did not return output0');
 
     const detections: Detection[] = [];
-
     for (let i = 0; i < output.dims[1]; i++) {
       const offset = i * 6;
       const x1 = Number(output.data[offset]);
@@ -82,75 +70,53 @@ export async function runYolo(
       const y2 = Number(output.data[offset + 3]);
       const score = Number(output.data[offset + 4]);
       const classId = Math.round(Number(output.data[offset + 5]));
-
       if (!Number.isFinite(score) || score <= 0) continue;
-
       try {
-        detections.push({
-          x1,
-          y1,
-          x2,
-          y2,
-          score,
-          classId,
-          className: getYolo26ClassName(classId),
-        });
+        const className = getYolo26ClassName(classId);
+        detections.push({ x1, y1, x2, y2, score, classId, className, category: categoryOfClass(classId) });
       } catch {
         // Ignore invalid class IDs returned by the model.
       }
     }
 
-    // Annotation uses the same user-defined category confidence thresholds
-    // as sensor triggering. There is no separate global annotation threshold.
-    const annotationDetections = sensors === undefined
-      ? []
-      : detections.filter(detection => {
-        const category = categoryOfClass(detection.classId);
-        if (category === null) return false;
-        return sensors.some(sensor => {
-          const threshold = sensor.thresholds[category];
-          return sensor.categories.includes(category) &&
-            threshold !== undefined &&
-            detection.score >= threshold;
+    const createAnnotatedImage = storeSnapshots === 'annotated'
+      ? async (sensors: SensorSpec[]): Promise<Buffer> => {
+        const annotationDetections = detections.filter(detection => {
+          const category = detection.category;
+          if (category === null) return false;
+          return sensors.some(sensor => {
+            const threshold = sensor.thresholds[category];
+            return sensor.categories.includes(category) && threshold !== undefined && detection.score >= threshold;
+          });
         });
-      });
 
-    let annotatedImage: Buffer | undefined;
+        if (annotationDetections.length === 0) return source.clone().jpeg().toBuffer();
 
-    if (storeSnapshots === 'annotated' && annotationDetections.length > 0) {
-      const scaleX = sourceWidth / MODEL_WIDTH;
-      const scaleY = sourceHeight / MODEL_HEIGHT;
-      const boxes = annotationDetections.map(detection => {
-        const x = Math.max(0, Math.min(sourceWidth, detection.x1 * scaleX));
-        const y = Math.max(0, Math.min(sourceHeight, detection.y1 * scaleY));
-        const x2 = Math.max(0, Math.min(sourceWidth, detection.x2 * scaleX));
-        const y2 = Math.max(0, Math.min(sourceHeight, detection.y2 * scaleY));
-        const width = Math.max(0, x2 - x);
-        const height = Math.max(0, y2 - y);
-        const fontSize = Math.max(18, Math.round(Math.min(sourceWidth, sourceHeight) / 30));
-        const label = `${detection.className} ${detection.score.toFixed(2).replace(/^0/, '')}`;
-        // Place the label above the bounding box when possible so it does not obscure the detected object.
-        // If the box is too close to the top edge, fall back to placing the label inside the box.
-        const labelY = y >= fontSize + 6 ? y - 6 : y + fontSize + 6;
-        // Approximate the label width for a high-contrast background panel.
-        const labelPadding = Math.max(4, Math.round(fontSize * 0.25));
-        const labelWidth = Math.min(sourceWidth - x, Math.ceil(label.length * fontSize * 0.6) + (labelPadding * 2));
-        const labelHeight = fontSize + (labelPadding * 2);
-        const labelPanelY = Math.max(0, labelY - fontSize - labelPadding);
+        const scaleX = sourceWidth / MODEL_WIDTH;
+        const scaleY = sourceHeight / MODEL_HEIGHT;
+        const boxes = annotationDetections.map(detection => {
+          const x = Math.max(0, Math.min(sourceWidth, detection.x1 * scaleX));
+          const y = Math.max(0, Math.min(sourceHeight, detection.y1 * scaleY));
+          const x2 = Math.max(0, Math.min(sourceWidth, detection.x2 * scaleX));
+          const y2 = Math.max(0, Math.min(sourceHeight, detection.y2 * scaleY));
+          const width = Math.max(0, x2 - x);
+          const height = Math.max(0, y2 - y);
+          const fontSize = Math.max(18, Math.round(Math.min(sourceWidth, sourceHeight) / 30));
+          const label = `${detection.className} ${detection.score.toFixed(2).replace(/^0/, '')}`;
+          const labelY = y >= fontSize + 6 ? y - 6 : y + fontSize + 6;
+          const labelPadding = Math.max(4, Math.round(fontSize * 0.25));
+          const labelWidth = Math.min(sourceWidth - x, Math.ceil(label.length * fontSize * 0.6) + (labelPadding * 2));
+          const labelHeight = fontSize + (labelPadding * 2);
+          const labelPanelY = Math.max(0, labelY - fontSize - labelPadding);
+          return `<rect x="${x}" y="${y}" width="${width}" height="${height}" fill="none" stroke="red" stroke-width="4"/><rect x="${x}" y="${labelPanelY}" width="${labelWidth}" height="${labelHeight}" fill="red"/><text x="${x + labelPadding}" y="${labelY}" font-family="Arial" font-size="${fontSize}" fill="white">${label}</text>`;
+        }).join('');
 
-        return `<rect x="${x}" y="${y}" width="${width}" height="${height}" fill="none" stroke="red" stroke-width="4"/><rect x="${x}" y="${labelPanelY}" width="${labelWidth}" height="${labelHeight}" fill="red"/><text x="${x + labelPadding}" y="${labelY}" font-family="Arial" font-size="${fontSize}" fill="white">${label}</text>`;
-      }).join('');
+        const overlay = Buffer.from(`<svg width="${sourceWidth}" height="${sourceHeight}" xmlns="http://www.w3.org/2000/svg">${boxes}</svg>`);
+        return source.clone().composite([{ input: overlay }]).jpeg().toBuffer();
+      }
+      : undefined;
 
-      const overlay = Buffer.from(`<svg width="${sourceWidth}" height="${sourceHeight}" xmlns="http://www.w3.org/2000/svg">${boxes}</svg>`);
-
-      annotatedImage = await source
-        .clone()
-        .composite([{ input: overlay }])
-        .jpeg()
-        .toBuffer();
-    }
-
-    return { detections, annotatedImage };
+    return { detections, createAnnotatedImage };
   } finally {
     inferenceRunning = false;
   }

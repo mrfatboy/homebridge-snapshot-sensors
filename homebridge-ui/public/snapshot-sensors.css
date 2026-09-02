@@ -7,15 +7,21 @@
 .snapshot-card .notifications-select { font-size: 1rem; height: 1.9rem; padding: .2rem .4rem; }
 .snapshot-card button { font-size: 12px; padding: .2rem .4rem; }
 .snapshot-card .test-snapshot,
-.snapshot-card .test-notification { background-color: #800080; border-color: #800080; color: #fff; float: right; }
+.snapshot-card .test-notification,
+.snapshot-card .test-webhook { background-color: #800080; border-color: #800080; color: #fff; float: right; }
 .snapshot-card .test-snapshot:hover,
-.snapshot-card .test-notification:hover { background-color: #6a006a; border-color: #6a006a; color: #fff; }
+.snapshot-card .test-notification:hover,
+.snapshot-card .test-webhook:hover { background-color: #6a006a; border-color: #6a006a; color: #fff; }
+.snapshot-card .test-webhook:disabled { background-color: #800080; border-color: #800080; color: #fff; opacity: .65; }
 .sensor-heading,
 .notifications-heading,
-.camera-snapshot-heading { font-size: 20px !important; line-height: 1.2; }
+.camera-snapshot-heading,
+.webhook-heading { font-size: 20px !important; line-height: 1.2; }
 .sensor-heading .sensor-emoji,
 .notifications-heading .notifications-emoji,
-.camera-snapshot-heading .camera-snapshot-emoji { font-size: 20px !important; }
+.camera-snapshot-heading .camera-snapshot-emoji,
+.webhook-heading .webhook-emoji { font-size: 20px !important; }
 .notifications-heading { display: block; margin-top: 2rem; margin-bottom: .75rem; }
+.webhook-heading { margin-top: 1.5rem; margin-bottom: .75rem; }
 #snapshotModal.snapshot-test-modal { position: fixed; margin: 0; z-index: 1060; }
 #snapshotModal.snapshot-test-modal .modal-dialog { margin: 0; max-width: min(800px, calc(100vw - 20px)); }
