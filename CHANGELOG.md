@@ -9,6 +9,12 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [1.0.6-beta.1] - 2026-09-02
 
+### Added
+
+- Added optional webhook delivery for matching detections and Unidentified Activity events.
+- Added GET and POST webhook methods with a minimal detection payload containing camera, object, and confidence.
+- Added **Test Webhook** configuration support with the same size, color, and placement as the existing test buttons.
+
 ### Performance
 
 - Deferred annotated snapshot generation until after sensor matching so unnecessary image compositing and JPEG encoding are avoided.
