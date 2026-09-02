@@ -20,7 +20,6 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
-
           p = Path('src/index.ts')
           p.write_text("""import { API } from 'homebridge';
 import { SnapshotSensorsPlatform } from './platform.js';
@@ -30,48 +29,35 @@ export default (api: API) => {
   api.registerPlatform(PLUGIN_NAME, PLATFORM_NAME, SnapshotSensorsPlatform);
 };
 """)
-
           p = Path('src/platform.ts')
           s = p.read_text()
           if "from './pushcut.js'" not in s:
               s = s.replace("import path from 'node:path';\n", "import path from 'node:path';\nimport { sendPushcutNotification } from './pushcut.js';\n")
           old = "const channel: NotificationChannel | undefined = provider === 'pushover' ? notification?.pushover : provider === 'pushbullet' ? notification?.pushbullet : provider === 'ntfy' ? notification?.ntfy : notification?.pushsafer;"
           new = "const channel: NotificationChannel | undefined = provider === 'pushover' ? notification?.pushover : provider === 'pushbullet' ? notification?.pushbullet : provider === 'ntfy' ? notification?.ntfy : provider === 'pushsafer' ? notification?.pushsafer : provider === 'pushcut' ? notification?.pushcut : undefined;"
-          if old not in s:
-              raise SystemExit('Expected provider selection was not found in platform.ts')
+          if old not in s: raise SystemExit('Expected provider selection was not found in platform.ts')
           s = s.replace(old, new, 1)
           marker = "    return null;\n  }\n}"
           branch = "    if (provider === 'pushcut') { await sendPushcutNotification(channel, message); return 'Pushcut'; }\n    return null;\n  }\n}"
-          if marker not in s:
-              raise SystemExit('Expected end of sendNotification was not found in platform.ts')
+          if marker not in s: raise SystemExit('Expected end of sendNotification was not found in platform.ts')
           s = s.replace(marker, branch, 1)
           p.write_text(s)
-
           p = Path('homebridge-ui/public/pushcut.js')
-          s = p.read_text()
-          s = s.replace('test-notification', 'test-pushcut')
-          p.write_text(s)
-
+          p.write_text(p.read_text().replace('test-notification', 'test-pushcut'))
           p = Path('homebridge-ui/public/snapshot-sensors.css')
-          s = p.read_text()
-          s = s.replace('.snapshot-card .test-webhook {', '.snapshot-card .test-webhook,\n.snapshot-card .test-pushcut {', 1)
-          s = s.replace('.snapshot-card .test-webhook:hover {', '.snapshot-card .test-webhook:hover,\n.snapshot-card .test-pushcut:hover {', 1)
+          s = p.read_text().replace('.snapshot-card .test-webhook {', '.snapshot-card .test-webhook,\n.snapshot-card .test-pushcut {', 1).replace('.snapshot-card .test-webhook:hover {', '.snapshot-card .test-webhook:hover,\n.snapshot-card .test-pushcut:hover {', 1)
           p.write_text(s)
-
           p = Path('homebridge-ui/public/snapshot-sensors-config.js')
           s = p.read_text()
           old = "|| notification.pushsafer && typeof notification.pushsafer === 'object';"
           new = "|| notification.pushsafer && typeof notification.pushsafer === 'object'\n    || notification.pushcut && typeof notification.pushcut === 'object';"
-          if old in s and 'notification.pushcut && typeof notification.pushcut' not in s:
-              s = s.replace(old, new, 1)
+          if old in s and 'notification.pushcut && typeof notification.pushcut' not in s: s = s.replace(old, new, 1)
           p.write_text(s)
-
       - name: Verify build and tests
         run: |
           npm ci
           npm run build
           npm test
-
       - name: Commit verified fix
         run: |
           git config user.name 'github-actions[bot]'
@@ -80,11 +66,11 @@ export default (api: API) => {
           git diff --cached --check
           git commit -m 'fix: integrate Pushcut without monkey patching'
           git push
-
       - name: Remove temporary workflow
         if: success()
-        shell: bash
         run: |
           git rm .github/workflows/fix-pushcut.yml
           git commit -m 'chore: remove temporary Pushcut fix workflow'
           git push
+
+# trigger verification
