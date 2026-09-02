@@ -14,6 +14,7 @@ const MAX_SNAPSHOT_SIZE = 10 * 1024 * 1024;
 const TEST_IMAGE_PATH = process.env.SNAPSHOT_SENSORS_TEST_IMAGE?.trim();
 type NotificationCategory = Category | 'unidentified';
 type SnapshotRuntime = { config: SnapshotConfig; sensors: SensorSpec[]; service: Service; running: boolean };
+type OwnershipIds = { uid: number; gid: number };
 const detectionMessages: Record<NotificationCategory, string> = {
   people: 'Person detected', animals: 'Animal detected', vehicles: 'Vehicle detected', unidentified: 'Unidentified Activity detected',
 };
@@ -23,6 +24,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
   public readonly Characteristic: typeof Characteristic;
   public readonly accessories: PlatformAccessory[] = [];
   private readonly runtimes = new Map<string, SnapshotRuntime>();
+  private readonly ownershipCache = new Map<string, Promise<OwnershipIds>>();
   constructor(public readonly log: Logger, public readonly config: PlatformConfig, public readonly api: API) {
     this.Service = api.hap.Service; this.Characteristic = api.hap.Characteristic;
     this.api.on('didFinishLaunching', () => this.discoverDevices());
@@ -50,10 +52,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
   private async triggerSnapshot(snapshotName: string): Promise<void> {
     const runtime = this.runtimes.get(snapshotName);
     if (!runtime) return;
-    if (runtime.running) {
-      this.log.info(`[${snapshotName}] Snapshot already running; skipping duplicate trigger.`);
-      return;
-    }
+    if (runtime.running) { this.log.info(`[${snapshotName}] Snapshot already running; skipping duplicate trigger.`); return; }
     const startedAt = process.hrtime.bigint(); runtime.running = true;
     let providerUsed = 'none'; let detectionType = 'No objects matching the selected categories were detected';
     const store = (runtime.config.storeSnapshots ?? 'never') as StoreSnapshots;
@@ -77,26 +76,24 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
         if (!image.length) throw new Error('Camera returned an empty response');
       }
       if (image.length > MAX_SNAPSHOT_SIZE) throw new Error('Snapshot image exceeds the maximum allowed size of 10 MB');
-      const yolo = await runYolo(image, store, runtime.sensors);
-      if (!yolo) {
-        this.log.info(`[${snapshotName}] YOLO is busy; skipping snapshot detection.`);
-        return;
-      }
+      const yolo = await runYolo(image, store);
+      if (!yolo) { this.log.info(`[${snapshotName}] YOLO is busy; skipping snapshot detection.`); return; }
       if (TEST_IMAGE_PATH) {
         const details = yolo.detections
-          .filter(d => {
-            const category = this.categoryForDetection(d);
-            return category !== null && runtime.sensors.some(sensor =>
-              sensor.categories.includes(category) &&
-              sensor.thresholds[category] !== undefined &&
-              d.score >= sensor.thresholds[category]!,
-            );
-          })
+          .filter(d => d.category !== null && runtime.sensors.some(sensor =>
+            sensor.categories.includes(d.category!) &&
+            sensor.thresholds[d.category!] !== undefined &&
+            d.score >= sensor.thresholds[d.category!]!,
+          ))
           .map(d => `${d.className} (${d.score.toFixed(3)})`);
         this.log.info(`[${snapshotName}] [Test Image] Accepted detections: ${details.length === 0 ? 'none' : details.join(', ')}`);
       }
-      await this.saveSnapshot(runtime.config, image, yolo.annotatedImage, contentType);
       const matched = matchingSensors(yolo.detections, runtime.sensors);
+      let annotatedImage: Buffer | undefined;
+      if (store === 'annotated' && matched.length > 0 && yolo.createAnnotatedImage) {
+        annotatedImage = await yolo.createAnnotatedImage(runtime.sensors);
+      }
+      await this.saveSnapshot(runtime.config, image, annotatedImage, contentType);
       if (matched.length === 0) {
         const unidentifiedMotionActivityEnabled = runtime.sensors.some(sensor => sensor.unidentifiedMotionActivity);
         if (yolo.detections.length > 0 && unidentifiedMotionActivityEnabled) {
@@ -108,7 +105,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
         let bestMatch: { category: Category; score: number } | null = null;
         for (const sensor of matched) {
           for (const detection of yolo.detections) {
-            const category = this.categoryForDetection(detection);
+            const category = detection.category;
             if (!category || !sensor.categories.includes(category)) continue;
             if (detection.score < (sensor.thresholds[category] ?? 0.25)) continue;
             if (!bestMatch || detection.score > bestMatch.score) bestMatch = { category, score: detection.score };
@@ -128,12 +125,6 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     } finally { runtime.running = false; runtime.service.updateCharacteristic(this.Characteristic.On, false); }
   }
   private formatElapsed(ms: number): string { return ms < 1000 ? `${Math.round(ms)} ms` : `${(ms / 1000).toFixed(2)} s`; }
-  private categoryForDetection(detection: Detection): Category | null {
-    if (detection.className === 'person') return 'people';
-    if (['bird', 'cat', 'dog', 'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe'].includes(detection.className)) return 'animals';
-    if (['bicycle', 'car', 'motorcycle', 'bus', 'train', 'truck', 'boat'].includes(detection.className)) return 'vehicles';
-    return null;
-  }
   private async saveSnapshot(config: SnapshotConfig, image: Buffer, annotated: Buffer | undefined, contentType: string): Promise<void> {
     const store = config.storeSnapshots ?? 'never'; if (store === 'never') return;
     const directory = config.snapshotDirectory?.trim(); if (!directory) throw new Error('Snapshot Directory is required when storing snapshots.');
@@ -143,11 +134,37 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     const filePath = path.join(directory, filename); await writeFile(filePath, store === 'annotated' && annotated ? annotated : image); await this.applyOwnership(filePath, config.snapshotOwnership);
   }
   private async applyOwnership(filePath: string, ownership?: string): Promise<void> {
-    if (!ownership?.trim()) return; const [username, group] = ownership.split(':', 2).map(part => part.trim()); if (!username) throw new Error('Snapshot Ownership Override must contain a username.');
-    const { stdout: passwd } = await execFileAsync('getent', ['passwd', username]); const fields = passwd.trim().split(':'); if (fields.length < 4) throw new Error(`Unable to resolve snapshot owner: ${username}`);
-    const uid = Number(fields[2]); let gid = Number(fields[3]); if (!Number.isInteger(uid) || !Number.isInteger(gid)) throw new Error(`Unable to resolve snapshot owner: ${username}`);
-    if (group) { const { stdout: groupData } = await execFileAsync('getent', ['group', group]); const groupFields = groupData.trim().split(':'); if (groupFields.length < 3) throw new Error(`Unable to resolve snapshot group: ${group}`); gid = Number(groupFields[2]); if (!Number.isInteger(gid)) throw new Error(`Unable to resolve snapshot group: ${group}`); }
-    await chown(filePath, uid, gid);
+    if (!ownership?.trim()) return;
+    const key = ownership.trim();
+    let idsPromise = this.ownershipCache.get(key);
+    if (!idsPromise) {
+      idsPromise = this.resolveOwnership(key);
+      this.ownershipCache.set(key, idsPromise);
+    }
+    try {
+      const { uid, gid } = await idsPromise;
+      await chown(filePath, uid, gid);
+    } catch (error) {
+      if (this.ownershipCache.get(key) === idsPromise) this.ownershipCache.delete(key);
+      throw error;
+    }
+  }
+  private async resolveOwnership(ownership: string): Promise<OwnershipIds> {
+    const [username, group] = ownership.split(':', 2).map(part => part.trim());
+    if (!username) throw new Error('Snapshot Ownership Override must contain a username.');
+    const { stdout: passwd } = await execFileAsync('getent', ['passwd', username]);
+    const fields = passwd.trim().split(':');
+    if (fields.length < 4) throw new Error(`Unable to resolve snapshot owner: ${username}`);
+    const uid = Number(fields[2]); let gid = Number(fields[3]);
+    if (!Number.isInteger(uid) || !Number.isInteger(gid)) throw new Error(`Unable to resolve snapshot owner: ${username}`);
+    if (group) {
+      const { stdout: groupData } = await execFileAsync('getent', ['group', group]);
+      const groupFields = groupData.trim().split(':');
+      if (groupFields.length < 3) throw new Error(`Unable to resolve snapshot group: ${group}`);
+      gid = Number(groupFields[2]);
+      if (!Number.isInteger(gid)) throw new Error(`Unable to resolve snapshot group: ${group}`);
+    }
+    return { uid, gid };
   }
   private async sendNotification(config: SnapshotConfig, category: NotificationCategory): Promise<string | null> {
     const notification = config.notifications; const provider = notification?.provider ?? 'none'; if (provider === 'none') return null;

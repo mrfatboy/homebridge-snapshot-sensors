@@ -76,4 +76,5 @@ export interface Detection {
   score: number;
   classId: number;
   className: string;
+  category: Category | null;
 }
