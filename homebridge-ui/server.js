@@ -11,6 +11,7 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
     this.onRequest('/browse', this.handleBrowse.bind(this));
     this.onRequest('/test-snapshot', this.testSnapshot.bind(this));
     this.onRequest('/test-notification', this.testNotification.bind(this));
+    this.onRequest('/test-webhook', this.testWebhook.bind(this));
     this.ready();
   }
 
@@ -88,7 +89,7 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
           const groupFields = groupOutput.trim().split(':');
           if (groupFields.length < 3) throw new Error(`Unable to resolve snapshot group: ${group}`);
           gid = Number(groupFields[2]);
-          if (!Number.isInteger(gid)) throw new Error(`Unable to resolve snapshot group: ${group}`);
+          if (!Number.isInteger(gid)) throw new Error(`Unable to resolve snapshot owner group: ${group}`);
         }
         await fs.chown(filePath, uid, gid);
       }
@@ -96,6 +97,43 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new RequestError(`Unable to retrieve snapshot: ${message}`, { status: 502 });
+    }
+  }
+
+  async testWebhook(payload) {
+    const url = typeof payload?.url === 'string' ? payload.url.trim() : '';
+    const method = payload?.method === 'GET' ? 'GET' : 'POST';
+    if (!url) throw new RequestError('Webhook URL is required.', { status: 400 });
+    let parsed;
+    try { parsed = new URL(url); } catch { throw new RequestError('The Webhook URL is not valid.', { status: 400 }); }
+    if (!['http:', 'https:'].includes(parsed.protocol)) throw new RequestError('The Webhook URL must use HTTP or HTTPS.', { status: 400 });
+    const payloadBody = { camera: 'Test', object: 'test', confidence: null };
+    let endpoint = parsed;
+    const options = { method, signal: AbortSignal.timeout(15000) };
+    if (method === 'POST') {
+      options.headers = { 'Content-Type': 'application/json' };
+      options.body = JSON.stringify(payloadBody);
+    } else {
+      endpoint = new URL(parsed.toString());
+      endpoint.searchParams.set('camera', payloadBody.camera);
+      endpoint.searchParams.set('object', payloadBody.object);
+      endpoint.searchParams.set('confidence', 'null');
+    }
+    try {
+      const response = await fetch(endpoint, options);
+      const status = `HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ''}`;
+      if (!response.ok) {
+        console.error(`[Snapshot Sensors] Webhook test failed: ${method} -> ${status}`);
+        throw new RequestError(`Unable to send webhook: HTTP ${response.status}`, { status: 502 });
+      }
+      console.log(`[Snapshot Sensors] Webhook test: ${method} -> ${status}`);
+      return { success: true, status: response.status, statusText: response.statusText || 'OK' };
+    } catch (error) {
+      if (error instanceof RequestError) throw error;
+      const isTimeout = error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError');
+      const message = isTimeout ? 'timeout' : 'fetch failed';
+      console.error(`[Snapshot Sensors] Webhook test failed: ${method} -> ${message}`);
+      throw new RequestError(`Unable to send webhook: ${message}`, { status: 502 });
     }
   }
 
@@ -119,6 +157,24 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
         return { success: true };
       } catch (error) {
         throw new RequestError(`Unable to send Pushover notification: ${error instanceof Error ? error.message : String(error)}`, { status: 502 });
+      }
+    }
+
+    if (provider === 'pushcut') {
+      const url = typeof payload?.url === 'string' ? payload.url.trim() : '';
+      const title = typeof payload?.title === 'string' ? payload.title.trim() : '';
+      if (!url) throw new RequestError('Pushcut Webhook URL is required.', { status: 400 });
+      if (!title) throw new RequestError('Pushcut Title is required.', { status: 400 });
+      let endpoint;
+      try { endpoint = new URL(url); } catch { throw new RequestError('The Pushcut Webhook URL is not valid.', { status: 400 }); }
+      if (endpoint.protocol !== 'https:') throw new RequestError('The Pushcut Webhook URL must use HTTPS.', { status: 400 });
+      try {
+        const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, text: TEST_NOTIFICATION_MESSAGE }), signal: AbortSignal.timeout(15000) });
+        const responseText = await response.text();
+        if (!response.ok) throw new Error(responseText || `HTTP ${response.status}`);
+        return { success: true };
+      } catch (error) {
+        throw new RequestError(`Unable to send Pushcut notification: ${error instanceof Error ? error.message : String(error)}`, { status: 502 });
       }
     }
 
@@ -210,7 +266,7 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
       }
     }
 
-    throw new RequestError('A notification provider must be selected.', { status: 400 });
+    throw new RequestError(`Unsupported notification provider: ${provider}`, { status: 400 });
   }
 }
 

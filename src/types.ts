@@ -33,14 +33,22 @@ export interface NotificationChannel {
   timeToLive?: number;
   retry?: number;
   expire?: number;
+  pushcutUrl?: string;
 }
 
 export interface NotificationConfig {
-  provider?: 'none' | 'pushover' | 'pushbullet' | 'ntfy' | 'pushsafer';
+  provider?: 'none' | 'pushover' | 'pushbullet' | 'ntfy' | 'pushsafer' | 'pushcut';
   pushover?: NotificationChannel;
   pushbullet?: NotificationChannel;
   ntfy?: NotificationChannel;
   pushsafer?: NotificationChannel;
+  pushcut?: NotificationChannel;
+}
+
+export interface WebhookConfig {
+  enabled?: boolean;
+  url?: string;
+  method?: 'GET' | 'POST';
 }
 
 export interface RawSensor {
@@ -59,6 +67,7 @@ export interface SnapshotConfig {
   snapshotPrefix?: string;
   sensors: RawSensor[];
   notifications?: NotificationConfig;
+  webhook?: WebhookConfig;
 }
 
 export interface SensorSpec {
@@ -76,4 +85,5 @@ export interface Detection {
   score: number;
   classId: number;
   className: string;
+  category: Category | null;
 }

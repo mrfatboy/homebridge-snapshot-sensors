@@ -28,9 +28,11 @@ No cloud-based object-detection service is required.
 - 🖼️ Save an annotated image containing matching YOLO detections
 - 🔔 Push notifications
   - Pushover support
+  - Pushcut support
   - Pushbullet support
-  - ntfy support
   - Push Safer support
+  - ntfy support
+- 🔗 Generic webhook integration for external automations/services
 - 🔄 Multiple independent Snapshot Sensors
 - Use third-party sensors to trigger this plugin.
 
@@ -142,6 +144,7 @@ Notifications are configured independently for each Snapshot.
 |---|:---:|
 | None | ✅ |
 | Pushover | ✅ |
+| Pushcut | ✅ |
 | Pushbullet | ✅ |
 | Push Safer | ✅ |
 | ntfy | ✅ |
@@ -287,6 +290,14 @@ Example:
               "vehicleSound": "pushover",
               "unidentifiedMessage": "Unidentified Activity detected ⚠️",
               "unidentifiedSound": "pushover"
+            },
+            "pushcut": {
+              "pushcutUrl": "https://api.pushcut.io/YOUR_SECRET/notifications/YOUR_NOTIFICATION",
+              "title": "Driveway",
+              "animalMessage": "Animal detected 🐕",
+              "personMessage": "Person detected 🚶‍♂️",
+              "vehicleMessage": "Vehicle detected 🚗",
+              "unidentifiedMessage": "Unidentified Activity detected ⚠️"
             },
             "pushbullet": {
               "apiKey": "",
