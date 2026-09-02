@@ -133,10 +133,18 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
   private async sendWebhook(config: SnapshotConfig, payload: WebhookPayload): Promise<void> {
     const webhook = config.webhook;
     if (!webhook?.enabled || !webhook.url?.trim()) return;
+    const method = webhook.method === 'GET' ? 'GET' : 'POST';
+    let parsed: URL;
     try {
-      const parsed = new URL(webhook.url.trim());
+      parsed = new URL(webhook.url.trim());
       if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('Webhook URL must use HTTP or HTTPS');
-      const method = webhook.method === 'GET' ? 'GET' : 'POST';
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`[Snapshot Sensors] Webhook failed: ${method} [invalid URL] - ${message}`);
+      return;
+    }
+    const logEndpoint = `${parsed.origin}${parsed.pathname}`;
+    try {
       let url = parsed;
       const options: RequestInit = { method, signal: AbortSignal.timeout(15000) };
       if (method === 'POST') {
@@ -148,15 +156,13 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
         url.searchParams.set('object', payload.object);
         url.searchParams.set('confidence', payload.confidence === null ? 'null' : String(payload.confidence));
       }
-      const logEndpoint = `${parsed.origin}${parsed.pathname}`;
       console.log(`[Snapshot Sensors] Webhook: sending ${method} request to ${logEndpoint}`);
       const response = await fetch(url, options);
       console.log(`[Snapshot Sensors] Webhook: received HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ''}`);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      const logEndpoint = (() => { try { const value = new URL(webhook.url.trim()); return `${value.origin}${value.pathname}`; } catch { return '[invalid URL]'; } })();
-      console.error(`[Snapshot Sensors] Webhook failed: ${methodSafe(webhook.method)} ${logEndpoint} - ${message}`);
+      console.error(`[Snapshot Sensors] Webhook failed: ${method} ${logEndpoint} - ${message}`);
     }
   }
   private formatElapsed(ms: number): string { return ms < 1000 ? `${Math.round(ms)} ms` : `${(ms / 1000).toFixed(2)} s`; }
