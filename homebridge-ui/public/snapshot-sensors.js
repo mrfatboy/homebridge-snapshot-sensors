@@ -25,9 +25,32 @@
       else { homebridge.toast.error('Please select a notification provider.', 'Invalid Notification Settings'); return; }
       button.disabled = true;
       try { const response = await homebridge.request('/test-notification', requestBody); if (!response?.success) throw new Error(response?.error || 'Test notification failed.'); homebridge.toast.success('Test notification sent.', 'Notification Test'); } catch (error) { homebridge.toast.error(error?.message || String(error), 'Test Notification Failed'); } finally { button.disabled = false; }
+      return;
+    }
+    if (event.target.closest('.test-snapshot')) {
+      const button = event.target.closest('.test-snapshot'); const url = snapshot.querySelector('.snapshot-url').value.trim(); const directory = snapshot.querySelector('.snapshot-directory')?.value.trim() || ''; const ownership = snapshot.querySelector('.snapshot-ownership')?.value.trim() || ''; const prefix = snapshot.querySelector('.snapshot-prefix').value.trim() || snapshot.querySelector('.snapshot-name').value.trim(); const storeSnapshots = snapshot.querySelector('.store-snapshots').value;
+      if (!url) { homebridge.toast.error('Please enter a valid Snapshot URL.', 'Invalid Snapshot URL'); return; }
+      if (!prefix) { homebridge.toast.error('Please enter a Snapshot prefix.', 'Invalid Snapshot Prefix'); return; }
+      button.disabled = true; const originalText = button.textContent; button.textContent = '📸 Testing...';
+      try {
+        const result = await homebridge.request('/test-snapshot', { url, directory, prefix, ownership, storeSnapshots });
+        if (!result?.image) throw new Error('The camera did not return an image.');
+        document.querySelector('#snapshotResult').src = `data:${result.contentType || 'image/jpeg'};base64,${result.image}`;
+        const modal = document.querySelector('#snapshotModal');
+        const heading = snapshot.querySelector('.camera-snapshot-heading');
+        const rect = heading.getBoundingClientRect();
+        const modalWidth = Math.min(800, window.innerWidth - 20);
+        const modalHeight = Math.min(window.innerHeight - 20, 700);
+        const left = Math.max(10, Math.min(rect.left, window.innerWidth - modalWidth - 10));
+        const top = Math.max(10, Math.min(rect.top, window.innerHeight - modalHeight - 10));
+        modal.classList.add('snapshot-test-modal'); modal.style.left = `${left}px`; modal.style.top = `${top}px`; modal.classList.add('show'); modal.style.display = 'block'; modal.removeAttribute('aria-hidden');
+        const backdrop = document.createElement('div'); backdrop.className = 'modal-backdrop fade show'; document.body.appendChild(backdrop);
+        const close = () => { modal.classList.remove('show', 'snapshot-test-modal'); modal.style.display = 'none'; modal.setAttribute('aria-hidden', 'true'); modal.style.left = ''; modal.style.top = ''; backdrop.remove(); };
+        modal.querySelectorAll('[data-bs-dismiss="modal"], .btn-close').forEach(el => el.onclick = close);
+      } catch (error) { console.error('Test Snapshot failed:', error); homebridge.toast.error(error?.message || 'Unable to retrieve or save the snapshot.', 'Test Snapshot Failed'); } finally { button.disabled = false; button.textContent = originalText; }
+      return;
     }
   });
-  snapshots.insertAdjacentHTML('beforeend', snapshotHtml());
-  updateDirectoryVisibility(snapshots.lastElementChild);
-  updateNotificationVisibility(snapshots.lastElementChild);
+  document.querySelector('#addSnapshot')?.addEventListener('click', addSnapshot);
+  if (snapshots.children.length === 0) addSnapshot();
 })();
