@@ -8,7 +8,6 @@ import { mkdir, readFile, writeFile, chown } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import path from 'node:path';
-import { sendPushcutNotification } from './pushcut.js';
 
 const execFileAsync = promisify(execFile);
 const MAX_SNAPSHOT_SIZE = 10 * 1024 * 1024;
@@ -198,7 +197,21 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     if (provider === 'pushover') { if (!channel.token || !channel.user) throw new Error('Pushover token and user are required.'); const form = new URLSearchParams({ token: channel.token, user: channel.user, message, title, sound: sound?.trim() || 'pushover' }); if (channel.device?.trim()) form.set('device', channel.device.trim()); const response = await fetch('https://api.pushover.net/1/messages.json', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: form.toString(), signal: AbortSignal.timeout(15000) }); if (!response.ok) throw new Error(`Pushover returned HTTP ${response.status}`); return 'Pushover'; }
     if (provider === 'pushbullet') { if (!channel.apiKey) throw new Error('Pushbullet Access Token is required.'); const push: Record<string, string> = { type: 'note', title, body: message }; if (channel.deviceIden) push.device_iden = channel.deviceIden; else if (channel.email) push.email = channel.email; else if (channel.channelTag) push.channel_tag = channel.channelTag; const response = await fetch('https://api.pushbullet.com/v2/pushes', { method: 'POST', headers: { 'Access-Token': channel.apiKey, 'Content-Type': 'application/json' }, body: JSON.stringify(push), signal: AbortSignal.timeout(15000) }); if (!response.ok) throw new Error(`Pushbullet returned HTTP ${response.status}`); return 'Pushbullet'; }
     if (provider === 'ntfy') { const server = (channel.server?.trim() || 'https://ntfy.sh').replace(/\/+$/, ''); const topic = channel.topic?.trim(); if (!topic) throw new Error('ntfy Topic is required.'); const url = `${server}/${encodeURIComponent(topic)}`; const headers: Record<string, string> = { 'Content-Type': 'text/plain; charset=utf-8', 'Title': title, 'Priority': String(channel.priority ?? 3) }; if (channel.tags?.trim()) headers.Tags = channel.tags.trim(); if (channel.accessToken?.trim()) headers.Authorization = `Bearer ${channel.accessToken.trim()}`; const response = await fetch(url, { method: 'POST', headers, body: message, signal: AbortSignal.timeout(15000) }); if (!response.ok) throw new Error(`ntfy returned HTTP ${response.status}`); return 'ntfy'; }
-    if (provider === 'pushcut') { await sendPushcutNotification(channel, message); return 'Pushcut'; }
+    if (provider === 'pushcut') {
+      const url = channel.pushcutUrl?.trim();
+      if (!url) throw new Error('Pushcut Webhook URL is required.');
+      let endpoint: URL;
+      try { endpoint = new URL(url); } catch { throw new Error('Pushcut Webhook URL is not valid.'); }
+      if (endpoint.protocol !== 'https:') throw new Error('Pushcut Webhook URL must use HTTPS.');
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, text: message }),
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!response.ok) throw new Error(`Pushcut returned HTTP ${response.status}`);
+      return 'Pushcut';
+    }
     if (!channel.privateKey?.trim()) throw new Error('Push Safer Private Key is required.');
     const form = new URLSearchParams({ k: channel.privateKey.trim(), t: title, m: message, d: channel.pushsaferDevice?.trim() || '', i: String(channel.icon ?? 1), v: String(channel.vibration ?? 1), p: String(channel.priority ?? 0) });
     if (sound?.trim()) form.set('s', sound.trim()); if (channel.iconColor?.trim()) form.set('c', channel.iconColor.trim()); if (channel.url?.trim()) form.set('u', channel.url.trim()); if (channel.urlTitle?.trim()) form.set('ut', channel.urlTitle.trim()); if (channel.timeToLive !== undefined) form.set('l', String(channel.timeToLive)); if (channel.retry !== undefined) form.set('re', String(channel.retry)); if (channel.expire !== undefined) form.set('ex', String(channel.expire));
