@@ -18,8 +18,8 @@ type OwnershipIds = { uid: number; gid: number };
 const detectionMessages: Record<NotificationCategory, string> = {
   people: 'Person detected', animals: 'Animal detected', vehicles: 'Vehicle detected', unidentified: 'Unidentified Activity detected',
 };
-
 type WebhookPayload = { camera: string; object: string; confidence: number | null };
+type BestDetection = Pick<Detection, 'category' | 'score' | 'className'>;
 
 export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service;
@@ -106,7 +106,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
           webhookPayload = { camera: snapshotName, object: 'unidentified', confidence: null };
         }
       } else {
-        let bestMatch: { category: Category; score: number; className: string } | null = null;
+        let bestMatch: BestDetection | null = null;
         for (const sensor of matched) {
           for (const detection of yolo.detections) {
             const category = detection.category;
@@ -146,8 +146,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
         url = new URL(parsed.toString());
         url.searchParams.set('camera', payload.camera);
         url.searchParams.set('object', payload.object);
-        if (payload.confidence === null) url.searchParams.delete('confidence');
-        else url.searchParams.set('confidence', String(payload.confidence));
+        url.searchParams.set('confidence', payload.confidence === null ? 'null' : String(payload.confidence));
       }
       const response = await fetch(url, options);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
