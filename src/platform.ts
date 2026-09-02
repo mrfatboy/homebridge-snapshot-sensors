@@ -19,7 +19,7 @@ const detectionMessages: Record<NotificationCategory, string> = {
   people: 'Person detected', animals: 'Animal detected', vehicles: 'Vehicle detected', unidentified: 'Unidentified Activity detected',
 };
 type WebhookPayload = { camera: string; object: string; confidence: number | null };
-type BestDetection = Pick<Detection, 'category' | 'score' | 'className'>;
+type BestDetection = { category: Category; score: number; className: string };
 
 export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service;
