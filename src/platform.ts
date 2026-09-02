@@ -133,11 +133,9 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
       parsed = new URL(webhook.url.trim());
       if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('Webhook URL must use HTTP or HTTPS');
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      this.log.warn(`[${config.name}] Webhook failed: ${method} [invalid URL] -> ${message}`);
+      this.log.warn(`[${config.name}] Webhook failed: ${method} [invalid URL]`);
       return;
     }
-    const logEndpoint = `${parsed.origin}${parsed.pathname}`;
     try {
       let url = parsed;
       const options: RequestInit = { method, signal: AbortSignal.timeout(15000) };
@@ -153,13 +151,13 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
       const response = await fetch(url, options);
       const status = `HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ''}`;
       if (!response.ok) {
-        this.log.warn(`[${config.name}] Webhook failed: ${method} ${logEndpoint} -> ${status}`);
+        this.log.warn(`[${config.name}] Webhook failed: ${method} -> ${status}`);
         return;
       }
-      this.log.info(`[${config.name}] Webhook: ${method} ${logEndpoint} -> ${status}`);
+      this.log.info(`[${config.name}] Webhook: ${method} -> ${status}`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      this.log.warn(`[${config.name}] Webhook failed: ${method} ${logEndpoint} -> ${message}`);
+      const isTimeout = error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError');
+      this.log.warn(`[${config.name}] Webhook failed: ${method} -> ${isTimeout ? 'timeout' : 'fetch failed'}`);
     }
   }
   private formatElapsed(ms: number): string { return ms < 1000 ? `${Math.round(ms)} ms` : `${(ms / 1000).toFixed(2)} s`; }
