@@ -7,18 +7,12 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Added
-
-- Added **Pushcut** as a notification provider.
-- Added **webhook support**.
-
 ## [1.0.6-beta.1] - 2026-09-02
 
 ### Added
 
-- Added optional webhook delivery for matching detections and Unidentified Activity events.
-- Added GET and POST webhook methods with a minimal detection payload containing camera, object, and confidence.
-- Added **Test Webhook** configuration support with the same size, color, and placement as the existing test buttons.
+- Added **Pushcut** as a notification provider.
+- Added **webhook support**.
 
 ### Performance
 
