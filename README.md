@@ -28,9 +28,10 @@ No cloud-based object-detection service is required.
 - 🖼️ Save an annotated image containing matching YOLO detections
 - 🔔 Push notifications
   - Pushover support
+  - Pushcut support
   - Pushbullet support
-  - ntfy support
   - Push Safer support
+  - ntfy support
 - 🔄 Multiple independent Snapshot Sensors
 - Use third-party sensors to trigger this plugin.
 
@@ -138,15 +139,30 @@ The exact host and container paths depend on your Docker Compose configuration.
 
 Notifications are configured independently for each Snapshot.
 
+The notification provider order in the Homebridge configuration UI is:
+
 | Provider | Supported |
 |---|:---:|
 | None | ✅ |
 | Pushover | ✅ |
+| Pushcut | ✅ |
 | Pushbullet | ✅ |
 | Push Safer | ✅ |
 | ntfy | ✅ |
 
 Only the provider selected for that Snapshot is used.
+
+### Pushover
+
+Pushover requires an Application Token and User Key. Snapshot Sensors supports a custom notification title and separate detection messages for Animal, Person, Vehicle, and Unidentified Activity detections. Pushover also supports a separate sound for each detection type.
+
+### Pushcut
+
+Pushcut uses a notification webhook URL copied from the Pushcut app. Snapshot Sensors sends the configured Pushcut title and the appropriate detection message as dynamic notification content using the same webhook URL.
+
+**Pushcut Pro is required for dynamic titles and messages.** Without Pushcut Pro, Pushcut uses the title and message configured in the Pushcut app.
+
+Snapshot Sensors also provides a **Test Notification** button for Pushcut.
 
 ### Detection messages and sounds
 
@@ -287,6 +303,14 @@ Example:
               "vehicleSound": "pushover",
               "unidentifiedMessage": "Unidentified Activity detected ⚠️",
               "unidentifiedSound": "pushover"
+            },
+            "pushcut": {
+              "pushcutUrl": "https://api.pushcut.io/YOUR_SECRET/notifications/YOUR_NOTIFICATION",
+              "title": "Driveway",
+              "animalMessage": "Animal detected 🐕",
+              "personMessage": "Person detected 🚶‍♂️",
+              "vehicleMessage": "Vehicle detected 🚗",
+              "unidentifiedMessage": "Unidentified Activity detected ⚠️"
             },
             "pushbullet": {
               "apiKey": "",
