@@ -1,0 +1,108 @@
+name: Finalize Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version (for example, 1.0.6-beta.1)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify release
+        id: verify
+        env:
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          package_version="$(node -p "require('./package.json').version")"
+
+          if [ "$VERSION" != "$package_version" ]; then
+            echo "Requested version ($VERSION) does not match package.json ($package_version)"
+            exit 1
+          fi
+
+          tag="v$VERSION"
+
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+            echo "Release tag $tag already exists. Refusing to create it again."
+            exit 1
+          fi
+
+          npm_version="$(npm view "homebridge-snapshot-sensors@$VERSION" version 2>/dev/null || true)"
+          if [ "$npm_version" != "$VERSION" ]; then
+            echo "Version $VERSION was not found on npm. Publish it to npm before finalizing the release."
+            exit 1
+          fi
+
+          if ! grep -q "^## \[$VERSION\]" CHANGELOG.md; then
+            echo "Could not find release notes for version $VERSION in CHANGELOG.md"
+            exit 1
+          fi
+
+      - name: Extract release notes
+        id: changelog
+        env:
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          notes="$(awk -v version="$VERSION" '
+            $0 ~ "^## \\[" version "\\]" {
+              found=1
+              next
+            }
+            found && $0 ~ "^## \\[" {
+              exit
+            }
+            found {
+              print
+            }
+          ' CHANGELOG.md)"
+
+          if [ -z "$notes" ]; then
+            echo "Could not extract release notes for version $VERSION"
+            exit 1
+          fi
+
+          {
+            echo "notes<<EOF"
+            echo "$notes"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create Git tag
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          tag="v$VERSION"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$tag" -m "Release $VERSION"
+          git push origin "$tag"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          gh release create "v$VERSION" \
+            --title "v$VERSION" \
+            --notes "${{ steps.changelog.outputs.notes }}"
