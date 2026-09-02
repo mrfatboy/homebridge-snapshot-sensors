@@ -108,7 +108,6 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
     try { parsed = new URL(url); } catch { throw new RequestError('The Webhook URL is not valid.', { status: 400 }); }
     if (!['http:', 'https:'].includes(parsed.protocol)) throw new RequestError('The Webhook URL must use HTTP or HTTPS.', { status: 400 });
     const payloadBody = { camera: 'Test', object: 'test', confidence: null };
-    const logEndpoint = `${parsed.origin}${parsed.pathname}`;
     let endpoint = parsed;
     const options = { method, signal: AbortSignal.timeout(15000) };
     if (method === 'POST') {
@@ -124,15 +123,16 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
       const response = await fetch(endpoint, options);
       const status = `HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ''}`;
       if (!response.ok) {
-        console.error(`[Snapshot Sensors] Webhook test failed: ${method} ${logEndpoint} -> ${status}`);
+        console.error(`[Snapshot Sensors] Webhook test failed: ${method} -> ${status}`);
         throw new RequestError(`Unable to send webhook: HTTP ${response.status}`, { status: 502 });
       }
-      console.log(`[Snapshot Sensors] Webhook test: ${method} ${logEndpoint} -> ${status}`);
+      console.log(`[Snapshot Sensors] Webhook test: ${method} -> ${status}`);
       return { success: true, status: response.status, statusText: response.statusText || 'OK' };
     } catch (error) {
       if (error instanceof RequestError) throw error;
-      const message = error instanceof Error ? error.message : String(error);
-      console.error(`[Snapshot Sensors] Webhook test failed: ${method} ${logEndpoint} -> ${message}`);
+      const isTimeout = error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError');
+      const message = isTimeout ? 'timeout' : 'fetch failed';
+      console.error(`[Snapshot Sensors] Webhook test failed: ${method} -> ${message}`);
       throw new RequestError(`Unable to send webhook: ${message}`, { status: 502 });
     }
   }
