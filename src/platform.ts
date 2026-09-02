@@ -82,19 +82,13 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
       if (!yolo) { this.log.info(`[${snapshotName}] YOLO is busy; skipping snapshot detection.`); return; }
       if (TEST_IMAGE_PATH) {
         const details = yolo.detections
-          .filter(d => d.category !== null && runtime.sensors.some(sensor =>
-            sensor.categories.includes(d.category!) &&
-            sensor.thresholds[d.category!] !== undefined &&
-            d.score >= sensor.thresholds[d.category!]!,
-          ))
+          .filter(d => d.category !== null && runtime.sensors.some(sensor => sensor.categories.includes(d.category!) && sensor.thresholds[d.category!] !== undefined && d.score >= sensor.thresholds[d.category!]!))
           .map(d => `${d.className} (${d.score.toFixed(3)})`);
         this.log.info(`[${snapshotName}] [Test Image] Accepted detections: ${details.length === 0 ? 'none' : details.join(', ')}`);
       }
       const matched = matchingSensors(yolo.detections, runtime.sensors);
       let annotatedImage: Buffer | undefined;
-      if (store === 'annotated' && matched.length > 0 && yolo.createAnnotatedImage) {
-        annotatedImage = await yolo.createAnnotatedImage(runtime.sensors);
-      }
+      if (store === 'annotated' && matched.length > 0 && yolo.createAnnotatedImage) annotatedImage = await yolo.createAnnotatedImage(runtime.sensors);
       await this.saveSnapshot(runtime.config, image, annotatedImage, contentType);
       let webhookPayload: WebhookPayload | null = null;
       if (matched.length === 0) {
@@ -140,7 +134,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
       if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('Webhook URL must use HTTP or HTTPS');
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      console.error(`[Snapshot Sensors] Webhook failed: ${method} [invalid URL] - ${message}`);
+      this.log.warn(`[${config.name}] Webhook failed: ${method} [invalid URL] -> ${message}`);
       return;
     }
     const logEndpoint = `${parsed.origin}${parsed.pathname}`;
@@ -156,13 +150,16 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
         url.searchParams.set('object', payload.object);
         url.searchParams.set('confidence', payload.confidence === null ? 'null' : String(payload.confidence));
       }
-      console.log(`[Snapshot Sensors] Webhook: sending ${method} request to ${logEndpoint}`);
       const response = await fetch(url, options);
-      console.log(`[Snapshot Sensors] Webhook: received HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ''}`);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const status = `HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ''}`;
+      if (!response.ok) {
+        this.log.warn(`[${config.name}] Webhook failed: ${method} ${logEndpoint} -> ${status}`);
+        return;
+      }
+      this.log.info(`[${config.name}] Webhook: ${method} ${logEndpoint} -> ${status}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      console.error(`[Snapshot Sensors] Webhook failed: ${method} ${logEndpoint} - ${message}`);
+      this.log.warn(`[${config.name}] Webhook failed: ${method} ${logEndpoint} -> ${message}`);
     }
   }
   private formatElapsed(ms: number): string { return ms < 1000 ? `${Math.round(ms)} ms` : `${(ms / 1000).toFixed(2)} s`; }
@@ -178,33 +175,18 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     if (!ownership?.trim()) return;
     const key = ownership.trim();
     let idsPromise = this.ownershipCache.get(key);
-    if (!idsPromise) {
-      idsPromise = this.resolveOwnership(key);
-      this.ownershipCache.set(key, idsPromise);
-    }
-    try {
-      const { uid, gid } = await idsPromise;
-      await chown(filePath, uid, gid);
-    } catch (error) {
-      if (this.ownershipCache.get(key) === idsPromise) this.ownershipCache.delete(key);
-      throw error;
-    }
+    if (!idsPromise) { idsPromise = this.resolveOwnership(key); this.ownershipCache.set(key, idsPromise); }
+    try { const { uid, gid } = await idsPromise; await chown(filePath, uid, gid); }
+    catch (error) { if (this.ownershipCache.get(key) === idsPromise) this.ownershipCache.delete(key); throw error; }
   }
   private async resolveOwnership(ownership: string): Promise<OwnershipIds> {
     const [username, group] = ownership.split(':', 2).map(part => part.trim());
     if (!username) throw new Error('Snapshot Ownership Override must contain a username.');
-    const { stdout: passwd } = await execFileAsync('getent', ['passwd', username]);
-    const fields = passwd.trim().split(':');
+    const { stdout: passwd } = await execFileAsync('getent', ['passwd', username]); const fields = passwd.trim().split(':');
     if (fields.length < 4) throw new Error(`Unable to resolve snapshot owner: ${username}`);
     const uid = Number(fields[2]); let gid = Number(fields[3]);
     if (!Number.isInteger(uid) || !Number.isInteger(gid)) throw new Error(`Unable to resolve snapshot owner: ${username}`);
-    if (group) {
-      const { stdout: groupData } = await execFileAsync('getent', ['group', group]);
-      const groupFields = groupData.trim().split(':');
-      if (groupFields.length < 3) throw new Error(`Unable to resolve snapshot group: ${group}`);
-      gid = Number(groupFields[2]);
-      if (!Number.isInteger(gid)) throw new Error(`Unable to resolve snapshot group: ${group}`);
-    }
+    if (group) { const { stdout: groupData } = await execFileAsync('getent', ['group', group]); const groupFields = groupData.trim().split(':'); if (groupFields.length < 3) throw new Error(`Unable to resolve snapshot group: ${group}`); gid = Number(groupFields[2]); if (!Number.isInteger(gid)) throw new Error(`Unable to resolve snapshot owner group: ${group}`); }
     return { uid, gid };
   }
   private async sendNotification(config: SnapshotConfig, category: NotificationCategory): Promise<string | null> {
@@ -214,21 +196,9 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     const key = category === 'unidentified' ? 'unidentifiedMessage' : category === 'people' ? 'personMessage' : category === 'animals' ? 'animalMessage' : 'vehicleMessage'; const message = channel[key as keyof NotificationChannel] as string | undefined; if (!message) return null;
     const soundKey = category === 'unidentified' ? 'unidentifiedSound' : category === 'people' ? 'personSound' : category === 'animals' ? 'animalSound' : 'vehicleSound'; const sound = channel[soundKey as keyof NotificationChannel] as string | undefined;
     const title = channel.title?.trim() || 'Snapshot Sensors';
-    if (provider === 'pushover') {
-      if (!channel.token || !channel.user) throw new Error('Pushover token and user are required.');
-      const form = new URLSearchParams({ token: channel.token, user: channel.user, message, title, sound: sound?.trim() || 'pushover' }); if (channel.device?.trim()) form.set('device', channel.device.trim());
-      const response = await fetch('https://api.pushover.net/1/messages.json', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: form.toString(), signal: AbortSignal.timeout(15000) }); if (!response.ok) throw new Error(`Pushover returned HTTP ${response.status}`); return 'Pushover';
-    }
-    if (provider === 'pushbullet') {
-      if (!channel.apiKey) throw new Error('Pushbullet Access Token is required.');
-      const push: Record<string, string> = { type: 'note', title, body: message }; if (channel.deviceIden) push.device_iden = channel.deviceIden; else if (channel.email) push.email = channel.email; else if (channel.channelTag) push.channel_tag = channel.channelTag;
-      const response = await fetch('https://api.pushbullet.com/v2/pushes', { method: 'POST', headers: { 'Access-Token': channel.apiKey, 'Content-Type': 'application/json' }, body: JSON.stringify(push), signal: AbortSignal.timeout(15000) }); if (!response.ok) throw new Error(`Pushbullet returned HTTP ${response.status}`); return 'Pushbullet';
-    }
-    if (provider === 'ntfy') {
-      const server = (channel.server?.trim() || 'https://ntfy.sh').replace(/\/+$/, ''); const topic = channel.topic?.trim(); if (!topic) throw new Error('ntfy Topic is required.');
-      const url = `${server}/${encodeURIComponent(topic)}`; const headers: Record<string, string> = { 'Content-Type': 'text/plain; charset=utf-8', 'Title': title, 'Priority': String(channel.priority ?? 3) }; if (channel.tags?.trim()) headers.Tags = channel.tags.trim(); if (channel.accessToken?.trim()) headers.Authorization = `Bearer ${channel.accessToken.trim()}`;
-      const response = await fetch(url, { method: 'POST', headers, body: message, signal: AbortSignal.timeout(15000) }); if (!response.ok) throw new Error(`ntfy returned HTTP ${response.status}`); return 'ntfy';
-    }
+    if (provider === 'pushover') { if (!channel.token || !channel.user) throw new Error('Pushover token and user are required.'); const form = new URLSearchParams({ token: channel.token, user: channel.user, message, title, sound: sound?.trim() || 'pushover' }); if (channel.device?.trim()) form.set('device', channel.device.trim()); const response = await fetch('https://api.pushover.net/1/messages.json', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: form.toString(), signal: AbortSignal.timeout(15000) }); if (!response.ok) throw new Error(`Pushover returned HTTP ${response.status}`); return 'Pushover'; }
+    if (provider === 'pushbullet') { if (!channel.apiKey) throw new Error('Pushbullet Access Token is required.'); const push: Record<string, string> = { type: 'note', title, body: message }; if (channel.deviceIden) push.device_iden = channel.deviceIden; else if (channel.email) push.email = channel.email; else if (channel.channelTag) push.channel_tag = channel.channelTag; const response = await fetch('https://api.pushbullet.com/v2/pushes', { method: 'POST', headers: { 'Access-Token': channel.apiKey, 'Content-Type': 'application/json' }, body: JSON.stringify(push), signal: AbortSignal.timeout(15000) }); if (!response.ok) throw new Error(`Pushbullet returned HTTP ${response.status}`); return 'Pushbullet'; }
+    if (provider === 'ntfy') { const server = (channel.server?.trim() || 'https://ntfy.sh').replace(/\/+$/, ''); const topic = channel.topic?.trim(); if (!topic) throw new Error('ntfy Topic is required.'); const url = `${server}/${encodeURIComponent(topic)}`; const headers: Record<string, string> = { 'Content-Type': 'text/plain; charset=utf-8', 'Title': title, 'Priority': String(channel.priority ?? 3) }; if (channel.tags?.trim()) headers.Tags = channel.tags.trim(); if (channel.accessToken?.trim()) headers.Authorization = `Bearer ${channel.accessToken.trim()}`; const response = await fetch(url, { method: 'POST', headers, body: message, signal: AbortSignal.timeout(15000) }); if (!response.ok) throw new Error(`ntfy returned HTTP ${response.status}`); return 'ntfy'; }
     if (!channel.privateKey?.trim()) throw new Error('Push Safer Private Key is required.');
     const form = new URLSearchParams({ k: channel.privateKey.trim(), t: title, m: message, d: channel.pushsaferDevice?.trim() || '', i: String(channel.icon ?? 1), v: String(channel.vibration ?? 1), p: String(channel.priority ?? 0) });
     if (sound?.trim()) form.set('s', sound.trim()); if (channel.iconColor?.trim()) form.set('c', channel.iconColor.trim()); if (channel.url?.trim()) form.set('u', channel.url.trim()); if (channel.urlTitle?.trim()) form.set('ut', channel.urlTitle.trim()); if (channel.timeToLive !== undefined) form.set('l', String(channel.timeToLive)); if (channel.retry !== undefined) form.set('re', String(channel.retry)); if (channel.expire !== undefined) form.set('ex', String(channel.expire));
