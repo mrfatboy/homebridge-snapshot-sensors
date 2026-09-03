@@ -4,7 +4,9 @@ import { matchingSensors } from './detector.js';
 import { fetchSnapshot } from './snapshot.js';
 import { runYolo } from './yolo.js';
 import { NotificationService, notificationProvider } from './notifications/service.js';
+import { sendWebhook as postWebhook } from './webhook.js';
 import type { SensorSpec, SnapshotConfig, Category, StoreSnapshots } from './types.js';
+import type { WebhookPayload } from './webhook.js';
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile, chown } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
@@ -19,7 +21,6 @@ type OwnershipIds = { uid: number; gid: number };
 const detectionMessages: Record<NotificationCategory, string> = {
   people: 'Person detected', animals: 'Animal detected', vehicles: 'Vehicle detected', unidentified: 'Unidentified Activity detected',
 };
-type WebhookPayload = { camera: string; object: string; confidence: number | null };
 type BestDetection = { category: Category; score: number; className: string };
 
 export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
@@ -133,18 +134,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
       return;
     }
     try {
-      let url = parsed;
-      const options: RequestInit = { method, signal: AbortSignal.timeout(15000) };
-      if (method === 'POST') {
-        options.headers = { 'Content-Type': 'application/json' };
-        options.body = JSON.stringify(payload);
-      } else {
-        url = new URL(parsed.toString());
-        url.searchParams.set('camera', payload.camera);
-        url.searchParams.set('object', payload.object);
-        url.searchParams.set('confidence', payload.confidence === null ? 'null' : String(payload.confidence));
-      }
-      const response = await fetch(url, options);
+      const response = await postWebhook(parsed, method, payload);
       const status = `HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ''}`;
       if (!response.ok) {
         this.log.warn(`[${config.name}] Webhook failed: ${method} -> ${status}`);
