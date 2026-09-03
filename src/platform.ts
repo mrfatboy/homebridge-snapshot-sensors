@@ -1,6 +1,7 @@
 import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge';
 import { resolveSensors } from './categories.js';
 import { matchingSensors } from './detector.js';
+import { fetchSnapshot } from './snapshot.js';
 import { runYolo } from './yolo.js';
 import { NotificationService, notificationProvider } from './notifications/service.js';
 import type { SensorSpec, SnapshotConfig, Category, StoreSnapshots } from './types.js';
@@ -11,7 +12,6 @@ import { promisify } from 'node:util';
 import path from 'node:path';
 
 const execFileAsync = promisify(execFile);
-const MAX_SNAPSHOT_SIZE = 10 * 1024 * 1024;
 const TEST_IMAGE_PATH = process.env.SNAPSHOT_SENSORS_TEST_IMAGE?.trim();
 type NotificationCategory = Category | 'unidentified';
 type SnapshotRuntime = { config: SnapshotConfig; sensors: SensorSpec[]; service: Service; running: boolean };
@@ -67,18 +67,8 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
         if (!image.length) throw new Error(`Test image is empty: ${TEST_IMAGE_PATH}`);
         this.log.info(`[${snapshotName}] [Test Image] Using ${TEST_IMAGE_PATH}`);
       } else {
-        const response = await fetch(runtime.config.url, { signal: AbortSignal.timeout(15000) });
-        if (!response.ok) throw new Error(`Camera returned HTTP ${response.status}`);
-        const contentLength = response.headers.get('content-length');
-        if (contentLength) {
-          const size = Number(contentLength);
-          if (!Number.isFinite(size) || size < 0) throw new Error('Camera returned an invalid Content-Length header');
-          if (size > MAX_SNAPSHOT_SIZE) throw new Error('Camera snapshot exceeds the maximum allowed size of 10 MB');
-        }
-        contentType = response.headers.get('content-type') || 'image/jpeg'; image = Buffer.from(await response.arrayBuffer());
-        if (!image.length) throw new Error('Camera returned an empty response');
+        ({ image, contentType } = await fetchSnapshot(runtime.config.url));
       }
-      if (image.length > MAX_SNAPSHOT_SIZE) throw new Error('Snapshot image exceeds the maximum allowed size of 10 MB');
       const yolo = await runYolo(image, store);
       if (!yolo) { this.log.info(`[${snapshotName}] YOLO is busy; skipping snapshot detection.`); return; }
       if (TEST_IMAGE_PATH) {
