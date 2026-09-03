@@ -24,4 +24,5 @@ export const sendPushbullet: NotificationProviderSender = async ({ channel, titl
     signal: AbortSignal.timeout(15000),
   });
   if (!response.ok) throw new Error(`Pushbullet returned HTTP ${response.status}`);
+  return response.status;
 };
