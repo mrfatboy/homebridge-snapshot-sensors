@@ -1,5 +1,10 @@
 import type { NotificationProviderSender } from '../types.js';
 
+interface PushoverResponse {
+  status?: number;
+  errors?: string[];
+}
+
 export const sendPushover: NotificationProviderSender = async ({ channel, title, message, sound }) => {
   const token = channel.token?.trim();
   const user = channel.user?.trim();
@@ -20,9 +25,9 @@ export const sendPushover: NotificationProviderSender = async ({ channel, title,
     body: form.toString(),
     signal: AbortSignal.timeout(15000),
   });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok || body?.status !== 1) {
-    const detail = Array.isArray(body?.errors) ? body.errors.join(', ') : `HTTP ${response.status}`;
+  const body = await response.json().catch(() => ({})) as PushoverResponse;
+  if (!response.ok || body.status !== 1) {
+    const detail = Array.isArray(body.errors) ? body.errors.join(', ') : `HTTP ${response.status}`;
     throw new Error(`Pushover returned ${detail}`);
   }
 };
