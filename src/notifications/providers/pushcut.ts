@@ -19,4 +19,5 @@ export const sendPushcut: NotificationProviderSender = async ({ channel, title, 
     signal: AbortSignal.timeout(15000),
   });
   if (!response.ok) throw new Error(`Pushcut returned HTTP ${response.status}`);
+  return response.status;
 };
