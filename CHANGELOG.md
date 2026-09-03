@@ -7,6 +7,14 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.6-beta.3] - 2026-09-03
+
+### Changed
+
+- Unified notification delivery for normal detection workflows and UI test notifications through a shared notification service.
+- Improved test-image diagnostics by logging the configured accepted categories and accepted detections.
+- Aligned UI test snapshot validation with the production 10 MB snapshot size limit.
+
 ## [1.0.6-beta.2] - 2026-09-02
 
 ### Performance
@@ -92,6 +100,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - Homebridge custom configuration UI.
 
 [Unreleased]: https://github.com/mrfatboy/homebridge-snapshot-sensors/compare/main...NewFeature
+[1.0.6-beta.3]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.6-beta.3
 [1.0.6-beta.2]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.6-beta.2
 [1.0.6-beta.1]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.6-beta.1
 [1.0.5]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.5
