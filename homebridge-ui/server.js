@@ -1,10 +1,10 @@
 import { HomebridgePluginUiServer, RequestError } from '@homebridge/plugin-ui-utils';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { fetchSnapshot } from '../dist/src/snapshot.js';
 import { NotificationService } from '../dist/src/notifications/service.js';
 
 const execFileAsync = promisify(execFile);
-const MAX_SNAPSHOT_SIZE = 10 * 1024 * 1024;
 const TEST_NOTIFICATION_MESSAGE = 'This is a test';
 
 class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
@@ -57,23 +57,13 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
       }
     }
     try {
-      const response = await fetch(parsed, { signal: AbortSignal.timeout(15000) });
-      if (!response.ok) throw new Error(`Camera returned HTTP ${response.status}`);
-      const contentLength = response.headers.get('content-length');
-      if (contentLength) {
-        const size = Number(contentLength);
-        if (!Number.isFinite(size) || size < 0) throw new Error('Camera returned an invalid Content-Length header');
-        if (size > MAX_SNAPSHOT_SIZE) throw new Error('Camera snapshot exceeds the maximum allowed size of 10 MB');
-      }
-      const contentType = response.headers.get('content-type') || 'image/jpeg';
-      const data = Buffer.from(await response.arrayBuffer());
-      if (!data.length) throw new Error('Camera returned an empty response');
-      if (data.length > MAX_SNAPSHOT_SIZE) throw new Error('Snapshot image exceeds the maximum allowed size of 10 MB');
+      const { image: data, contentType } = await fetchSnapshot(parsed.toString());
       let outputImage = data;
       if (storeSnapshots !== 'never') {
         const { runYolo } = await import('../dist/src/yolo.js');
         const result = await runYolo(data, storeSnapshots);
-        if (storeSnapshots === 'annotated' && result.annotatedImage) outputImage = result.annotatedImage;
+        if (!result) throw new Error('YOLO is busy; please try again.');
+        if (storeSnapshots === 'annotated' && result.createAnnotatedImage) outputImage = await result.createAnnotatedImage([]);
       }
       if (storeSnapshots === 'never') return { contentType, image: data.toString('base64'), saved: false };
       const extension = storeSnapshots === 'annotated' ? '.jpg' : (contentType.toLowerCase().includes('png') ? '.png' : '.jpg');
@@ -98,13 +88,14 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
           const groupFields = groupOutput.trim().split(':');
           if (groupFields.length < 3) throw new Error(`Unable to resolve snapshot group: ${group}`);
           gid = Number(groupFields[2]);
-          if (!Number.isInteger(gid)) throw new Error(`Unable to resolve snapshot group: ${group}`);
+          if (!Number.isInteger(gid)) throw new Error(`Unable to resolve snapshot owner group: ${group}`);
         }
         await fs.chown(filePath, uid, gid);
       }
       return { contentType: storeSnapshots === 'annotated' ? 'image/jpeg' : contentType, image: outputImage.toString('base64'), filename, path: filePath, saved: true };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      if (error instanceof RequestError) throw error;
       throw new RequestError(`Unable to retrieve snapshot: ${message}`, { status: 502 });
     }
   }

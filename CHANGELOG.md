@@ -14,6 +14,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - Unified notification delivery for normal detection workflows and UI test notifications through a shared notification service.
 - Improved test-image diagnostics by logging the configured accepted categories and accepted detections.
 - Aligned UI test snapshot validation with the production 10 MB snapshot size limit.
+- Refactored snapshot retrieval and validation into a shared snapshot system.
 
 ## [1.0.6-beta.2] - 2026-09-02
 
