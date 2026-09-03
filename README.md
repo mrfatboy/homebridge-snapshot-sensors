@@ -8,7 +8,7 @@
 
 **Homebridge snapshot-triggered object detection using a local YOLO26 model.**
 
-`homebridge-snapshot-sensors` retrieves a still image from one or more configured cameras, runs local object detection using the bundled YOLO26/ONNX Runtime engine, compares the detections against your individually configured sensors, optionally saves the image, and sends a push notification when configured.
+`homebridge-snapshot-sensors` retrieves a still image from one or more configured cameras, runs local object detection using the bundled YOLO26/ONNX Runtime engine, compares the detections against your individually configured sensors, optionally saves the image, and sends a push notification or webhook request when configured.
 
 No cloud-based object-detection service is required.
 
