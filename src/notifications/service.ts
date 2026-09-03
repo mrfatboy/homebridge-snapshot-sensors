@@ -46,19 +46,19 @@ export function notificationProvider(notification?: NotificationConfig, category
 export class NotificationService {
   static async send(request: NotificationRequest): Promise<NotificationResult> {
     const provider = request.notification.provider;
-    if (!provider || provider === 'none') return { sent: false, provider: null };
+    if (!provider || provider === 'none') return { sent: false, provider: null, status: null };
 
     const definition = PROVIDERS[provider];
     const channel = channelFor(request.notification, provider);
     if (!channel) throw new Error(`${definition.name} notification configuration is missing.`);
 
-    await definition.send({
+    const status = await definition.send({
       channel,
       title: request.title.trim() || 'Snapshot Sensors',
       message: request.message,
       sound: request.sound,
     });
-    return { sent: true, provider: definition.name };
+    return { sent: true, provider: definition.name, status };
   }
 
   static messageFor(channel: NotificationChannel, category: NotificationCategory): string | undefined {
