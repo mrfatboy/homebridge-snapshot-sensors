@@ -4,6 +4,7 @@ import { promisify } from 'node:util';
 import { NotificationService } from '../dist/src/notifications/service.js';
 
 const execFileAsync = promisify(execFile);
+const MAX_SNAPSHOT_SIZE = 10 * 1024 * 1024;
 const TEST_NOTIFICATION_MESSAGE = 'This is a test';
 
 class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
@@ -58,9 +59,16 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
     try {
       const response = await fetch(parsed, { signal: AbortSignal.timeout(15000) });
       if (!response.ok) throw new Error(`Camera returned HTTP ${response.status}`);
+      const contentLength = response.headers.get('content-length');
+      if (contentLength) {
+        const size = Number(contentLength);
+        if (!Number.isFinite(size) || size < 0) throw new Error('Camera returned an invalid Content-Length header');
+        if (size > MAX_SNAPSHOT_SIZE) throw new Error('Camera snapshot exceeds the maximum allowed size of 10 MB');
+      }
       const contentType = response.headers.get('content-type') || 'image/jpeg';
       const data = Buffer.from(await response.arrayBuffer());
       if (!data.length) throw new Error('Camera returned an empty response');
+      if (data.length > MAX_SNAPSHOT_SIZE) throw new Error('Snapshot image exceeds the maximum allowed size of 10 MB');
       let outputImage = data;
       if (storeSnapshots !== 'never') {
         const { runYolo } = await import('../dist/src/yolo.js');
