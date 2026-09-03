@@ -1,18 +1,24 @@
 import type { Category, NotificationChannel, NotificationConfig } from '../types.js';
-import type { NotificationProvider, NotificationRequest, NotificationResult, NotificationProviderSender } from './types.js';
+import type {
+  NotificationProvider,
+  NotificationRequest,
+  NotificationResult,
+  NotificationProviderSender,
+} from './types.js';
 import { sendNtfy } from './providers/ntfy.js';
 import { sendPushSafer } from './providers/pushsafer.js';
 import { sendPushbullet } from './providers/pushbullet.js';
 import { sendPushcut } from './providers/pushcut.js';
 import { sendPushover } from './providers/pushover.js';
 
-const PROVIDERS: Record<NotificationProvider, { name: string; send: NotificationProviderSender }> = {
-  pushover: { name: 'Pushover', send: sendPushover },
-  pushbullet: { name: 'Pushbullet', send: sendPushbullet },
-  ntfy: { name: 'ntfy', send: sendNtfy },
-  pushsafer: { name: 'Push Safer', send: sendPushSafer },
-  pushcut: { name: 'Pushcut', send: sendPushcut },
-};
+const PROVIDERS: Record<NotificationProvider, { name: string; send: NotificationProviderSender }> =
+  {
+    pushover: { name: 'Pushover', send: sendPushover },
+    pushbullet: { name: 'Pushbullet', send: sendPushbullet },
+    ntfy: { name: 'ntfy', send: sendNtfy },
+    pushsafer: { name: 'Push Safer', send: sendPushSafer },
+    pushcut: { name: 'Pushcut', send: sendPushcut },
+  };
 
 type NotificationCategory = Category | 'unidentified';
 
@@ -30,7 +36,10 @@ const SOUND_KEYS: Record<NotificationCategory, keyof NotificationChannel> = {
   vehicles: 'vehicleSound',
 };
 
-function channelFor(notification: NotificationConfig, provider: NotificationProvider): NotificationChannel | undefined {
+function channelFor(
+  notification: NotificationConfig,
+  provider: NotificationProvider,
+): NotificationChannel | undefined {
   return notification[provider];
 }
 
@@ -59,11 +68,17 @@ export class NotificationService {
     return { sent: true, provider: definition.name, status };
   }
 
-  static messageFor(channel: NotificationChannel, category: NotificationCategory): string | undefined {
+  static messageFor(
+    channel: NotificationChannel,
+    category: NotificationCategory,
+  ): string | undefined {
     return channel[MESSAGE_KEYS[category]] as string | undefined;
   }
 
-  static soundFor(channel: NotificationChannel, category: NotificationCategory): string | undefined {
+  static soundFor(
+    channel: NotificationChannel,
+    category: NotificationCategory,
+  ): string | undefined {
     return channel[SOUND_KEYS[category]] as string | undefined;
   }
 }

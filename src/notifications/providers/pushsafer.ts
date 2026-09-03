@@ -1,6 +1,11 @@
 import type { NotificationProviderSender } from '../types.js';
 
-export const sendPushSafer: NotificationProviderSender = async ({ channel, title, message, sound }) => {
+export const sendPushSafer: NotificationProviderSender = async ({
+  channel,
+  title,
+  message,
+  sound,
+}) => {
   const privateKey = channel.privateKey?.trim();
   if (!privateKey) throw new Error('Push Safer Private Key is required.');
 

@@ -11,7 +11,8 @@ export const sendNtfy: NotificationProviderSender = async ({ channel, title, mes
   } catch {
     throw new Error('ntfy Server URL is not valid.');
   }
-  if (!['http:', 'https:'].includes(endpoint.protocol)) throw new Error('ntfy Server URL must use HTTP or HTTPS.');
+  if (!['http:', 'https:'].includes(endpoint.protocol))
+    throw new Error('ntfy Server URL must use HTTP or HTTPS.');
 
   const headers: Record<string, string> = {
     'Content-Type': 'text/plain; charset=utf-8',

@@ -4,11 +4,26 @@ import { categoryOfClass } from '../src/categories.js';
 import type { Detection, SensorSpec } from '../src/types.js';
 
 const det = (classId: number, score: number, w = 200, h = 200): Detection => {
-  return { x1: 0, y1: 0, x2: w, y2: h, score, classId, className: '', category: categoryOfClass(classId) };
+  return {
+    x1: 0,
+    y1: 0,
+    x2: w,
+    y2: h,
+    score,
+    classId,
+    className: '',
+    category: categoryOfClass(classId),
+  };
 };
 
-const sensor = (categories: SensorSpec['categories'], thresholds: SensorSpec['thresholds']): SensorSpec => ({
-  name: 'Test Sensor', categories, thresholds, unidentifiedMotionActivity: true,
+const sensor = (
+  categories: SensorSpec['categories'],
+  thresholds: SensorSpec['thresholds'],
+): SensorSpec => ({
+  name: 'Test Sensor',
+  categories,
+  thresholds,
+  unidentifiedMotionActivity: true,
 });
 
 describe('categoryOfClass()', () => {
@@ -54,7 +69,11 @@ describe('scoreCategories()', () => {
 
 describe('matchingSensors()', () => {
   it('applies the configured threshold independently for each category', () => {
-    const s = sensor(['animals', 'people', 'vehicles'], { animals: 0.4, people: 0.25, vehicles: 0.55 });
+    const s = sensor(['animals', 'people', 'vehicles'], {
+      animals: 0.4,
+      people: 0.25,
+      vehicles: 0.55,
+    });
     expect(matchingSensors([det(15, 0.35), det(0, 0.25), det(2, 0.54)], [s])).toHaveLength(1);
     expect(matchingSensors([det(15, 0.4), det(0, 0.25), det(2, 0.55)], [s])).toHaveLength(1);
     expect(matchingSensors([det(15, 0.39), det(0, 0.24), det(2, 0.54)], [s])).toHaveLength(0);

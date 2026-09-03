@@ -6,7 +6,11 @@ export interface WebhookPayload {
   confidence: number | null;
 }
 
-export async function sendWebhook(url: string | URL, method: WebhookMethod, payload: WebhookPayload): Promise<Response> {
+export async function sendWebhook(
+  url: string | URL,
+  method: WebhookMethod,
+  payload: WebhookPayload,
+): Promise<Response> {
   const endpoint = new URL(url.toString());
   const options: RequestInit = { method, signal: AbortSignal.timeout(15000) };
 
@@ -16,7 +20,10 @@ export async function sendWebhook(url: string | URL, method: WebhookMethod, payl
   } else {
     endpoint.searchParams.set('camera', payload.camera);
     endpoint.searchParams.set('object', payload.object);
-    endpoint.searchParams.set('confidence', payload.confidence === null ? 'null' : String(payload.confidence));
+    endpoint.searchParams.set(
+      'confidence',
+      payload.confidence === null ? 'null' : String(payload.confidence),
+    );
   }
 
   return fetch(endpoint, options);
