@@ -1,6 +1,7 @@
 import { HomebridgePluginUiServer, RequestError } from '@homebridge/plugin-ui-utils';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { NotificationService } from '../dist/src/notifications/service.js';
 
 const execFileAsync = promisify(execFile);
 const TEST_NOTIFICATION_MESSAGE = 'This is a test';
@@ -89,7 +90,7 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
           const groupFields = groupOutput.trim().split(':');
           if (groupFields.length < 3) throw new Error(`Unable to resolve snapshot group: ${group}`);
           gid = Number(groupFields[2]);
-          if (!Number.isInteger(gid)) throw new Error(`Unable to resolve snapshot owner group: ${group}`);
+          if (!Number.isInteger(gid)) throw new Error(`Unable to resolve snapshot group: ${group}`);
         }
         await fs.chown(filePath, uid, gid);
       }
@@ -139,134 +140,20 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
 
   async testNotification(payload) {
     const provider = typeof payload?.provider === 'string' ? payload.provider.trim().toLowerCase() : 'none';
-    if (provider === 'pushover') {
-      const token = typeof payload?.token === 'string' ? payload.token.trim() : '';
-      const user = typeof payload?.user === 'string' ? payload.user.trim() : '';
-      const device = typeof payload?.device === 'string' ? payload.device.trim() : '';
-      const title = typeof payload?.title === 'string' ? payload.title.trim() : '';
-      if (!token) throw new RequestError('Pushover Application Token is required.', { status: 400 });
-      if (!user) throw new RequestError('Pushover User Key is required.', { status: 400 });
-      if (!title) throw new RequestError('Pushover Title is required.', { status: 400 });
-      const form = new URLSearchParams();
-      form.set('token', token); form.set('user', user); form.set('message', TEST_NOTIFICATION_MESSAGE); form.set('title', title); form.set('sound', 'pushover');
-      if (device) form.set('device', device);
-      try {
-        const response = await fetch('https://api.pushover.net/1/messages.json', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: form.toString(), signal: AbortSignal.timeout(15000) });
-        const body = await response.json().catch(() => ({}));
-        if (!response.ok || body?.status !== 1) throw new Error(Array.isArray(body?.errors) ? body.errors.join(', ') : `HTTP ${response.status}`);
-        return { success: true };
-      } catch (error) {
-        throw new RequestError(`Unable to send Pushover notification: ${error instanceof Error ? error.message : String(error)}`, { status: 502 });
-      }
-    }
+    if (provider === 'none') throw new RequestError('A notification provider is required.', { status: 400 });
+    const title = typeof payload?.title === 'string' ? payload.title.trim() : '';
+    if (!title) throw new RequestError(`${provider} Title is required.`, { status: 400 });
 
-    if (provider === 'pushcut') {
-      const url = typeof payload?.url === 'string' ? payload.url.trim() : '';
-      const title = typeof payload?.title === 'string' ? payload.title.trim() : '';
-      if (!url) throw new RequestError('Pushcut Webhook URL is required.', { status: 400 });
-      if (!title) throw new RequestError('Pushcut Title is required.', { status: 400 });
-      let endpoint;
-      try { endpoint = new URL(url); } catch { throw new RequestError('The Pushcut Webhook URL is not valid.', { status: 400 }); }
-      if (endpoint.protocol !== 'https:') throw new RequestError('The Pushcut Webhook URL must use HTTPS.', { status: 400 });
-      try {
-        const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, text: TEST_NOTIFICATION_MESSAGE }), signal: AbortSignal.timeout(15000) });
-        const responseText = await response.text();
-        if (!response.ok) throw new Error(responseText || `HTTP ${response.status}`);
-        return { success: true };
-      } catch (error) {
-        throw new RequestError(`Unable to send Pushcut notification: ${error instanceof Error ? error.message : String(error)}`, { status: 502 });
-      }
-    }
+    const channel = { ...payload };
+    if (provider === 'pushcut' && typeof payload?.url === 'string') channel.pushcutUrl = payload.url.trim();
+    const notification = { provider, [provider]: channel };
 
-    if (provider === 'pushbullet') {
-      const apiKey = typeof payload?.apiKey === 'string' ? payload.apiKey.trim() : '';
-      const deviceIden = typeof payload?.deviceIden === 'string' ? payload.deviceIden.trim() : '';
-      const email = typeof payload?.email === 'string' ? payload.email.trim() : '';
-      const channelTag = typeof payload?.channelTag === 'string' ? payload.channelTag.trim() : '';
-      const title = typeof payload?.title === 'string' ? payload.title.trim() : '';
-      if (!apiKey) throw new RequestError('Pushbullet Access Token is required.', { status: 400 });
-      if (!title) throw new RequestError('Pushbullet Title is required.', { status: 400 });
-      const targets = [deviceIden, email, channelTag].filter(Boolean);
-      if (targets.length > 1) throw new RequestError('Specify only one Pushbullet target: Device Identifier, Email, or Channel Tag.', { status: 400 });
-      const push = { type: 'note', title, body: TEST_NOTIFICATION_MESSAGE };
-      if (deviceIden) push.device_iden = deviceIden;
-      else if (email) push.email = email;
-      else if (channelTag) push.channel_tag = channelTag;
-      try {
-        const response = await fetch('https://api.pushbullet.com/v2/pushes', { method: 'POST', headers: { 'Access-Token': apiKey, 'Content-Type': 'application/json' }, body: JSON.stringify(push), signal: AbortSignal.timeout(15000) });
-        const responseText = await response.text();
-        if (!response.ok) throw new Error(responseText || `HTTP ${response.status}`);
-        return { success: true };
-      } catch (error) {
-        throw new RequestError(`Unable to send Pushbullet notification: ${error instanceof Error ? error.message : String(error)}`, { status: 502 });
-      }
+    try {
+      await NotificationService.send({ notification, title, message: TEST_NOTIFICATION_MESSAGE });
+      return { success: true };
+    } catch (error) {
+      throw new RequestError(`Unable to send ${provider} notification: ${error instanceof Error ? error.message : String(error)}`, { status: 502 });
     }
-
-    if (provider === 'ntfy') {
-      const server = typeof payload?.server === 'string' ? payload.server.trim() : '';
-      const topic = typeof payload?.topic === 'string' ? payload.topic.trim() : '';
-      const accessToken = typeof payload?.accessToken === 'string' ? payload.accessToken.trim() : '';
-      const priority = Number(payload?.priority ?? 3);
-      const tags = typeof payload?.tags === 'string' ? payload.tags.trim() : '';
-      const title = typeof payload?.title === 'string' ? payload.title.trim() : '';
-      if (!server) throw new RequestError('ntfy Server URL is required.', { status: 400 });
-      if (!topic) throw new RequestError('ntfy Topic is required.', { status: 400 });
-      if (!title) throw new RequestError('ntfy Title is required.', { status: 400 });
-      let parsedServer;
-      try { parsedServer = new URL(server); } catch { throw new RequestError('The ntfy Server URL is not valid.', { status: 400 }); }
-      if (!['http:', 'https:'].includes(parsedServer.protocol)) throw new RequestError('The ntfy Server URL must use HTTP or HTTPS.', { status: 400 });
-      const endpoint = new URL(topic, `${parsedServer.toString().replace(/\/$/, '')}/`);
-      const headers = { 'Content-Type': 'text/plain', 'Title': title, 'Priority': String(Number.isFinite(priority) ? priority : 3) };
-      if (tags) headers.Tags = tags;
-      if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
-      try {
-        const response = await fetch(endpoint, { method: 'POST', headers, body: TEST_NOTIFICATION_MESSAGE, signal: AbortSignal.timeout(15000) });
-        const responseText = await response.text();
-        if (!response.ok) throw new Error(responseText || `HTTP ${response.status}`);
-        return { success: true };
-      } catch (error) {
-        throw new RequestError(`Unable to send ntfy notification: ${error instanceof Error ? error.message : String(error)}`, { status: 502 });
-      }
-    }
-
-    if (provider === 'pushsafer') {
-      const privateKey = typeof payload?.privateKey === 'string' ? payload.privateKey.trim() : '';
-      const pushsaferDevice = typeof payload?.pushsaferDevice === 'string' ? payload.pushsaferDevice.trim() : '';
-      const title = typeof payload?.title === 'string' ? payload.title.trim() : '';
-      const icon = Number(payload?.icon ?? 1);
-      const vibration = Number(payload?.vibration ?? 1);
-      const iconColor = typeof payload?.iconColor === 'string' ? payload.iconColor.trim() : '';
-      const url = typeof payload?.url === 'string' ? payload.url.trim() : '';
-      const urlTitle = typeof payload?.urlTitle === 'string' ? payload.urlTitle.trim() : '';
-      const priority = Number(payload?.priority ?? 0);
-      const timeToLive = payload?.timeToLive;
-      const retry = payload?.retry;
-      const expire = payload?.expire;
-      if (!privateKey) throw new RequestError('Push Safer Private Key is required.', { status: 400 });
-      if (!title) throw new RequestError('Push Safer Title is required.', { status: 400 });
-      const form = new URLSearchParams();
-      form.set('k', privateKey); form.set('t', title); form.set('m', TEST_NOTIFICATION_MESSAGE);
-      if (pushsaferDevice) form.set('d', pushsaferDevice);
-      if (Number.isFinite(icon)) form.set('i', String(icon));
-      if (Number.isFinite(vibration)) form.set('v', String(vibration));
-      if (iconColor) form.set('c', iconColor);
-      if (url) form.set('u', url);
-      if (urlTitle) form.set('ut', urlTitle);
-      if (Number.isFinite(priority)) form.set('p', String(priority));
-      if (timeToLive !== undefined && timeToLive !== null && String(timeToLive).trim() !== '') form.set('l', String(timeToLive).trim());
-      if (retry !== undefined && retry !== null && String(retry).trim() !== '') form.set('re', String(retry).trim());
-      if (expire !== undefined && expire !== null && String(expire).trim() !== '') form.set('ex', String(expire).trim());
-      try {
-        const response = await fetch('https://www.pushsafer.com/api', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: form.toString(), signal: AbortSignal.timeout(15000) });
-        const responseText = await response.text();
-        if (!response.ok) throw new Error(responseText || `HTTP ${response.status}`);
-        return { success: true };
-      } catch (error) {
-        throw new RequestError(`Unable to send Push Safer notification: ${error instanceof Error ? error.message : String(error)}`, { status: 502 });
-      }
-    }
-
-    throw new RequestError(`Unsupported notification provider: ${provider}`, { status: 400 });
   }
 }
 
