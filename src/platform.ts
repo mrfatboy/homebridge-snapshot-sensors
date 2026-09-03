@@ -82,6 +82,13 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
       const yolo = await runYolo(image, store);
       if (!yolo) { this.log.info(`[${snapshotName}] YOLO is busy; skipping snapshot detection.`); return; }
       if (TEST_IMAGE_PATH) {
+        const acceptedCategories = [
+          runtime.sensors.some(sensor => sensor.categories.includes('animals')) ? 'Animal' : null,
+          runtime.sensors.some(sensor => sensor.categories.includes('people')) ? 'Person' : null,
+          runtime.sensors.some(sensor => sensor.categories.includes('vehicles')) ? 'Vehicle' : null,
+          runtime.sensors.some(sensor => sensor.unidentifiedMotionActivity) ? 'Unidentified Activity' : null,
+        ].filter((category): category is string => category !== null);
+        this.log.info(`[${snapshotName}] [Test Image] Accepted categories: ${acceptedCategories.join(', ')}`);
         const details = yolo.detections
           .filter(d => d.category !== null && runtime.sensors.some(sensor => sensor.categories.includes(d.category!) && sensor.thresholds[d.category!] !== undefined && d.score >= sensor.thresholds[d.category!]!))
           .map(d => `${d.className} (${d.score.toFixed(3)})`);
