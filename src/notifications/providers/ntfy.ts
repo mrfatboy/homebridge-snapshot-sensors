@@ -28,4 +28,5 @@ export const sendNtfy: NotificationProviderSender = async ({ channel, title, mes
     signal: AbortSignal.timeout(15000),
   });
   if (!response.ok) throw new Error(`ntfy returned HTTP ${response.status}`);
+  return response.status;
 };
