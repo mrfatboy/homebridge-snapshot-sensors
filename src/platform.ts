@@ -137,13 +137,13 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
       const response = await postWebhook(parsed, method, payload);
       const status = `HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ''}`;
       if (!response.ok) {
-        this.log.warn(`[${config.name}] Webhook failed: ${method} -> ${status}`);
+        this.log.warn(`[${config.name}] Webhook ${method} failed: ${status}.`);
         return;
       }
-      this.log.info(`[${config.name}] Webhook: ${method} -> ${status}`);
+      this.log.info(`[${config.name}] Webhook ${method}: ${status}.`);
     } catch (error) {
       const isTimeout = error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError');
-      this.log.warn(`[${config.name}] Webhook failed: ${method} -> ${isTimeout ? 'timeout' : 'fetch failed'}`);
+      this.log.warn(`[${config.name}] Webhook ${method} failed: ${isTimeout ? 'timeout' : 'fetch failed'}.`);
     }
   }
   private formatElapsed(ms: number): string { return ms < 1000 ? `${Math.round(ms)} ms` : `${(ms / 1000).toFixed(2)} s`; }
