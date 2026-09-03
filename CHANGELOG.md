@@ -7,18 +7,40 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-## [1.0.6-beta.2] - 2026-09-02
-
-### Performance
-
-- Optimized notification delivery to run asynchronously without blocking the detection workflow, improving overall detection performance and reducing notification-related latency.
-
-## [1.0.6-beta.1] - 2026-09-02
+## [1.0.6] - 2026-09-03
 
 ### Added
 
 - Added **Pushcut** as a notification provider.
 - Added **webhook support**.
+- Added **Unidentified Motion Activity ⚠️** as an optional fallback notification when YOLO detects objects that do not match any selected Animal, Person, or Vehicle category.
+
+### Changed
+
+- Unified notification delivery for normal detection workflows and UI test notifications through a shared notification service.
+- Optimized notification delivery to run asynchronously without blocking the detection workflow, improving overall detection performance and reducing notification-related latency.
+- Improved test-image diagnostics by logging the configured accepted categories and accepted detections.
+- Aligned UI test snapshot validation with the production 10 MB snapshot size limit.
+- Refactored snapshot retrieval and validation into a shared snapshot system.
+- Improved annotated detection labels by moving them outside bounding boxes and adding a background panel for better visibility.
+- Fixed the Homebridge UI plugin display name to consistently use **Homebridge Snapshot Sensors**.
+- Replaced the custom Rust YOLO runtime with Node.js ONNX Runtime.
+- Switched image processing and detection annotation to Sharp.
+- Updated detection filtering to use the user-defined Animal, Person, and Vehicle confidence thresholds.
+- Enabled cross-platform compatibility through Node.js ONNX Runtime.
+- Improved YOLO26 detection reliability and runtime handling.
+- Added individual notification sound settings for supported push notification messages.
+- Added test notification support for ntfy and Push Safer.
+- Standardized HTTP response logging across webhook and notification-related logging.
+
+### Fixed
+
+- Fixed the Pushover test notification to use the standard Pushover sound.
+- Fixed Linux ONNX Runtime loading for the bundled YOLO detection runner.
+
+### Removed
+
+- Removed the obsolete custom Rust YOLO runtime, bundled ONNX Runtime libraries, and native build workflow.
 
 ## [1.0.5] - 2026-09-01
 
@@ -92,8 +114,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - Homebridge custom configuration UI.
 
 [Unreleased]: https://github.com/mrfatboy/homebridge-snapshot-sensors/compare/main...NewFeature
-[1.0.6-beta.2]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.6-beta.2
-[1.0.6-beta.1]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.6-beta.1
+[1.0.6]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.6
 [1.0.5]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.5
 [1.0.4]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.4
 [1.0.3]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.3
