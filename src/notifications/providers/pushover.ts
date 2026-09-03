@@ -30,4 +30,5 @@ export const sendPushover: NotificationProviderSender = async ({ channel, title,
     const detail = Array.isArray(body.errors) ? body.errors.join(', ') : `HTTP ${response.status}`;
     throw new Error(`Pushover returned ${detail}`);
   }
+  return response.status;
 };
