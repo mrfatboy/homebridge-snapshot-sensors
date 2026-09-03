@@ -16,9 +16,10 @@ export interface NotificationProviderContext {
   sound?: string;
 }
 
-export type NotificationProviderSender = (context: NotificationProviderContext) => Promise<void>;
+export type NotificationProviderSender = (context: NotificationProviderContext) => Promise<number>;
 
 export interface NotificationResult {
   sent: boolean;
   provider: string | null;
+  status: number | null;
 }
