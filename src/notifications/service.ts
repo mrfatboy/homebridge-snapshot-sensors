@@ -34,12 +34,12 @@ function channelFor(notification: NotificationConfig, provider: NotificationProv
   return notification[provider];
 }
 
-export function notificationProvider(notification?: NotificationConfig, category?: NotificationCategory): string | null {
+export function notificationProvider(notification?: NotificationConfig, _category?: NotificationCategory): string | null {
   const provider = notification?.provider;
   if (!provider || provider === 'none') return null;
   const definition = PROVIDERS[provider];
   const channel = channelFor(notification, provider);
-  if (!channel || (category && !channel[MESSAGE_KEYS[category]])) return null;
+  if (!channel) return null;
   return definition.name;
 }
 
