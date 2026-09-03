@@ -9,9 +9,28 @@ function idOf(name: Yolo26ClassName): number {
 }
 
 export const CATEGORY_CLASS_IDS: Record<Category, ReadonlySet<number>> = {
-  animals: new Set([idOf('bird'), idOf('cat'), idOf('dog'), idOf('horse'), idOf('sheep'), idOf('cow'), idOf('elephant'), idOf('bear'), idOf('zebra'), idOf('giraffe')]),
+  animals: new Set([
+    idOf('bird'),
+    idOf('cat'),
+    idOf('dog'),
+    idOf('horse'),
+    idOf('sheep'),
+    idOf('cow'),
+    idOf('elephant'),
+    idOf('bear'),
+    idOf('zebra'),
+    idOf('giraffe'),
+  ]),
   people: new Set([idOf('person')]),
-  vehicles: new Set([idOf('bicycle'), idOf('car'), idOf('motorcycle'), idOf('bus'), idOf('train'), idOf('truck'), idOf('boat')]),
+  vehicles: new Set([
+    idOf('bicycle'),
+    idOf('car'),
+    idOf('motorcycle'),
+    idOf('bus'),
+    idOf('train'),
+    idOf('truck'),
+    idOf('boat'),
+  ]),
 };
 
 export const VALID_CATEGORIES = Object.keys(CATEGORY_CLASS_IDS).join(', ');
@@ -44,7 +63,9 @@ export function resolveSensors(
     }
 
     if (categories.length === 0) {
-      warn(`Sensor ${raw?.name ? `"${raw.name}"` : JSON.stringify(raw)} has no valid categories, skipping`);
+      warn(
+        `Sensor ${raw?.name ? `"${raw.name}"` : JSON.stringify(raw)} has no valid categories, skipping`,
+      );
       continue;
     }
 
@@ -64,14 +85,22 @@ export function resolveSensors(
     const name = typeof raw?.name === 'string' ? raw.name.trim() : '';
     const label = name || `${snapshotName} ${sensorName(categories)}`;
 
-    resolved.push({ name: label, categories, thresholds, unidentifiedMotionActivity: raw?.unidentifiedMotionActivity !== false });
+    resolved.push({
+      name: label,
+      categories,
+      thresholds,
+      unidentifiedMotionActivity: raw?.unidentifiedMotionActivity !== false,
+    });
   }
 
   return resolved;
 }
 
 export function categoryOfClass(classId: number): Category | null {
-  for (const [cat, ids] of Object.entries(CATEGORY_CLASS_IDS) as [Category, ReadonlySet<number>][]) {
+  for (const [cat, ids] of Object.entries(CATEGORY_CLASS_IDS) as [
+    Category,
+    ReadonlySet<number>,
+  ][]) {
     if (ids.has(classId)) return cat;
   }
   return null;

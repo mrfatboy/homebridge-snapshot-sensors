@@ -20,14 +20,19 @@ function packageRoot(): string {
 
 const modelPath = join(packageRoot(), 'model', 'yolo26', 'model.onnx');
 
-const sessionPromise = ort.InferenceSession.create(modelPath).then(session => {
-  console.log(`[${new Date().toLocaleString('en-US')}] [SnapshotSensors] Plugin loaded successfully — YOLO26 model loaded and ready for detection.`);
+const sessionPromise = ort.InferenceSession.create(modelPath).then((session) => {
+  console.log(
+    `[${new Date().toLocaleString('en-US')}] [SnapshotSensors] Plugin loaded successfully — YOLO26 model loaded and ready for detection.`,
+  );
   return session;
 });
 
 let inferenceRunning = false;
 
-export async function runYolo(image: Buffer, storeSnapshots: StoreSnapshots): Promise<YoloResult | null> {
+export async function runYolo(
+  image: Buffer,
+  storeSnapshots: StoreSnapshots,
+): Promise<YoloResult | null> {
   if (inferenceRunning) return null;
   inferenceRunning = true;
 
@@ -37,9 +42,11 @@ export async function runYolo(image: Buffer, storeSnapshots: StoreSnapshots): Pr
     const sourceWidth = metadata.width;
     const sourceHeight = metadata.height;
 
-    if (!sourceWidth || !sourceHeight) throw new Error('Unable to determine snapshot image dimensions');
+    if (!sourceWidth || !sourceHeight)
+      throw new Error('Unable to determine snapshot image dimensions');
 
-    const { data } = await source.clone()
+    const { data } = await source
+      .clone()
       .resize(MODEL_WIDTH, MODEL_HEIGHT, { fit: 'fill' })
       .removeAlpha()
       .toColourspace('srgb')
@@ -52,7 +59,7 @@ export async function runYolo(image: Buffer, storeSnapshots: StoreSnapshots): Pr
       const pixelOffset = i * 3;
       tensorData[i] = data[pixelOffset] / 255;
       tensorData[pixels + i] = data[pixelOffset + 1] / 255;
-      tensorData[(2 * pixels) + i] = data[pixelOffset + 2] / 255;
+      tensorData[2 * pixels + i] = data[pixelOffset + 2] / 255;
     }
 
     const session = await sessionPromise;
@@ -73,48 +80,73 @@ export async function runYolo(image: Buffer, storeSnapshots: StoreSnapshots): Pr
       if (!Number.isFinite(score) || score <= 0) continue;
       try {
         const className = getYolo26ClassName(classId);
-        detections.push({ x1, y1, x2, y2, score, classId, className, category: categoryOfClass(classId) });
+        detections.push({
+          x1,
+          y1,
+          x2,
+          y2,
+          score,
+          classId,
+          className,
+          category: categoryOfClass(classId),
+        });
       } catch {
         // Ignore invalid class IDs returned by the model.
       }
     }
 
-    const createAnnotatedImage = storeSnapshots === 'annotated'
-      ? async (sensors: SensorSpec[]): Promise<Buffer> => {
-        const annotationDetections = detections.filter(detection => {
-          const category = detection.category;
-          if (category === null) return false;
-          return sensors.some(sensor => {
-            const threshold = sensor.thresholds[category];
-            return sensor.categories.includes(category) && threshold !== undefined && detection.score >= threshold;
-          });
-        });
+    const createAnnotatedImage =
+      storeSnapshots === 'annotated'
+        ? async (sensors: SensorSpec[]): Promise<Buffer> => {
+            const annotationDetections = detections.filter((detection) => {
+              const category = detection.category;
+              if (category === null) return false;
+              return sensors.some((sensor) => {
+                const threshold = sensor.thresholds[category];
+                return (
+                  sensor.categories.includes(category) &&
+                  threshold !== undefined &&
+                  detection.score >= threshold
+                );
+              });
+            });
 
-        if (annotationDetections.length === 0) return source.clone().jpeg().toBuffer();
+            if (annotationDetections.length === 0) return source.clone().jpeg().toBuffer();
 
-        const scaleX = sourceWidth / MODEL_WIDTH;
-        const scaleY = sourceHeight / MODEL_HEIGHT;
-        const boxes = annotationDetections.map(detection => {
-          const x = Math.max(0, Math.min(sourceWidth, detection.x1 * scaleX));
-          const y = Math.max(0, Math.min(sourceHeight, detection.y1 * scaleY));
-          const x2 = Math.max(0, Math.min(sourceWidth, detection.x2 * scaleX));
-          const y2 = Math.max(0, Math.min(sourceHeight, detection.y2 * scaleY));
-          const width = Math.max(0, x2 - x);
-          const height = Math.max(0, y2 - y);
-          const fontSize = Math.max(18, Math.round(Math.min(sourceWidth, sourceHeight) / 30));
-          const label = `${detection.className} ${detection.score.toFixed(2).replace(/^0/, '')}`;
-          const labelY = y >= fontSize + 6 ? y - 6 : y + fontSize + 6;
-          const labelPadding = Math.max(4, Math.round(fontSize * 0.25));
-          const labelWidth = Math.min(sourceWidth - x, Math.ceil(label.length * fontSize * 0.6) + (labelPadding * 2));
-          const labelHeight = fontSize + (labelPadding * 2);
-          const labelPanelY = Math.max(0, labelY - fontSize - labelPadding);
-          return `<rect x="${x}" y="${y}" width="${width}" height="${height}" fill="none" stroke="red" stroke-width="4"/><rect x="${x}" y="${labelPanelY}" width="${labelWidth}" height="${labelHeight}" fill="red"/><text x="${x + labelPadding}" y="${labelY}" font-family="Arial" font-size="${fontSize}" fill="white">${label}</text>`;
-        }).join('');
+            const scaleX = sourceWidth / MODEL_WIDTH;
+            const scaleY = sourceHeight / MODEL_HEIGHT;
+            const boxes = annotationDetections
+              .map((detection) => {
+                const x = Math.max(0, Math.min(sourceWidth, detection.x1 * scaleX));
+                const y = Math.max(0, Math.min(sourceHeight, detection.y1 * scaleY));
+                const x2 = Math.max(0, Math.min(sourceWidth, detection.x2 * scaleX));
+                const y2 = Math.max(0, Math.min(sourceHeight, detection.y2 * scaleY));
+                const width = Math.max(0, x2 - x);
+                const height = Math.max(0, y2 - y);
+                const fontSize = Math.max(18, Math.round(Math.min(sourceWidth, sourceHeight) / 30));
+                const label = `${detection.className} ${detection.score.toFixed(2).replace(/^0/, '')}`;
+                const labelY = y >= fontSize + 6 ? y - 6 : y + fontSize + 6;
+                const labelPadding = Math.max(4, Math.round(fontSize * 0.25));
+                const labelWidth = Math.min(
+                  sourceWidth - x,
+                  Math.ceil(label.length * fontSize * 0.6) + labelPadding * 2,
+                );
+                const labelHeight = fontSize + labelPadding * 2;
+                const labelPanelY = Math.max(0, labelY - fontSize - labelPadding);
+                return `<rect x="${x}" y="${y}" width="${width}" height="${height}" fill="none" stroke="red" stroke-width="4"/><rect x="${x}" y="${labelPanelY}" width="${labelWidth}" height="${labelHeight}" fill="red"/><text x="${x + labelPadding}" y="${labelY}" font-family="Arial" font-size="${fontSize}" fill="white">${label}</text>`;
+              })
+              .join('');
 
-        const overlay = Buffer.from(`<svg width="${sourceWidth}" height="${sourceHeight}" xmlns="http://www.w3.org/2000/svg">${boxes}</svg>`);
-        return source.clone().composite([{ input: overlay }]).jpeg().toBuffer();
-      }
-      : undefined;
+            const overlay = Buffer.from(
+              `<svg width="${sourceWidth}" height="${sourceHeight}" xmlns="http://www.w3.org/2000/svg">${boxes}</svg>`,
+            );
+            return source
+              .clone()
+              .composite([{ input: overlay }])
+              .jpeg()
+              .toBuffer();
+          }
+        : undefined;
 
     return { detections, createAnnotatedImage };
   } finally {

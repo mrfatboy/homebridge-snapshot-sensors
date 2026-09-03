@@ -13,11 +13,17 @@ export function scoreCategories(detections: Detection[]): CategoryScores {
 }
 
 export function matchingSensors(detections: Detection[], sensors: SensorSpec[]): SensorSpec[] {
-  return sensors.filter(sensor => detections.some(detection => {
-    const category = detection.category;
-    const threshold = category === null ? undefined : sensor.thresholds[category];
-    return category !== null && sensor.categories.includes(category) && detection.score >= (threshold ?? 0.25);
-  }));
+  return sensors.filter((sensor) =>
+    detections.some((detection) => {
+      const category = detection.category;
+      const threshold = category === null ? undefined : sensor.thresholds[category];
+      return (
+        category !== null &&
+        sensor.categories.includes(category) &&
+        detection.score >= (threshold ?? 0.25)
+      );
+    }),
+  );
 }
 
 export function detectCategories(detections: Detection[], threshold = 0): Set<Category> {

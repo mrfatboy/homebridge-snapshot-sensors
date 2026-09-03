@@ -9,7 +9,9 @@ export const sendPushbullet: NotificationProviderSender = async ({ channel, titl
   const channelTag = channel.channelTag?.trim();
   const targets = [deviceIden, email, channelTag].filter(Boolean);
   if (targets.length > 1) {
-    throw new Error('Specify only one Pushbullet target: Device Identifier, Email, or Channel Tag.');
+    throw new Error(
+      'Specify only one Pushbullet target: Device Identifier, Email, or Channel Tag.',
+    );
   }
 
   const push: Record<string, string> = { type: 'note', title, body: message };

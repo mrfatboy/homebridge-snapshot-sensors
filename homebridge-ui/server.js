@@ -2,6 +2,7 @@ import { HomebridgePluginUiServer, RequestError } from '@homebridge/plugin-ui-ut
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fetchSnapshot } from '../dist/src/snapshot.js';
+import { sendWebhook } from '../dist/src/webhook.js';
 import { NotificationService } from '../dist/src/notifications/service.js';
 
 const execFileAsync = promisify(execFile);
@@ -108,31 +109,20 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
     try { parsed = new URL(url); } catch { throw new RequestError('The Webhook URL is not valid.', { status: 400 }); }
     if (!['http:', 'https:'].includes(parsed.protocol)) throw new RequestError('The Webhook URL must use HTTP or HTTPS.', { status: 400 });
     const payloadBody = { camera: 'Test', object: 'test', confidence: null };
-    let endpoint = parsed;
-    const options = { method, signal: AbortSignal.timeout(15000) };
-    if (method === 'POST') {
-      options.headers = { 'Content-Type': 'application/json' };
-      options.body = JSON.stringify(payloadBody);
-    } else {
-      endpoint = new URL(parsed.toString());
-      endpoint.searchParams.set('camera', payloadBody.camera);
-      endpoint.searchParams.set('object', payloadBody.object);
-      endpoint.searchParams.set('confidence', 'null');
-    }
     try {
-      const response = await fetch(endpoint, options);
+      const response = await sendWebhook(parsed, method, payloadBody);
       const status = `HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ''}`;
       if (!response.ok) {
-        console.error(`[Snapshot Sensors] Webhook test failed: ${method} -> ${status}`);
+        console.error(`[Snapshot Sensors] Webhook test ${method} failed: ${status}.`);
         throw new RequestError(`Unable to send webhook: HTTP ${response.status}`, { status: 502 });
       }
-      console.log(`[Snapshot Sensors] Webhook test: ${method} -> ${status}`);
+      console.log(`[Snapshot Sensors] Webhook test ${method}: ${status}.`);
       return { success: true, status: response.status, statusText: response.statusText || 'OK' };
     } catch (error) {
       if (error instanceof RequestError) throw error;
       const isTimeout = error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError');
       const message = isTimeout ? 'timeout' : 'fetch failed';
-      console.error(`[Snapshot Sensors] Webhook test failed: ${method} -> ${message}`);
+      console.error(`[Snapshot Sensors] Webhook test ${method} failed: ${message}.`);
       throw new RequestError(`Unable to send webhook: ${message}`, { status: 502 });
     }
   }
@@ -149,7 +139,7 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
 
     try {
       const result = await NotificationService.send({ notification, title, message: TEST_NOTIFICATION_MESSAGE });
-      console.log(`[Snapshot Sensors] Notification test: ${result.provider}: HTTP ${result.status}`);
+      console.log(`[Snapshot Sensors] Notification test: ${result.provider}: HTTP ${result.status}.`);
       return { success: true, status: result.status };
     } catch (error) {
       console.error(`[Snapshot Sensors] Notification test failed: ${provider} -> ${error instanceof Error ? error.message : String(error)}`);
