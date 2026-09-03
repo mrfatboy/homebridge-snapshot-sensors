@@ -113,16 +113,16 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
       const response = await sendWebhook(parsed, method, payloadBody);
       const status = `HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ''}`;
       if (!response.ok) {
-        console.error(`[Snapshot Sensors] Webhook test failed: ${method} -> ${status}`);
+        console.error(`[Snapshot Sensors] Webhook test ${method} failed: ${status}.`);
         throw new RequestError(`Unable to send webhook: HTTP ${response.status}`, { status: 502 });
       }
-      console.log(`[Snapshot Sensors] Webhook test: ${method} -> ${status}`);
+      console.log(`[Snapshot Sensors] Webhook test ${method}: ${status}.`);
       return { success: true, status: response.status, statusText: response.statusText || 'OK' };
     } catch (error) {
       if (error instanceof RequestError) throw error;
       const isTimeout = error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError');
       const message = isTimeout ? 'timeout' : 'fetch failed';
-      console.error(`[Snapshot Sensors] Webhook test failed: ${method} -> ${message}`);
+      console.error(`[Snapshot Sensors] Webhook test ${method} failed: ${message}.`);
       throw new RequestError(`Unable to send webhook: ${message}`, { status: 502 });
     }
   }
@@ -139,7 +139,7 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
 
     try {
       const result = await NotificationService.send({ notification, title, message: TEST_NOTIFICATION_MESSAGE });
-      console.log(`[Snapshot Sensors] Notification test: ${result.provider}: HTTP ${result.status}`);
+      console.log(`[Snapshot Sensors] Notification test: ${result.provider}: HTTP ${result.status}.`);
       return { success: true, status: result.status };
     } catch (error) {
       console.error(`[Snapshot Sensors] Notification test failed: ${provider} -> ${error instanceof Error ? error.message : String(error)}`);
