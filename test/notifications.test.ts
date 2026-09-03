@@ -20,7 +20,7 @@ describe('NotificationService', () => {
       provider: 'pushover' as const,
       pushover: { token: 'token', user: 'user', device: 'device' },
     };
-    await expect(NotificationService.send({ notification, title: 'Title', message: 'Message' })).resolves.toEqual({ sent: true, provider: 'Pushover' });
+    await expect(NotificationService.send({ notification, title: 'Title', message: 'Message' })).resolves.toEqual({ sent: true, provider: 'Pushover', status: 200 });
 
     const [url, options] = fetchMock.mock.calls[0];
     expect(url).toBe('https://api.pushover.net/1/messages.json');
@@ -50,7 +50,7 @@ describe('NotificationService', () => {
   it('sends Pushbullet notifications to a channel when configured', async () => {
     vi.stubGlobal('fetch', fetchMock.mockResolvedValue(response()));
     const notification = { provider: 'pushbullet' as const, pushbullet: { apiKey: 'key', channelTag: 'alerts' } };
-    await expect(NotificationService.send({ notification, title: 'Title', message: 'Message' })).resolves.toEqual({ sent: true, provider: 'Pushbullet' });
+    await expect(NotificationService.send({ notification, title: 'Title', message: 'Message' })).resolves.toEqual({ sent: true, provider: 'Pushbullet', status: 200 });
     const [, options] = fetchMock.mock.calls[0];
     expect(JSON.parse(options.body)).toEqual({ type: 'note', title: 'Title', body: 'Message', channel_tag: 'alerts' });
   });
@@ -61,7 +61,7 @@ describe('NotificationService', () => {
       provider: 'ntfy' as const,
       ntfy: { topic: 'camera alerts', accessToken: 'token', tags: 'camera,warning', priority: 5 },
     };
-    await expect(NotificationService.send({ notification, title: 'Title', message: 'Message' })).resolves.toEqual({ sent: true, provider: 'ntfy' });
+    await expect(NotificationService.send({ notification, title: 'Title', message: 'Message' })).resolves.toEqual({ sent: true, provider: 'ntfy', status: 200 });
     const [url, options] = fetchMock.mock.calls[0];
     expect(url.toString()).toBe('https://ntfy.sh/camera%20alerts');
     expect(options.headers).toMatchObject({ Title: 'Title', Priority: '5', Tags: 'camera,warning', Authorization: 'Bearer token' });
@@ -78,7 +78,7 @@ describe('NotificationService', () => {
   it('sends Pushcut JSON using the shared message', async () => {
     vi.stubGlobal('fetch', fetchMock.mockResolvedValue(response()));
     const notification = { provider: 'pushcut' as const, pushcut: { pushcutUrl: 'https://example.test/hook' } };
-    await expect(NotificationService.send({ notification, title: 'Title', message: 'Message' })).resolves.toEqual({ sent: true, provider: 'Pushcut' });
+    await expect(NotificationService.send({ notification, title: 'Title', message: 'Message' })).resolves.toEqual({ sent: true, provider: 'Pushcut', status: 200 });
     const [, options] = fetchMock.mock.calls[0];
     expect(JSON.parse(options.body)).toEqual({ title: 'Title', text: 'Message' });
   });
@@ -92,7 +92,7 @@ describe('NotificationService', () => {
         iconColor: '#fff', url: 'https://example.test', urlTitle: 'Open', timeToLive: 60, retry: 2, expire: 30,
       },
     };
-    await expect(NotificationService.send({ notification, title: 'Title', message: 'Message', sound: '7' })).resolves.toEqual({ sent: true, provider: 'Push Safer' });
+    await expect(NotificationService.send({ notification, title: 'Title', message: 'Message', sound: '7' })).resolves.toEqual({ sent: true, provider: 'Push Safer', status: 200 });
     const [, options] = fetchMock.mock.calls[0];
     expect(options.body).toContain('k=key');
     expect(options.body).toContain('s=7');
