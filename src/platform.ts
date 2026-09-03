@@ -57,7 +57,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     if (!runtime) return;
     if (runtime.running) { this.log.info(`[${snapshotName}] Snapshot already running; skipping duplicate trigger.`); return; }
     const startedAt = process.hrtime.bigint(); runtime.running = true;
-    let providerUsed = 'none'; let detectionType = 'No objects matching the selected categories were detected';
+    let providerUsed = notificationProvider(runtime.config.notifications) ?? 'none'; let detectionType = 'No objects matching the selected categories were detected';
     const store = (runtime.config.storeSnapshots ?? 'never') as StoreSnapshots;
     try {
       let image: Buffer;
@@ -96,8 +96,6 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
         const unidentifiedMotionActivityEnabled = runtime.sensors.some(sensor => sensor.unidentifiedMotionActivity);
         if (yolo.detections.length > 0 && unidentifiedMotionActivityEnabled) {
           detectionType = detectionMessages.unidentified;
-          const provider = notificationProvider(runtime.config.notifications, 'unidentified');
-          if (provider) providerUsed = provider;
           void this.sendNotification(runtime.config, 'unidentified');
           webhookPayload = { camera: snapshotName, object: 'unidentified', confidence: null };
         }
@@ -113,8 +111,6 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
         }
         if (bestMatch) {
           detectionType = detectionMessages[bestMatch.category];
-          const provider = notificationProvider(runtime.config.notifications, bestMatch.category);
-          if (provider) providerUsed = provider;
           void this.sendNotification(runtime.config, bestMatch.category);
           webhookPayload = { camera: snapshotName, object: bestMatch.className, confidence: bestMatch.score };
         }
@@ -193,7 +189,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
   private async sendNotification(config: SnapshotConfig, category: NotificationCategory): Promise<void> {
     const notification = config.notifications;
     if (!notification || notification.provider === 'none' || !notification.provider) return;
-    const provider = notificationProvider(notification, category);
+    const provider = notificationProvider(notification);
     const providerName = provider ?? 'none';
     const channel = notification[notification.provider];
     if (!channel) return;
