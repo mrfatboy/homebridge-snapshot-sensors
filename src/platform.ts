@@ -201,8 +201,8 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     if (!message) return;
     const sound = NotificationService.soundFor(channel, category);
     try {
-      await NotificationService.send({ notification, title: channel.title?.trim() || 'Snapshot Sensors', message, sound });
-      this.log.info(`[${config.name}] ${providerName} notification sent.`);
+      const result = await NotificationService.send({ notification, title: channel.title?.trim() || 'Snapshot Sensors', message, sound });
+      this.log.info(`[${config.name}] ${providerName} notification sent: HTTP ${result.status}.`);
     } catch (error) {
       this.log.warn(`[${config.name}] Notification failed: ${error instanceof Error ? error.message : String(error)}`);
     }
