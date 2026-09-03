@@ -90,7 +90,7 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
           const groupFields = groupOutput.trim().split(':');
           if (groupFields.length < 3) throw new Error(`Unable to resolve snapshot group: ${group}`);
           gid = Number(groupFields[2]);
-          if (!Number.isInteger(gid)) throw new Error(`Unable to resolve snapshot group: ${group}`);
+          if (!Number.isInteger(gid)) throw new Error(`Unable to resolve snapshot group: ${username}`);
         }
         await fs.chown(filePath, uid, gid);
       }
@@ -149,9 +149,11 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
     const notification = { provider, [provider]: channel };
 
     try {
-      await NotificationService.send({ notification, title, message: TEST_NOTIFICATION_MESSAGE });
-      return { success: true };
+      const result = await NotificationService.send({ notification, title, message: TEST_NOTIFICATION_MESSAGE });
+      console.log(`[Snapshot Sensors] Notification test: ${result.provider} -> HTTP ${result.status}`);
+      return { success: true, status: result.status };
     } catch (error) {
+      console.error(`[Snapshot Sensors] Notification test failed: ${provider} -> ${error instanceof Error ? error.message : String(error)}`);
       throw new RequestError(`Unable to send ${provider} notification: ${error instanceof Error ? error.message : String(error)}`, { status: 502 });
     }
   }
