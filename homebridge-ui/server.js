@@ -2,6 +2,7 @@ import { HomebridgePluginUiServer, RequestError } from '@homebridge/plugin-ui-ut
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fetchSnapshot } from '../dist/src/snapshot.js';
+import { sendWebhook } from '../dist/src/webhook.js';
 import { NotificationService } from '../dist/src/notifications/service.js';
 
 const execFileAsync = promisify(execFile);
@@ -108,19 +109,8 @@ class SnapshotSensorsUiServer extends HomebridgePluginUiServer {
     try { parsed = new URL(url); } catch { throw new RequestError('The Webhook URL is not valid.', { status: 400 }); }
     if (!['http:', 'https:'].includes(parsed.protocol)) throw new RequestError('The Webhook URL must use HTTP or HTTPS.', { status: 400 });
     const payloadBody = { camera: 'Test', object: 'test', confidence: null };
-    let endpoint = parsed;
-    const options = { method, signal: AbortSignal.timeout(15000) };
-    if (method === 'POST') {
-      options.headers = { 'Content-Type': 'application/json' };
-      options.body = JSON.stringify(payloadBody);
-    } else {
-      endpoint = new URL(parsed.toString());
-      endpoint.searchParams.set('camera', payloadBody.camera);
-      endpoint.searchParams.set('object', payloadBody.object);
-      endpoint.searchParams.set('confidence', 'null');
-    }
     try {
-      const response = await fetch(endpoint, options);
+      const response = await sendWebhook(parsed, method, payloadBody);
       const status = `HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ''}`;
       if (!response.ok) {
         console.error(`[Snapshot Sensors] Webhook test failed: ${method} -> ${status}`);
