@@ -21,14 +21,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-      # Do not restore the npm cache here. The Node 22 runners were all
-      # failing inside npm/arborist while using the restored cache, while
-      # Node 24 completed successfully with the same dependency graph.
-      - name: Clean npm cache
-        run: npm cache clean --force
-      # The lockfile is generated on Linux, while this matrix also runs on
-      # macOS and Windows. Resolve optional native dependencies from
-      # package.json without rewriting package-lock.json.
+      - name: Use npm 11.6.0 on Node 22
+        if: matrix.node-version == 22
+        run: npm install --global npm@11.6.0
       - name: Install dependencies
         run: npm install --include=optional --no-package-lock --ignore-scripts --no-audit --no-fund
       - run: npm run lint
