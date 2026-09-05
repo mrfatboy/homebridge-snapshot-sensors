@@ -23,11 +23,13 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: npm
       # The lockfile is generated on Linux, while this matrix also runs on
-      # macOS and Windows. npm ci can reject a cross-platform lockfile when
-      # optional native bindings are not represented for the runner platform.
-      # Install from package.json without rewriting package-lock.json so npm
-      # resolves the correct native optional dependencies for each platform.
-      - run: npm install --include=optional --no-package-lock --ignore-scripts --no-audit --no-fund
+      # macOS and Windows. npm's arborist can fail when resolving optional
+      # native dependencies from a cross-platform lockfile, especially with
+      # the npm cache restored by setup-node.
+      # A clean install from package.json avoids that cross-platform state and
+      # resolves the correct native optional dependencies for each runner.
+      - name: Install dependencies
+        run: npm install --include=optional --no-package-lock --ignore-scripts --no-audit --no-fund
       - run: npm run lint
       - run: npm run build
       - run: npm test
