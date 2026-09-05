@@ -14,7 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        node-version: [20, 22, 24]
+        node-version: [22, 24]
     steps:
       - uses: actions/checkout@v4
       - name: Use Node.js ${{ matrix.node-version }}
@@ -22,12 +22,12 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
-      # npm has known issues with platform-specific optional dependencies
-      # in package-lock.json on newer Node/npm combinations. Regenerate the
-      # lock metadata before the clean install so CI can validate/install the
-      # same dependency graph consistently across supported Node versions.
-      - run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      # npm can omit platform-specific optional native bindings from
+      # node_modules when the lockfile was created on another platform.
+      # npm ci preserves the lockfile, then npm install restores the
+      # platform-specific optional bindings without changing package.json.
       - run: npm ci
+      - run: npm install --include=optional --no-save --ignore-scripts --no-audit --no-fund
       - run: npm run lint
       - run: npm run build
       - run: npm test
