@@ -257,7 +257,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
       .replace(/\s+/g, '_');
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
-    const filename = `${prefix}_${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}${store === 'annotated' ? '.jpg' : contentType.toLowerCase().includes('png') ? '.png' : '.jpg'}`;
+    const filename = `${prefix}_${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}${store === 'annotated' ? '.jpg' : contentType.toLowerCase().includes('png') ? '.png' : '.jpg'}`;
     const filePath = path.join(directory, filename);
     await writeFile(filePath, store === 'annotated' && annotated ? annotated : image);
     await this.applyOwnership(filePath, config.snapshotOwnership);
