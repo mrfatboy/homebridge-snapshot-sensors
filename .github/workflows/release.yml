@@ -45,7 +45,7 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "Release version: $version"
 
-      - name: Verify release version is new
+      - name: Verify release version
         env:
           VERSION: ${{ steps.version.outputs.version }}
         shell: bash
@@ -53,15 +53,21 @@ jobs:
           set -euo pipefail
 
           tag="v$VERSION"
+          tag_exists=false
+          npm_exists=false
 
           if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
-            echo "Release tag $tag already exists. This version has already been released."
-            exit 1
+            tag_exists=true
           fi
 
           if npm view "homebridge-snapshot-sensors@$VERSION" version >/dev/null 2>&1; then
-            echo "Version $VERSION already exists on npm. Refusing to release it again."
-            exit 1
+            npm_exists=true
+          fi
+
+          if [ "$tag_exists" = true ] || [ "$npm_exists" = true ]; then
+            echo "Version $VERSION has already been published. Validating the existing release state."
+          else
+            echo "Version $VERSION is new and ready for release."
           fi
 
       - name: Verify changelog entry
@@ -78,6 +84,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Restore platform-specific optional dependencies
+        run: npm install --include=optional --no-save --ignore-scripts --no-audit --no-fund
 
       - name: Lint
         run: npm run lint
@@ -97,5 +106,5 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          echo "Release $VERSION passed all automated validation checks."
-          echo "Publish this version to npm manually, including 2FA, then run the Finalize Release workflow."
+          echo "Release validation for $VERSION passed all automated checks."
+          echo "For a new version, publish it to npm manually, including 2FA, then run the Finalize Release workflow."
