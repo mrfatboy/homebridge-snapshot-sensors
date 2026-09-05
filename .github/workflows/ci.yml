@@ -22,12 +22,12 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
-      # npm can omit platform-specific optional native bindings from
-      # node_modules when the lockfile was created on another platform.
-      # npm ci preserves the lockfile, then npm install restores the
-      # platform-specific optional bindings without changing package.json.
-      - run: npm ci
-      - run: npm install --include=optional --no-save --ignore-scripts --no-audit --no-fund
+      # The lockfile is generated on Linux, while this matrix also runs on
+      # macOS and Windows. npm ci can reject a cross-platform lockfile when
+      # optional native bindings are not represented for the runner platform.
+      # Install from package.json without rewriting package-lock.json so npm
+      # resolves the correct native optional dependencies for each platform.
+      - run: npm install --include=optional --no-package-lock --ignore-scripts --no-audit --no-fund
       - run: npm run lint
       - run: npm run build
       - run: npm test
