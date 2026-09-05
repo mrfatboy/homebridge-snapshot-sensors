@@ -15,7 +15,6 @@ import { NotificationService, notificationProvider } from './notifications/servi
 import { sendWebhook as postWebhook } from './webhook.js';
 import type { SensorSpec, SnapshotConfig, Category, StoreSnapshots } from './types.js';
 import type { WebhookPayload } from './webhook.js';
-import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile, chown } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
