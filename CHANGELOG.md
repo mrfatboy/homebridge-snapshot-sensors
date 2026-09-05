@@ -7,6 +7,13 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.7] - 2026-09-05
+
+### Changed
+
+- Changed stored snapshot filenames to use the configured prefix followed by a date and time in `YYYY-MM-DD-HH:MM:SS` format.
+- Removed the random UUID suffix from stored snapshot filenames.
+
 ## [1.0.6] - 2026-09-03
 
 ### Added
@@ -114,6 +121,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - Homebridge custom configuration UI.
 
 [Unreleased]: https://github.com/mrfatboy/homebridge-snapshot-sensors/compare/main...NewFeature
+[1.0.7]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.7
 [1.0.6]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.6
 [1.0.5]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.5
 [1.0.4]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.4
