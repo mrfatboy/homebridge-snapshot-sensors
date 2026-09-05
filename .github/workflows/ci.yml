@@ -21,13 +21,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: npm
+      # Do not restore the npm cache here. The Node 22 runners were all
+      # failing inside npm/arborist while using the restored cache, while
+      # Node 24 completed successfully with the same dependency graph.
+      - name: Clean npm cache
+        run: npm cache clean --force
       # The lockfile is generated on Linux, while this matrix also runs on
-      # macOS and Windows. npm's arborist can fail when resolving optional
-      # native dependencies from a cross-platform lockfile, especially with
-      # the npm cache restored by setup-node.
-      # A clean install from package.json avoids that cross-platform state and
-      # resolves the correct native optional dependencies for each runner.
+      # macOS and Windows. Resolve optional native dependencies from
+      # package.json without rewriting package-lock.json.
       - name: Install dependencies
         run: npm install --include=optional --no-package-lock --ignore-scripts --no-audit --no-fund
       - run: npm run lint
