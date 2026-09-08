@@ -8,3 +8,6 @@ dist/
 
 # npm package artifacts
 /homebridge-snapshot-sensors-*.*.*.tgz
+
+# Local development scripts
+/buildNewFeature.sh
