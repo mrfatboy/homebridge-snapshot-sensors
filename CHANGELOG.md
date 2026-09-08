@@ -7,6 +7,12 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.8] - 2026-09-08
+
+### Changed
+
+- Reduced the npm package size by approximately **90%** by excluding unused development YOLO models from the published package while retaining the production model.
+
 ## [1.0.7] - 2026-09-05
 
 ### Changed
@@ -121,6 +127,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - Homebridge custom configuration UI.
 
 [Unreleased]: https://github.com/mrfatboy/homebridge-snapshot-sensors/compare/main...NewFeature
+[1.0.8]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.8
 [1.0.7]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.7
 [1.0.6]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.6
 [1.0.5]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.5
