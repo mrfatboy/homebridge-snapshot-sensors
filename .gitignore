@@ -11,3 +11,4 @@ dist/
 
 # Local development scripts
 /buildNewFeature.sh
+buildNewFeature.sh
