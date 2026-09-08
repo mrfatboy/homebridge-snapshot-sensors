@@ -1,3 +1,5 @@
 homebridge-ui/public/*.backup
 native/yolo-runner/target/
 native/yolo-runner/.ort/
+model/yolo26/yolo26s.onnx
+model/yolo26/yolo26m.onnx
