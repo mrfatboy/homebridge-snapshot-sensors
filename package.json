@@ -6,7 +6,7 @@
   "type": "module",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
-  "files": ["dist/", "config.schema.json", "homebridge-ui/", "model/", "CHANGELOG.md"],
+  "files": ["dist/", "config.schema.json", "homebridge-ui/", "model/yolo26/model.onnx", "CHANGELOG.md"],
   "scripts": {
     "clean": "node -e \"const fs=require('fs');fs.rmSync('dist',{recursive:true,force:true})\"",
     "build": "npm run clean && tsc",
