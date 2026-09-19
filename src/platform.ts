@@ -159,15 +159,19 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
         );
       }
       const matched = matchingSensors(yolo.detections, runtime.sensors);
+      const unidentifiedMotionActivityEnabled = runtime.sensors.some(
+        (sensor) => sensor.unidentifiedMotionActivity,
+      );
+      const unidentifiedDetection = matched.length === 0 && yolo.detections.length > 0;
+      const shouldSaveSnapshot =
+        matched.length > 0 || !unidentifiedDetection || unidentifiedMotionActivityEnabled;
       let annotatedImage: Buffer | undefined;
-      if (store === 'annotated' && matched.length > 0 && yolo.createAnnotatedImage)
+      if (shouldSaveSnapshot && store === 'annotated' && matched.length > 0 && yolo.createAnnotatedImage)
         annotatedImage = await yolo.createAnnotatedImage(runtime.sensors);
-      await this.saveSnapshot(runtime.config, image, annotatedImage, contentType);
+      if (shouldSaveSnapshot)
+        await this.saveSnapshot(runtime.config, image, annotatedImage, contentType);
       let webhookPayload: WebhookPayload | null = null;
       if (matched.length === 0) {
-        const unidentifiedMotionActivityEnabled = runtime.sensors.some(
-          (sensor) => sensor.unidentifiedMotionActivity,
-        );
         if (yolo.detections.length > 0 && unidentifiedMotionActivityEnabled) {
           detectionType = detectionMessages.unidentified;
           void this.sendNotification(runtime.config, 'unidentified');
