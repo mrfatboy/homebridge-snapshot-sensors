@@ -112,6 +112,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     runtime.running = true;
     let detectionType = 'No objects matching the selected categories were detected';
     let imageSaveStatus: StoreSnapshots | 'not saved' = 'not saved';
+    let notificationDisabled = false;
     const store = (runtime.config.storeSnapshots ?? 'never') as StoreSnapshots;
     try {
       let image: Buffer;
@@ -168,8 +169,10 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
       let annotatedImage: Buffer | undefined;
       if (shouldSaveSnapshot && store === 'annotated' && matched.length > 0 && yolo.createAnnotatedImage)
         annotatedImage = await yolo.createAnnotatedImage(runtime.sensors);
-      if (shouldSaveSnapshot)
+      if (shouldSaveSnapshot) {
         await this.saveSnapshot(runtime.config, image, annotatedImage, contentType);
+        if (store !== 'never') imageSaveStatus = store;
+      }
       let webhookPayload: WebhookPayload | null = null;
       if (matched.length === 0) {
         if (yolo.detections.length > 0) {
@@ -177,6 +180,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
             detectionType = detectionMessages.unidentified;
           } else {
             detectionType = 'Unidentified activity detected but disabled';
+            notificationDisabled = true;
           }
         }
         if (yolo.detections.length > 0 && unidentifiedMotionActivityEnabled) {
@@ -204,7 +208,6 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
           };
         }
       }
-      if (shouldSaveSnapshot && store !== 'never') imageSaveStatus = store;
       if (webhookPayload) void this.sendWebhook(runtime.config, webhookPayload);
       const elapsedMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
       this.log.info(
