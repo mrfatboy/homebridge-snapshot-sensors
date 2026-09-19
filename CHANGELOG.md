@@ -7,6 +7,12 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.9] - 2026-09-19
+
+### Fixed
+
+- Fixed unidentified activity settings so disabled unidentified activity no longer saves snapshots or sends notifications.
+
 ## [1.0.8] - 2026-09-08
 
 ### Changed
@@ -126,7 +132,8 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - Support for multiple independent Snapshot Sensor configurations.
 - Homebridge custom configuration UI.
 
-[Unreleased]: https://github.com/mrfatboy/homebridge-snapshot-sensors/compare/main...NewFeature
+[Unreleased]: https://github.com/mrfatboy/homebridge-snapshot-sensors/compare/v1.0.9...NewFeature
+[1.0.9]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.9
 [1.0.8]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.8
 [1.0.7]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.7
 [1.0.6]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.6
