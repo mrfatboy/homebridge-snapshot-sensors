@@ -110,8 +110,9 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     }
     const startedAt = process.hrtime.bigint();
     runtime.running = true;
-    let providerUsed = notificationProvider(runtime.config.notifications) ?? 'none';
     let detectionType = 'No objects matching the selected categories were detected';
+    let imageSaveStatus: StoreSnapshots | 'not saved' = 'not saved';
+    let notificationDisabled = false;
     const store = (runtime.config.storeSnapshots ?? 'never') as StoreSnapshots;
     try {
       let image: Buffer;
@@ -168,12 +169,21 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
       let annotatedImage: Buffer | undefined;
       if (shouldSaveSnapshot && store === 'annotated' && matched.length > 0 && yolo.createAnnotatedImage)
         annotatedImage = await yolo.createAnnotatedImage(runtime.sensors);
-      if (shouldSaveSnapshot)
+      if (shouldSaveSnapshot) {
         await this.saveSnapshot(runtime.config, image, annotatedImage, contentType);
+        if (store !== 'never') imageSaveStatus = store;
+      }
       let webhookPayload: WebhookPayload | null = null;
       if (matched.length === 0) {
+        if (yolo.detections.length > 0) {
+          if (unidentifiedMotionActivityEnabled) {
+            detectionType = detectionMessages.unidentified;
+          } else {
+            detectionType = 'Unidentified activity detected but disabled';
+            notificationDisabled = true;
+          }
+        }
         if (yolo.detections.length > 0 && unidentifiedMotionActivityEnabled) {
-          detectionType = detectionMessages.unidentified;
           void this.sendNotification(runtime.config, 'unidentified');
           webhookPayload = { camera: snapshotName, object: 'unidentified', confidence: null };
         }
@@ -201,12 +211,12 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
       if (webhookPayload) void this.sendWebhook(runtime.config, webhookPayload);
       const elapsedMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
       this.log.info(
-        `[${snapshotName}] ${TEST_IMAGE_PATH ? '[Test Image] ' : ''}${detectionType}; notification provider: ${providerUsed}; image saved: ${store}; total elapsed time: ${this.formatElapsed(elapsedMs)}.`,
+        `[${snapshotName}] ${TEST_IMAGE_PATH ? '[Test Image] ' : ''}${detectionType}; image ${imageSaveStatus === 'not saved' ? 'not saved' : `saved: ${imageSaveStatus}`}${notificationDisabled ? '; no notification' : ''}; total elapsed time: ${this.formatElapsed(elapsedMs)}.`,
       );
     } catch (error) {
       const elapsedMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
       this.log.error(
-        `[${snapshotName}] Snapshot detection failed after ${this.formatElapsed(elapsedMs)} — ${TEST_IMAGE_PATH ? '[Test Image] ' : ''}${detectionType}; notification provider: ${providerUsed}; image saved: ${store}; error: ${error instanceof Error ? error.message : String(error)}`,
+        `[${snapshotName}] Snapshot detection failed after ${this.formatElapsed(elapsedMs)} — ${TEST_IMAGE_PATH ? '[Test Image] ' : ''}${detectionType}; image ${imageSaveStatus === 'not saved' ? 'not saved' : `saved: ${imageSaveStatus}`}; error: ${error instanceof Error ? error.message : String(error)}`,
       );
     } finally {
       runtime.running = false;
