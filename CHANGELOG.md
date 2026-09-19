@@ -7,6 +7,10 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed unidentified activity settings so disabled unidentified activity no longer saves snapshots or sends notifications.
+
 ## [1.0.8] - 2026-09-08
 
 ### Changed
