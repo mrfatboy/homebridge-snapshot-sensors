@@ -211,7 +211,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
       if (webhookPayload) void this.sendWebhook(runtime.config, webhookPayload);
       const elapsedMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
       this.log.info(
-        `[${snapshotName}] ${TEST_IMAGE_PATH ? '[Test Image] ' : ''}${detectionType}; image ${imageSaveStatus === 'not saved' ? 'not saved' : `saved: ${imageSaveStatus}`};${detectionType === 'Unidentified activity detected but disabled' ? ' no notification or' : ''} total elapsed time: ${this.formatElapsed(elapsedMs)}.`,
+        `[${snapshotName}] ${TEST_IMAGE_PATH ? '[Test Image] ' : ''}${detectionType}; image ${imageSaveStatus === 'not saved' ? 'not saved' : `saved: ${imageSaveStatus}`}${notificationDisabled ? '; no notification' : ''}; total elapsed time: ${this.formatElapsed(elapsedMs)}.`,
       );
     } catch (error) {
       const elapsedMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
