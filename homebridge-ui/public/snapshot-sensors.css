@@ -28,3 +28,10 @@
 .webhook-heading { margin-top: 1.5rem; margin-bottom: .75rem; }
 #snapshotModal.snapshot-test-modal { position: fixed; margin: 0; z-index: 1060; }
 #snapshotModal.snapshot-test-modal .modal-dialog { margin: 0; max-width: min(800px, calc(100vw - 20px)); }
+
+.roi-heading { font-size: 20px !important; line-height: 1.2; margin-top: 1.5rem; margin-bottom: .75rem; }
+.roi-heading .roi-emoji { font-size: 20px !important; }
+.roi-controls { margin-bottom: 1rem; }
+.roi-image-wrap { position: relative; display: inline-block; max-width: 100%; }
+.roi-image { display: block; max-width: 100%; height: auto; }
+.roi-box { position: absolute; border: 4px solid #00ff00; box-sizing: border-box; pointer-events: none; }
