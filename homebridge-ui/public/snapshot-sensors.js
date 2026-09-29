@@ -24,14 +24,20 @@
     try {
       const result=await homebridge.request('/test-snapshot',{url,prefix:'ROI',storeSnapshots:'never'});
       if(!result?.image) throw new Error('The camera did not return an image.');
-      image.onload=()=>{ if(snapshot.dataset.roiLoaded!=='true'){ snapshot.querySelector('.roi-x1').value=0; snapshot.querySelector('.roi-y1').value=0; snapshot.querySelector('.roi-x2').value=image.naturalWidth; snapshot.querySelector('.roi-y2').value=image.naturalHeight; } updateRoiDisplay(snapshot); };
+      image.onload=()=>{ if(snapshot.dataset.roiLoaded!=='true'){ snapshot.querySelector('.roi-x1').value=0; snapshot.querySelector('.roi-y1').value=0; snapshot.querySelector('.roi-x2').value=image.naturalWidth; snapshot.querySelector('.roi-y2').value=image.naturalHeight; } requestAnimationFrame(()=>updateRoiDisplay(snapshot)); };
       image.src='data:'+(result.contentType||'image/jpeg')+';base64,'+result.image;
     } catch(error) { homebridge.toast.error(error?.message||String(error),'ROI Snapshot Failed'); }
+  };
+  const observeRoiImage = snapshot => {
+    const image = snapshot.querySelector('.roi-image');
+    if (!image || snapshot._roiResizeObserver) return;
+    snapshot._roiResizeObserver = new ResizeObserver(() => updateRoiDisplay(snapshot));
+    snapshot._roiResizeObserver.observe(image);
   };
   const updateRoiVisibility = snapshot => {
     const enabled=snapshot.querySelector('.roi-enabled')?.checked===true, controls=snapshot.querySelector('.roi-controls');
     if(controls) controls.style.display=enabled?'':'none';
-    if(enabled) { if(!snapshot.querySelector('.roi-image')?.src) void loadRoiSnapshot(snapshot); else updateRoiDisplay(snapshot); }
+    if(enabled) { observeRoiImage(snapshot); if(!snapshot.querySelector('.roi-image')?.src) void loadRoiSnapshot(snapshot); else updateRoiDisplay(snapshot); }
   };
   snapshots.addEventListener('input', event => { const snapshot=event.target.closest('.snapshot-card'); if(!snapshot) return; if(event.target.matches('.roi-x1,.roi-y1,.roi-x2,.roi-y2')) updateRoiDisplay(snapshot); });
   const updateDirectoryVisibility = snapshot => { const store = snapshot.querySelector('.store-snapshots'); const controls = snapshot.querySelector('.snapshot-directory-controls'); if (controls) controls.style.display = store.value === 'never' ? 'none' : ''; };
