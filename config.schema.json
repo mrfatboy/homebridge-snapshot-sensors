@@ -21,6 +21,7 @@
             "snapshotDirectory": {"title": "Snapshot Directory", "type": "string", "description": "Required when Store snapshots is Normal or Annotated."},
             "snapshotOwnership": {"title": "Snapshot Ownership Override (optional)", "type": "string", "description": "Override default Camera Snapshot file ownership"},
             "snapshotPrefix": {"title": "Snapshot prefix", "type": "string", "description": "Prefix used for saved snapshot filenames."},
+            "roi": {"title":"Region of Interest","type":"object","properties":{"enabled":{"title":"Enable Region of Interest","type":"boolean","default":false},"x1":{"title":"X1","type":"integer","minimum":0,"default":0},"y1":{"title":"Y1","type":"integer","minimum":0,"default":0},"x2":{"title":"X2","type":"integer","minimum":0},"y2":{"title":"Y2","type":"integer","minimum":0}},"additionalProperties":false},
             "notifications": {
               "title": "Notifications", "type": "object",
               "properties": {

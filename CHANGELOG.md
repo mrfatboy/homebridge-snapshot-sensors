@@ -7,6 +7,12 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.10] - 2026-09-29
+
+### Added
+
+- Added an optional **Region of Interest (ROI)** for limiting YOLO detection to a user-defined area of the camera image while preserving full-resolution original snapshots and annotations.
+
 ## [1.0.9] - 2026-09-19
 
 ### Fixed
@@ -132,7 +138,8 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - Support for multiple independent Snapshot Sensor configurations.
 - Homebridge custom configuration UI.
 
-[Unreleased]: https://github.com/mrfatboy/homebridge-snapshot-sensors/compare/v1.0.9...NewFeature
+[Unreleased]: https://github.com/mrfatboy/homebridge-snapshot-sensors/compare/v1.0.10...NewFeature
+[1.0.10]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.10
 [1.0.9]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.9
 [1.0.8]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.8
 [1.0.7]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.7

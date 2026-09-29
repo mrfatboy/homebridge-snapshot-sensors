@@ -19,7 +19,8 @@ No cloud-based object-detection service is required.
 - 🔒 Object detection runs locally on the Homebridge host
 - 🏠 HomeKit-compatible Snapshot Sensor switches
 - ⚡ Stateless switch behavior — the switch automatically turns off after 1 second
-- 🎯 **Per-category detection thresholds for each sensor**
+- 📡 **Per-category detection thresholds for each sensor**
+- 🎯 **Optional Region of Interest (ROI) for limiting object detection to a specific area of the camera image**
 - 🐕 Animal detection
 - 🚶 Person detection
 - 🚗 Vehicle detection
@@ -76,6 +77,26 @@ The detector uses the YOLO26 model and maps its object classes into Snapshot Sen
 | 🐕 **Animal** | Bird, Cat, Dog, Horse, Sheep, Cow, Elephant, Bear, Zebra, Giraffe |
 | 🚶 **Person** | Person |
 | 🚗 **Vehicle** | Bicycle, Car, Motorcycle, Bus, Train, Truck, Boat |
+
+## Region of Interest
+
+The optional **Region of Interest (ROI)** feature allows you to limit object detection to a specific rectangular area of the camera image.
+
+When ROI is enabled:
+
+- The camera snapshot is displayed in the Homebridge configuration UI.
+- The ROI is defined using four pixel coordinates: **X1, Y1, X2, Y2**.
+- The coordinate origin **(0,0)** is the upper-left corner of the original camera image.
+- **X1/Y1** define the upper-left corner of the ROI.
+- **X2/Y2** define the lower-right corner of the ROI.
+- A bright green rectangle shows the selected region on the camera image.
+- Only the selected region is processed by YOLO for object detection.
+- Detected objects are mapped back to their original camera-image coordinates.
+- The original full-resolution camera image is retained for image storage and annotation.
+
+ROI coordinates use the original camera snapshot dimensions. If the camera's snapshot resolution changes, the ROI coordinates may need to be updated.
+
+When ROI is disabled, the entire camera image is processed for object detection as before.
 
 ## Sensor configuration
 
@@ -193,12 +214,13 @@ For each Snapshot:
 2. Enter the camera's Snapshot URL.
 3. Select the image-storage mode.
 4. Configure the Snapshot Directory if images are being saved.
-5. Configure one or more sensors.
-6. Select the desired detection categories.
-7. Set the threshold for each selected category.
-8. Select a notification provider if desired.
-9. Configure the provider's credentials, notification messages, and sounds where supported.
-10. Save the configuration.
+5. Configure **Region of Interest** if desired.
+6. Configure one or more sensors.
+7. Select the desired detection categories.
+8. Set the threshold for each selected category.
+9. Select a notification provider if desired.
+10. Configure the provider's credentials, notification messages, and sounds where supported.
+11. Save the configuration.
 
 ### Camera Snapshot URL examples
 

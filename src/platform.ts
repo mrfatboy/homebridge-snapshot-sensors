@@ -124,7 +124,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
       } else {
         ({ image, contentType } = await fetchSnapshot(runtime.config.url));
       }
-      const yolo = await runYolo(image, store);
+      const yolo = await runYolo(image, store, runtime.config.roi);
       if (!yolo) {
         this.log.info(`[${snapshotName}] YOLO is busy; skipping snapshot detection.`);
         return;
