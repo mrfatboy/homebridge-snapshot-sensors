@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getYolo26ClassName } from '../model/yolo26/classes.js';
 import { categoryOfClass } from './categories.js';
-import type { Detection, SensorSpec, StoreSnapshots } from './types.js';
+import type { Detection, RoiConfig, SensorSpec, StoreSnapshots } from './types.js';
 
 export interface YoloResult {
   detections: Detection[];
@@ -32,6 +32,7 @@ let inferenceRunning = false;
 export async function runYolo(
   image: Buffer,
   storeSnapshots: StoreSnapshots,
+  roi?: RoiConfig,
 ): Promise<YoloResult | null> {
   if (inferenceRunning) return null;
   inferenceRunning = true;
@@ -45,7 +46,20 @@ export async function runYolo(
     if (!sourceWidth || !sourceHeight)
       throw new Error('Unable to determine snapshot image dimensions');
 
-    const { data } = await source
+    const roiEnabled = roi?.enabled === true;
+    let processingSource = source;
+    let processingWidth = sourceWidth;
+    let processingHeight = sourceHeight;
+    if (roiEnabled) {
+      const x1 = Number(roi.x1), y1 = Number(roi.y1), x2 = Number(roi.x2), y2 = Number(roi.y2);
+      if (![x1,y1,x2,y2].every(Number.isInteger) || x1 < 0 || y1 < 0 || x2 <= x1 || y2 <= y1 || x2 > sourceWidth || y2 > sourceHeight)
+        throw new Error(`ROI coordinates are invalid for snapshot dimensions ${sourceWidth}x${sourceHeight}`);
+      processingWidth = x2 - x1;
+      processingHeight = y2 - y1;
+      processingSource = source.clone().extract({ left:x1, top:y1, width:processingWidth, height:processingHeight });
+    }
+
+    const { data } = await processingSource
       .clone()
       .resize(MODEL_WIDTH, MODEL_HEIGHT, { fit: 'fill' })
       .removeAlpha()
@@ -71,10 +85,18 @@ export async function runYolo(
     const detections: Detection[] = [];
     for (let i = 0; i < output.dims[1]; i++) {
       const offset = i * 6;
-      const x1 = Number(output.data[offset]);
-      const y1 = Number(output.data[offset + 1]);
-      const x2 = Number(output.data[offset + 2]);
-      const y2 = Number(output.data[offset + 3]);
+      const modelX1 = Number(output.data[offset]);
+      const modelY1 = Number(output.data[offset + 1]);
+      const modelX2 = Number(output.data[offset + 2]);
+      const modelY2 = Number(output.data[offset + 3]);
+      const xOffset = roiEnabled ? Number(roi.x1) : 0;
+      const yOffset = roiEnabled ? Number(roi.y1) : 0;
+      const xScale = processingWidth / MODEL_WIDTH;
+      const yScale = processingHeight / MODEL_HEIGHT;
+      const x1 = xOffset + modelX1 * xScale;
+      const y1 = yOffset + modelY1 * yScale;
+      const x2 = xOffset + modelX2 * xScale;
+      const y2 = yOffset + modelY2 * yScale;
       const score = Number(output.data[offset + 4]);
       const classId = Math.round(Number(output.data[offset + 5]));
       if (!Number.isFinite(score) || score <= 0) continue;
@@ -113,14 +135,12 @@ export async function runYolo(
 
             if (annotationDetections.length === 0) return source.clone().jpeg().toBuffer();
 
-            const scaleX = sourceWidth / MODEL_WIDTH;
-            const scaleY = sourceHeight / MODEL_HEIGHT;
             const boxes = annotationDetections
               .map((detection) => {
-                const x = Math.max(0, Math.min(sourceWidth, detection.x1 * scaleX));
-                const y = Math.max(0, Math.min(sourceHeight, detection.y1 * scaleY));
-                const x2 = Math.max(0, Math.min(sourceWidth, detection.x2 * scaleX));
-                const y2 = Math.max(0, Math.min(sourceHeight, detection.y2 * scaleY));
+                const x = Math.max(0, Math.min(sourceWidth, detection.x1));
+                const y = Math.max(0, Math.min(sourceHeight, detection.y1));
+                const x2 = Math.max(0, Math.min(sourceWidth, detection.x2));
+                const y2 = Math.max(0, Math.min(sourceHeight, detection.y2));
                 const width = Math.max(0, x2 - x);
                 const height = Math.max(0, y2 - y);
                 const fontSize = Math.max(18, Math.round(Math.min(sourceWidth, sourceHeight) / 30));
