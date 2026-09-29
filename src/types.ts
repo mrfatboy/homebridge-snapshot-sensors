@@ -58,6 +58,14 @@ export interface RawSensor {
   unidentifiedMotionActivity?: boolean;
 }
 
+export interface RoiConfig {
+  enabled?: boolean;
+  x1?: number;
+  y1?: number;
+  x2?: number;
+  y2?: number;
+}
+
 export interface SnapshotConfig {
   name: string;
   url: string;
@@ -65,6 +73,7 @@ export interface SnapshotConfig {
   snapshotOwnership?: string;
   storeSnapshots?: StoreSnapshots;
   snapshotPrefix?: string;
+  roi?: RoiConfig;
   sensors: RawSensor[];
   notifications?: NotificationConfig;
   webhook?: WebhookConfig;
