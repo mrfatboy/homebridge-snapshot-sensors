@@ -30,6 +30,7 @@
 #snapshotModal.snapshot-test-modal .modal-dialog { margin: 0; max-width: min(800px, calc(100vw - 20px)); }
 
 .roi-heading { font-size: 20px !important; line-height: 1.2; margin-top: 1.5rem; margin-bottom: .75rem; }
+.roi-settings { margin-bottom: 1.5rem; }
 .roi-heading .roi-emoji { font-size: 20px !important; }
 .roi-controls { margin-bottom: 2rem; }
 .roi-image-wrap { position: relative; display: inline-block; max-width: 100%; }
