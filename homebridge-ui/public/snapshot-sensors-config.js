@@ -80,8 +80,12 @@
         if (!value) return true;
         try { const parsed = new URL(value); return parsed.protocol !== 'http:' && parsed.protocol !== 'https:'; } catch { return true; }
       });
+      const invalidRoi = cards().some(card => {
+        if (!card.querySelector('.roi-enabled')?.checked) return false;
+        return ['.roi-x1', '.roi-y1', '.roi-x2', '.roi-y2'].some(selector => !card.querySelector(selector)?.checkValidity());
+      });
       if (duplicateNames.length) { homebridge.toast.error('There are duplicate Snapshot sensor names. Each Snapshot sensor must have a unique name.', 'Duplicate Snapshot Sensor Names'); homebridge.disableSaveButton(); return saving; }
-      if (invalidSnapshotUrl) homebridge.disableSaveButton(); else homebridge.enableSaveButton();
+      if (invalidSnapshotUrl || invalidRoi) homebridge.disableSaveButton(); else homebridge.enableSaveButton();
       const snapshots = cards().map(card => {
         const sensors = Array.from(card.querySelectorAll('.sensor-settings')).map(sensor => {
           const thresholds = {};
