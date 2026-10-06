@@ -13,7 +13,7 @@ import { fetchSnapshot } from './snapshot.js';
 import { runYolo } from './yolo.js';
 import { NotificationService, notificationProvider } from './notifications/service.js';
 import { sendWebhook as postWebhook } from './webhook.js';
-import type { SensorSpec, SnapshotConfig, Category, StoreSnapshots } from './types.js';
+import type { SensorSpec, SnapshotConfig, Category, StoreSnapshots, NotificationChannel } from './types.js';
 import type { WebhookPayload } from './webhook.js';
 import { mkdir, readFile, writeFile, chown } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
