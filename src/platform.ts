@@ -13,7 +13,7 @@ import { fetchSnapshot } from './snapshot.js';
 import { runYolo } from './yolo.js';
 import { NotificationService, notificationProvider } from './notifications/service.js';
 import { sendWebhook as postWebhook } from './webhook.js';
-import type { SensorSpec, SnapshotConfig, Category, StoreSnapshots } from './types.js';
+import type { SensorSpec, SnapshotConfig, Category, StoreSnapshots, NotificationChannel } from './types.js';
 import type { WebhookPayload } from './webhook.js';
 import { mkdir, readFile, writeFile, chown } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
@@ -113,6 +113,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     let detectionType = 'No objects matching the selected categories were detected';
     let imageSaveStatus: StoreSnapshots | 'not saved' = 'not saved';
     let notificationDisabled = false;
+    let notificationProviderName: string | null = null;
     const store = (runtime.config.storeSnapshots ?? 'never') as StoreSnapshots;
     try {
       let image: Buffer;
@@ -184,7 +185,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
           }
         }
         if (yolo.detections.length > 0 && unidentifiedMotionActivityEnabled) {
-          void this.sendNotification(runtime.config, 'unidentified');
+          notificationProviderName = this.sendNotification(runtime.config, 'unidentified');
           webhookPayload = { camera: snapshotName, object: 'unidentified', confidence: null };
         }
       } else {
@@ -200,7 +201,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
         }
         if (bestMatch) {
           detectionType = detectionMessages[bestMatch.category];
-          void this.sendNotification(runtime.config, bestMatch.category);
+          notificationProviderName = this.sendNotification(runtime.config, bestMatch.category);
           webhookPayload = {
             camera: snapshotName,
             object: bestMatch.className,
@@ -211,7 +212,7 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
       if (webhookPayload) void this.sendWebhook(runtime.config, webhookPayload);
       const elapsedMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
       this.log.info(
-        `[${snapshotName}] ${TEST_IMAGE_PATH ? '[Test Image] ' : ''}${detectionType}; image ${imageSaveStatus === 'not saved' ? 'not saved' : `saved: ${imageSaveStatus}`}${notificationDisabled ? '; no notification' : ''}; total elapsed time: ${this.formatElapsed(elapsedMs)}.`,
+        `[${snapshotName}] ${TEST_IMAGE_PATH ? '[Test Image] ' : ''}${detectionType}; image ${imageSaveStatus === 'not saved' ? 'not saved' : `saved: ${imageSaveStatus}`}${notificationDisabled ? '; no notification' : notificationProviderName ? `; ${notificationProviderName} notification sent` : ''}; total elapsed time: ${this.formatElapsed(elapsedMs)}.`,
       );
     } catch (error) {
       const elapsedMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
@@ -312,31 +313,40 @@ export class SnapshotSensorsPlatform implements DynamicPlatformPlugin {
     }
     return { uid, gid };
   }
-  private async sendNotification(
+  private sendNotification(
     config: SnapshotConfig,
     category: NotificationCategory,
-  ): Promise<void> {
+  ): string | null {
     const notification = config.notifications;
-    if (!notification || notification.provider === 'none' || !notification.provider) return;
-    const provider = notificationProvider(notification);
-    const providerName = provider ?? 'none';
+    if (!notification || notification.provider === 'none' || !notification.provider) return null;
+    const providerName = notificationProvider(notification);
+    if (!providerName) return null;
     const channel = notification[notification.provider];
-    if (!channel) return;
+    if (!channel) return null;
     const message = NotificationService.messageFor(channel, category);
-    if (!message) return;
+    if (!message) return null;
     const sound = NotificationService.soundFor(channel, category);
+    void this.dispatchNotification(config, notification, channel, message, sound);
+    return providerName;
+  }
+
+  private async dispatchNotification(
+    config: SnapshotConfig,
+    notification: NonNullable<SnapshotConfig['notifications']>,
+    channel: NotificationChannel,
+    message: string,
+    sound: string | undefined,
+  ): Promise<void> {
     try {
-      const result = await NotificationService.send({
+      await NotificationService.send({
         notification,
         title: channel.title?.trim() || 'Snapshot Sensors',
         message,
         sound,
       });
-      this.log.info(`[${config.name}] ${providerName} notification sent: HTTP ${result.status}.`);
     } catch (error) {
       this.log.warn(
         `[${config.name}] Notification failed: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
-  }
-}
+  }}
