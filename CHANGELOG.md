@@ -7,6 +7,10 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Added support for an optional URL in Pushover notifications.
+
 ## [1.0.12] - 2026-10-06
 
 ### Changed
