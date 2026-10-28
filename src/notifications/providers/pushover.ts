@@ -23,6 +23,7 @@ export const sendPushover: NotificationProviderSender = async ({
     sound: sound?.trim() || 'pushover',
   });
   if (channel.device?.trim()) form.set('device', channel.device.trim());
+  if (channel.url?.trim()) form.set('url', channel.url.trim());
 
   const response = await fetch('https://api.pushover.net/1/messages.json', {
     method: 'POST',

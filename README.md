@@ -190,6 +190,10 @@ Pushover and Push Safer also support separate sounds for each detection type:
 
 Messages and supported sound values can be customized in the Homebridge configuration UI.
 
+### Pushover URL
+
+Pushover supports an optional URL that can be opened from the notification. Configure the URL in the Pushover settings for the Snapshot. Leave it blank to omit the URL from notifications.
+
 ### Notification behavior
 
 A notification is sent when a detection matches one of the categories configured for a sensor and meets that category's configured threshold.
@@ -303,6 +307,7 @@ Example:
               "token": "YOUR_APP_TOKEN",
               "user": "YOUR_USER_KEY",
               "device": "",
+              "url": "https://example.com/",
               "title": "Driveway",
               "animalMessage": "Animal detected 🐕",
               "animalSound": "pushover",

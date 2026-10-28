@@ -21,7 +21,7 @@ describe('NotificationService', () => {
 
     const notification = {
       provider: 'pushover' as const,
-      pushover: { token: 'token', user: 'user', device: 'device' },
+      pushover: { token: 'token', user: 'user', device: 'device', url: 'https://example.test/camera' },
     };
     await expect(
       NotificationService.send({ notification, title: 'Title', message: 'Message' }),
@@ -33,6 +33,7 @@ describe('NotificationService', () => {
     expect(options.body).toContain('token=token');
     expect(options.body).toContain('user=user');
     expect(options.body).toContain('device=device');
+    expect(options.body).toContain('url=https%3A%2F%2Fexample.test%2Fcamera');
     expect(options.body).toContain('sound=pushover');
   });
 
