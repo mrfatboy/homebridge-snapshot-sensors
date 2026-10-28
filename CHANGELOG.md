@@ -7,6 +7,8 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.13] - 2026-10-28
+
 ### Added
 
 - Added support for an optional URL in Pushover notifications.
@@ -154,7 +156,8 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - Support for multiple independent Snapshot Sensor configurations.
 - Homebridge custom configuration UI.
 
-[Unreleased]: https://github.com/mrfatboy/homebridge-snapshot-sensors/compare/v1.0.12...NewFeature
+[Unreleased]: https://github.com/mrfatboy/homebridge-snapshot-sensors/compare/v1.0.13...NewFeature
+[1.0.13]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.13
 [1.0.12]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.12
 [1.0.11]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.11
 [1.0.10]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.10
