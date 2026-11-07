@@ -136,6 +136,7 @@ export async function runYolo(
             if (annotationDetections.length === 0) return source.clone().jpeg().toBuffer();
 
             const boxes = annotationDetections
+              .sort((a, b) => a.score - b.score)
               .map((detection) => {
                 const x = Math.max(0, Math.min(sourceWidth, detection.x1));
                 const y = Math.max(0, Math.min(sourceHeight, detection.y1));
