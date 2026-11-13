@@ -7,12 +7,17 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.15] - 2026-11-13
+
+### Changed
+
+- Show only the highest-confidence bounding box for each selected detection category in annotated snapshots.
+
 ## [1.0.14] - 2026-11-07
 
 ### Changed
 
 - Draw annotated detections in ascending confidence order so the highest-confidence bounding boxes and labels appear on top.
-- Show only the highest-confidence bounding box for each selected detection category in annotated snapshots.
 
 ## [1.0.13] - 2026-10-28
 
@@ -163,7 +168,8 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - Support for multiple independent Snapshot Sensor configurations.
 - Homebridge custom configuration UI.
 
-[Unreleased]: https://github.com/mrfatboy/homebridge-snapshot-sensors/compare/v1.0.14...NewFeature
+[Unreleased]: https://github.com/mrfatboy/homebridge-snapshot-sensors/compare/v1.0.15...NewFeature
+[1.0.15]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.15
 [1.0.14]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.14
 [1.0.13]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.13
 [1.0.12]: https://github.com/mrfatboy/homebridge-snapshot-sensors/releases/tag/v1.0.12
