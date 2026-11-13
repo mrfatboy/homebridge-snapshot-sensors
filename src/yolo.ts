@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getYolo26ClassName } from '../model/yolo26/classes.js';
 import { categoryOfClass } from './categories.js';
-import type { Detection, RoiConfig, SensorSpec, StoreSnapshots } from './types.js';
+import type { Category, Detection, RoiConfig, SensorSpec, StoreSnapshots } from './types.js';
 
 export interface YoloResult {
   detections: Detection[];
@@ -135,7 +135,16 @@ export async function runYolo(
 
             if (annotationDetections.length === 0) return source.clone().jpeg().toBuffer();
 
-            const boxes = annotationDetections
+            const bestByCategory = new Map<Category, Detection>();
+            for (const detection of annotationDetections) {
+              const category = detection.category;
+              if (category === null) continue;
+              const current = bestByCategory.get(category);
+              if (!current || detection.score > current.score)
+                bestByCategory.set(category, detection);
+            }
+
+            const boxes = [...bestByCategory.values()]
               .sort((a, b) => a.score - b.score)
               .map((detection) => {
                 const x = Math.max(0, Math.min(sourceWidth, detection.x1));
