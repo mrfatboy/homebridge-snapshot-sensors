@@ -51,7 +51,7 @@ When the HomeKit/Homebridge switch is activated:
 6. If a configured category matches, the appropriate notification is sent.
 7. If YOLO detects one or more objects but none match any selected Animal, Person, or Vehicle category, an **Unidentified Activity detected** notification is sent only when **Unidentified Motion Activity ⚠️** is enabled and notifications are enabled. If the option is disabled, no push notification is sent and the result is logged as **No objects matching the selected categories were detected**.
 8. If both matching and unmatched objects are detected, the matching selected category takes priority and no additional Unidentified Activity notification is sent.
-9. The image is saved according to the configured storage mode. Annotated images include only detections that match a sensor's selected category and that category's configured threshold.
+9. The image is saved according to the configured storage mode. Annotated images include only the highest-confidence detection for each selected category, provided it meets a sensor's configured confidence threshold.
 10. The switch automatically returns to Off.
 11. The detection process completes.
 
@@ -125,7 +125,7 @@ Snapshots can be configured to use one of three storage modes:
 |---|---|
 | **Never** | Image is processed but not saved |
 | **Normal** | Original camera image is saved |
-| **Annotated** | Image with matching YOLO detection boxes is saved |
+| **Annotated** | Image with the highest-confidence matching YOLO detection box for each selected category is saved |
 
 When image storage is enabled, a Snapshot Directory must be configured.
 
