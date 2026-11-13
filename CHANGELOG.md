@@ -12,6 +12,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - Draw annotated detections in ascending confidence order so the highest-confidence bounding boxes and labels appear on top.
+- Show only the highest-confidence bounding box for each selected detection category in annotated snapshots.
 
 ## [1.0.13] - 2026-10-28
 
